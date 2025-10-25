@@ -1,0 +1,41 @@
+spring.application.name=charging_station_management
+server.port=8080
+
+# ===============================
+# = Datasource (PostgreSQL)
+# ===============================
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.datasource.url=jdbc:postgresql://localhost:5432/charging_station_db
+spring.datasource.username=postgres 
+spring.datasource.password=your_password
+
+# ===============================
+# = Hibernate / JPA
+# ===============================
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# ===============================
+# = JWT (JSON Web Token)
+# ===============================
+# Cần tạo một cặp khóa RSA public/private và đặt trong thư mục resources
+jwt.public.key=classpath:public.pem
+jwt.private.key=classpath:key.pem
+# Thời gian hết hạn của Access Token (15 phút)
+application.security.jwt.expiration-minutes=15
+# Thời gian hết hạn của Refresh Token (7 ngày)
+application.security.jwt.refresh-token.expiration-ms=604800000
+
+# ===============================
+# = File Upload
+# ===============================
+# Đường dẫn tuyệt đối đến thư mục lưu file upload trên server
+application.upload-dir=D:/uploads
+
+# ===============================
+# = Internationalization (i18n)
+# ===============================
+spring.messages.basename=i18n/auth, i18n/validation, i18n/common
+spring.messages.encoding=UTF-8
