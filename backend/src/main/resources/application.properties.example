@@ -39,3 +39,10 @@ application.upload-dir=D:/uploads
 # ===============================
 spring.messages.basename=i18n/auth, i18n/validation, i18n/common
 spring.messages.encoding=UTF-8
+
+# Bật chế độ khởi tạo database
+spring.sql.init.mode=always
+
+spring.sql.init.schema-locations=classpath:data-generation-script.sql
+
+spring.jpa.defer-datasource-initialization=true
