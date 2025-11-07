@@ -311,7 +311,6 @@ const ProfilePage: React.FC = () => {
     if (avatarFile) {
       try {
         const uploadResult = await uploadAvatar({
-          userId,
           file: avatarFile,
         }).unwrap();
         newAvatarUrl = uploadResult.publicUrl;

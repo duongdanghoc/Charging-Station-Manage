@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import RouteDetailsView from '@/components/route-details/RouteDetailsView';
 import RouteChipsBar from '@/components/route-details/RouteChipsBar';
 import { useRouteDetailsData } from '@/components/route-details/useRouteDetailsData';
-import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectRadioContent,

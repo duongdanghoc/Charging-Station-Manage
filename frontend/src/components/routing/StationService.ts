@@ -1,149 +1,88 @@
-import { supabase } from '@/supabase/client';
-import type { Station } from './StationPinTool';
+// src/lib/services/StationService.ts
+import type { Station } from "./StationPinTool";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1/stations";
 
 export class StationService {
-    /**
-     * Lưu trạm mới vào Supabase
-     */
-    static async saveStation(station: Omit<Station, 'id'>): Promise<Station> {
-        const { data, error } = await supabase
-            .from('stations')
-            .insert({
-                name: station.name,
-                type: station.type,
-                lat: station.lat,
-                lng: station.lng,
-                description: station.description,
-                contact: station.contact,
-            })
-            .select()
-            .single();
+    /** Lưu trạm mới vào backend */
+    static async saveStation(station: Omit<Station, "id">): Promise<Station> {
+        const res = await fetch(`${API_BASE}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(station),
+        });
 
-        if (error) {
-            throw new Error(`Không thể lưu trạm: ${error.message}`);
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(`Không thể lưu trạm: ${err}`);
         }
 
-        return data;
+        return res.json();
     }
 
-    /**
-     * Lấy tất cả các trạm
-     */
+    /** Lấy tất cả các trạm */
     static async getAllStations(): Promise<Station[]> {
-        const { data, error } = await supabase
-            .from('stations')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            throw new Error(`Không thể lấy danh sách trạm: ${error.message}`);
-        }
-
-        return data || [];
+        const res = await fetch(`${API_BASE}`);
+        if (!res.ok) throw new Error("Không thể lấy danh sách trạm");
+        return res.json();
     }
 
-    /**
-     * Lấy các trạm theo loại
-     */
+    /** Lấy trạm theo loại */
     static async getStationsByType(type: string): Promise<Station[]> {
-        const { data, error } = await supabase
-            .from('stations')
-            .select('*')
-            .eq('type', type)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            throw new Error(`Không thể lấy trạm theo loại: ${error.message}`);
-        }
-
-        return data || [];
+        const res = await fetch(`${API_BASE}?type=${encodeURIComponent(type)}`);
+        if (!res.ok) throw new Error("Không thể lấy trạm theo loại");
+        return res.json();
     }
 
-    /**
-     * Lấy các trạm trong khu vực (theo bounding box)
-     */
+    /** Lấy trạm trong vùng toạ độ */
     static async getStationsInBounds(bounds: {
         north: number;
         south: number;
         east: number;
         west: number;
     }): Promise<Station[]> {
-        const { data, error } = await supabase
-            .from('stations')
-            .select('*')
-            .gte('lat', bounds.south)
-            .lte('lat', bounds.north)
-            .gte('lng', bounds.west)
-            .lte('lng', bounds.east);
-
-        if (error) {
-            throw new Error(`Không thể lấy trạm trong khu vực: ${error.message}`);
-        }
-
-        return data || [];
+        const query = new URLSearchParams({
+            north: bounds.north.toString(),
+            south: bounds.south.toString(),
+            east: bounds.east.toString(),
+            west: bounds.west.toString(),
+        });
+        const res = await fetch(`${API_BASE}/bounds?${query}`);
+        if (!res.ok) throw new Error("Không thể lấy trạm trong khu vực");
+        return res.json();
     }
 
-    /**
-     * Cập nhật thông tin trạm
-     */
+    /** Cập nhật thông tin trạm */
     static async updateStation(id: string, updates: Partial<Station>): Promise<Station> {
-        const { data, error } = await supabase
-            .from('stations')
-            .update(updates)
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) {
-            throw new Error(`Không thể cập nhật trạm: ${error.message}`);
-        }
-
-        return data;
+        const res = await fetch(`${API_BASE}/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+        });
+        if (!res.ok) throw new Error("Không thể cập nhật trạm");
+        return res.json();
     }
 
-    /**
-     * Xóa trạm
-     */
+    /** Xóa trạm */
     static async deleteStation(id: string): Promise<void> {
-        const { error } = await supabase
-            .from('stations')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            throw new Error(`Không thể xóa trạm: ${error.message}`);
-        }
+        const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Không thể xóa trạm");
     }
 
-    /**
-     * Tìm trạm gần nhất
-     */
+    /** Tìm trạm gần nhất (client-side tính khoảng cách) */
     static async findNearestStations(
         lat: number,
         lng: number,
         type?: string,
         limit: number = 5
     ): Promise<Station[]> {
-        let query = supabase
-            .from('stations')
-            .select('*');
+        const stations = type
+            ? await this.getStationsByType(type)
+            : await this.getAllStations();
 
-        if (type) {
-            query = query.eq('type', type);
-        }
-
-        const { data, error } = await query.limit(limit);
-
-        if (error) {
-            throw new Error(`Không thể tìm trạm gần nhất: ${error.message}`);
-        }
-
-        if (!data) return [];
-
-        // Tính khoảng cách và sắp xếp
-        const stationsWithDistance = data.map(station => ({
+        const stationsWithDistance = stations.map((station) => ({
             ...station,
-            distance: this.calculateDistance(lat, lng, station.lat, station.lng)
+            distance: this.calculateDistance(lat, lng, station.lat, station.lng),
         }));
 
         return stationsWithDistance
@@ -151,17 +90,16 @@ export class StationService {
             .slice(0, limit);
     }
 
-    /**
-     * Tính khoảng cách giữa 2 điểm (haversine formula)
-     */
+    /** Tính khoảng cách giữa 2 điểm (Haversine formula) */
     private static calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-        const R = 6371; // Bán kính Trái Đất (km)
+        const R = 6371;
         const dLat = this.toRadians(lat2 - lat1);
         const dLng = this.toRadians(lng2 - lng1);
         const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(this.toRadians(lat1)) *
+                Math.cos(this.toRadians(lat2)) *
+                Math.sin(dLng / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/supabase/client";
 import Link from "next/link";
 
 /**
@@ -19,39 +18,29 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState("");
 
-  /**
-   * Handle password input change
-   */
+  // Khi nhập mật khẩu mới
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
     setPasswordError("");
   };
 
-  /**
-   * Handle confirm password input change
-   */
-  const handleConfirmPasswordChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  // Khi nhập xác nhận mật khẩu
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setConfirmPassword(e.target.value);
     setPasswordError("");
   };
 
-  /**
-   * Handle form submission
-   */
+  // Gửi form đặt lại mật khẩu
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Validate passwords match
     if (password !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+      setPasswordError("Mật khẩu không khớp.");
       return;
     }
 
-    // Validate password strength
     if (password.length < 8) {
-      setPasswordError("Password must be at least 8 characters");
+      setPasswordError("Mật khẩu phải có ít nhất 8 ký tự.");
       return;
     }
 
@@ -59,20 +48,23 @@ export default function ResetPasswordPage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const res = await fetch("http://localhost:8080/api/v1/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
 
-      if (error) {
-        setError((error as any)?.message ?? String(error));
-      } else {
-        setSuccess(true);
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
+      if (!res.ok) {
+        const errData = await res.json();
+        setError(errData.message || "Không thể đặt lại mật khẩu.");
+        return;
       }
+
+      setSuccess(true);
+      setTimeout(() => router.push("/login"), 3000);
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
       console.error(err);
+      setError("Đã xảy ra lỗi hệ thống. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +73,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="auth-bg min-h-screen flex flex-col justify-center items-center px-4 pb-12 pt-16">
       <div className="w-full max-w-md">
-        {/* Logo and header */}
+        {/* Logo và tiêu đề */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-6">
             <Image
@@ -93,21 +85,18 @@ export default function ResetPasswordPage() {
             />
             <span className="font-semibold text-xl">WAYO</span>
           </Link>
-          <h1 className="text-2xl font-bold mb-2">Create New Password</h1>
+          <h1 className="text-2xl font-bold mb-2">Tạo mật khẩu mới</h1>
           <p className="text-gray-600">
-            Please enter a new secure password for your account.
+            Nhập mật khẩu mới cho tài khoản của bạn.
           </p>
         </div>
 
-        {/* Reset password form */}
+        {/* Form đặt lại mật khẩu */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 auth-form">
           {success ? (
             <div className="p-4 bg-green-50 text-green-700 rounded-lg border border-green-100 text-sm">
-              <h3 className="font-medium mb-1">Password updated!</h3>
-              <p>
-                Your password has been reset successfully. Redirecting to
-                login...
-              </p>
+              <h3 className="font-medium mb-1">Đặt lại mật khẩu thành công!</h3>
+              <p>Bạn sẽ được chuyển hướng đến trang đăng nhập trong giây lát...</p>
             </div>
           ) : (
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -128,7 +117,7 @@ export default function ResetPasswordPage() {
                   htmlFor="password"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  New Password
+                  Mật khẩu mới
                 </label>
                 <input
                   id="password"
@@ -148,7 +137,7 @@ export default function ResetPasswordPage() {
                   htmlFor="confirmPassword"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Confirm New Password
+                  Xác nhận mật khẩu mới
                 </label>
                 <input
                   id="confirmPassword"
@@ -168,20 +157,20 @@ export default function ResetPasswordPage() {
                 disabled={isLoading}
                 className="w-full py-2.5 px-4 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Updating..." : "Reset Password"}
+                {isLoading ? "Đang cập nhật..." : "Đặt lại mật khẩu"}
               </button>
             </form>
           )}
         </div>
 
-        {/* Login link */}
+        {/* Link quay lại login */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-600">
             <Link
               href="/login"
               className="text-blue-600 hover:text-blue-800 font-medium underline"
             >
-              Back to login
+              Quay lại đăng nhập
             </Link>
           </p>
         </div>

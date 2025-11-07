@@ -1,6 +1,5 @@
 package com.example.charging_station_management.entity.converters;
 
-import com.example.charging_station_management.entity.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,9 +29,7 @@ public class Customer {
     @Column(length = 11)
     private String phone;
 
-    @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "user_status")
-    private UserStatus status = UserStatus.ACTIVE;
+    private Integer status;
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL)
     private List<ElectricVehicle> electricVehicles;

@@ -2,12 +2,11 @@
 
 import { Suspense, useState, useCallback, useEffect } from 'react';
 import config from '@/config/config';
-import type { Instance, Solution, Route, Node } from '@/utils/dataModels';
+import type { Route, Node } from '@/utils/dataModels';
 import dynamic from 'next/dynamic';
 import { useFileReader } from '@/hooks/useFileReader';
 import sampleInstance from '@/data/sampleInstance.js';
 import { useMapControls } from '@/hooks/useMapControls';
-import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 
 // Dynamically import components to avoid SSR issues with Leaflet
 const MapComponent = dynamic(() => import('@/components/map/MapComponent'), { ssr: false });

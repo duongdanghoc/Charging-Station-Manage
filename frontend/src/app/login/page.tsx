@@ -5,17 +5,16 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLoginMutation } from "@/lib/redux/services/auth";
 import Link from "next/link";
-import { supabase } from "@/supabase/client";
-
 
 /**
- * Login form content component that uses useSearchParams
+ * Login form content component
  */
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
   const [login, { isLoading, error }] = useLoginMutation();
+
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
@@ -23,11 +22,7 @@ function LoginContent() {
   });
   const [verificationMessage, setVerificationMessage] = useState("");
 
-
-
-  /**
-   * Check for verification status on component mount
-   */
+  // Hiển thị thông báo xác minh email (nếu có)
   useEffect(() => {
     if (verified === "pending") {
       setVerificationMessage(
@@ -36,20 +31,7 @@ function LoginContent() {
     }
   }, [verified]);
 
-  /**
-   * Handle input change
-   */
-
-  const handleOAuthLogin = async (provider: 'google' | 'facebook') => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-    });
-
-    if (error) {
-      console.error("OAuth login error:", error);
-      alert("Không thể đăng nhập bằng " + provider);
-    }
-  };
+  // Xử lý khi nhập input
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setCredentials({
@@ -58,9 +40,7 @@ function LoginContent() {
     });
   };
 
-  /**
-   * Handle form submission
-   */
+  // Gửi thông tin đăng nhập đến backend của bạn
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -74,20 +54,21 @@ function LoginContent() {
         router.push("/profile");
       }
     } catch (err) {
-      // Error is handled by the RTK Query hook
-      console.error(err);
+      console.error("Đăng nhập thất bại:", err);
     }
   };
 
-  // Check if error exists and render error message
   const hasError = error != null;
 
   return (
     <div className="auth-bg min-h-screen flex flex-col justify-center items-center px-4 pb-12 pt-16">
       <div className="w-full max-w-md">
-        {/* Logo and header */}
+        {/* Logo và tiêu đề */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center drop-shadow-lg gap-3 mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center drop-shadow-lg gap-3 mb-6"
+          >
             <Image
               src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.png"}
               alt="WAYO Logo"
@@ -97,13 +78,15 @@ function LoginContent() {
             />
             <span className="font-semibold text-xl">WAYO</span>
           </Link>
-          <h1 className="text-2xl font-bold text-shadow-lg mb-2">Đăng nhập vào tài khoản</h1>
+          <h1 className="text-2xl font-bold text-shadow-lg mb-2">
+            Đăng nhập vào tài khoản
+          </h1>
           <p className="text-gray-600 text-shadow-lg">
             Chào mừng trở lại! Vui lòng nhập thông tin của bạn.
           </p>
         </div>
 
-        {/* Login form */}
+        {/* Form đăng nhập */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 auth-form">
           <form className="space-y-4" onSubmit={handleSubmit}>
             {verificationMessage && (
@@ -188,19 +171,7 @@ function LoginContent() {
           </form>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          <button
-            type="button"
-            onClick={() => handleOAuthLogin('google')}
-            className="flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors"
-          >
-            <Image src="https://www.gstatic.com/images/branding/searchlogo/ico/favicon.ico" width={20} height={20} alt="Google" className="mr-2" />
-
-            Đăng nhập bằng Google
-          </button>
-        </div>
-
-        {/* Sign up link */}
+        {/* Link đăng ký */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-600">
             Chưa có tài khoản?{" "}
@@ -211,11 +182,6 @@ function LoginContent() {
               Đăng ký
             </Link>
           </p>
-          <div style={{ textAlign: 'center', marginTop: 100 }}>
-
-
-
-          </div>
         </div>
       </div>
     </div>
