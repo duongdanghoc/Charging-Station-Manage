@@ -1,6 +1,5 @@
 package com.example.charging_station_management.entity.converters;
 
-import com.example.charging_station_management.entity.enums.UserStatus;
 import com.example.charging_station_management.entity.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -37,9 +36,7 @@ public class Station {
     @Column(nullable = false)
     private LocalTime closeTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "user_status")
-    private UserStatus status = UserStatus.ACTIVE;
+    private Integer status;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "station_type")

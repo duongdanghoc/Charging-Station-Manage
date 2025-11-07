@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/product").hasAuthority("ADMIN")
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/order").hasAnyAuthority("USER","ADMIN")
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webfonts/**", "/fonts/**").permitAll()
                         .anyRequest().authenticated()

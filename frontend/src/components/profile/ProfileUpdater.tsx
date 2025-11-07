@@ -6,11 +6,10 @@ import {
   useUpdateProfileMutation,
   useUploadAvatarMutation,
 } from "@/lib/redux/services/profileApi";
-import { supabase } from "@/supabase/client";
 
 /**
- * A client component that handles updating the user's profile with a phone number
- * from local storage. This component does not render anything.
+ * Client component: tự động cập nhật profile người dùng (số điện thoại và avatar)
+ * Không còn sử dụng Supabase.
  */
 export default function ProfileUpdater() {
   const { data: sessionData } = useGetSessionQuery();
@@ -22,46 +21,62 @@ export default function ProfileUpdater() {
     console.error(`Failed to ${context}:`, err);
   }, []);
 
+  /**
+   * Nếu có pending phone trong localStorage thì gửi lên API backend
+   */
   useEffect(() => {
-    if (userId) {
-      const pendingPhone = localStorage.getItem("pending-phone-update");
-      if (pendingPhone) {
-        updateProfile({ id: userId, phone: pendingPhone })
-          .unwrap()
-          .then(() => {
-            localStorage.removeItem("pending-phone-update");
-          })
-          .catch((err) => {
-            handleMutationError(err, "update phone from local storage");
-            // Also remove from local storage on failure to prevent repeated failed attempts
-            localStorage.removeItem("pending-phone-update");
-          });
-      }
+    if (typeof window === "undefined" || !userId) return;
+
+    const pendingPhone = localStorage.getItem("pending-phone-update");
+    if (pendingPhone) {
+      updateProfile({ id: userId, phone: pendingPhone })
+        .unwrap()
+        .then(() => {
+          localStorage.removeItem("pending-phone-update");
+        })
+        .catch((err) => {
+          handleMutationError(err, "update phone from local storage");
+          localStorage.removeItem("pending-phone-update");
+        });
     }
   }, [userId, updateProfile, handleMutationError]);
 
+  /**
+   * Nếu user đăng nhập bằng Google và chưa có avatar → sao chép avatar từ Google sang hệ thống backend
+   */
   useEffect(() => {
     const copyGoogleAvatar = async () => {
       if (!userId) return;
+
       const googleAvatarUrl =
         sessionData?.session?.user?.user_metadata?.avatar_url;
       if (!googleAvatarUrl) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (profile?.avatar_url) return;
-
       try {
+        // Kiểm tra avatar hiện tại trong backend
+        const profileRes = await fetch(
+          `http://localhost:8080/api/v1/profile/${userId}`
+        );
+        const profile = await profileRes.json();
+
+        // Nếu đã có avatar thì không cần làm gì
+        if (profile?.avatar_url) return;
+
+        // Nếu chưa có → tải avatar từ Google và upload qua backend
         const response = await fetch(googleAvatarUrl);
         if (!response.ok) throw new Error("Failed to fetch Google avatar");
+
         const blob = await response.blob();
         const file = new File([blob], "avatar.jpg", { type: blob.type });
-        const { publicUrl } = await uploadAvatar({ file, userId }).unwrap();
-        await updateProfile({ id: userId, avatar_url: publicUrl }).unwrap();
+
+        // Gọi API upload avatar backend (sử dụng endpoint riêng)
+        const uploadResponse = await uploadAvatar({ file }).unwrap();
+
+        // Sau khi upload thành công → cập nhật URL vào profile
+        await updateProfile({
+          id: userId,
+          avatar_url: uploadResponse.publicUrl,
+        }).unwrap();
       } catch (err) {
         handleMutationError(err, "copy Google avatar");
       }
@@ -76,5 +91,5 @@ export default function ProfileUpdater() {
     handleMutationError,
   ]);
 
-  return null; // This component doesn't render anything
+  return null;
 }
