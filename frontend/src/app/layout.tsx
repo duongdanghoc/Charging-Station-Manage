@@ -10,7 +10,6 @@ import { ReduxProvider } from "@/lib/redux/provider";
 import { DesktopLoginsSignups } from "./_DesktopLoginsSignups";
 import Link from "next/link";
 import MobileMenu from "@/components/MobileMenu";
-import Footer from "./_Footer";
 import NavbarShadow from "./_NavbarShadow";
 import ProfileUpdater from "@/components/profile/ProfileUpdater";
 import { Toaster } from "@/components/ui/sonner";
@@ -76,7 +75,7 @@ export default function RootLayout({
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-3">
                       <Image
-                        src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.png"}
+                        src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.svg"}
                         alt="WAYO Logo"
                         width={32}
                         height={32}

@@ -48,9 +48,10 @@ function LoginContent() {
       const result = await login({
         email: credentials.email,
         password: credentials.password,
+        role: "CUSTOMER",
       }).unwrap();
 
-      if (result.session) {
+      if (result) {
         router.push("/profile");
       }
     } catch (err) {
@@ -70,7 +71,7 @@ function LoginContent() {
             className="inline-flex items-center drop-shadow-lg gap-3 mb-6"
           >
             <Image
-              src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.png"}
+              src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.svg"}
               alt="WAYO Logo"
               width={32}
               height={32}
@@ -176,7 +177,7 @@ function LoginContent() {
           <p className="text-sm text-gray-600">
             Chưa có tài khoản?{" "}
             <Link
-              href="/signup"
+              href="/register"
               className="text-blue-600 hover:text-blue-800 font-medium underline"
             >
               Đăng ký

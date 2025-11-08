@@ -52,7 +52,7 @@ const ProfilePage: React.FC = () => {
   const { data: sessionData, isLoading: isLoadingSession } =
     useGetSessionQuery();
   const router = useRouter();
-  const userId = sessionData?.session?.user?.id;
+  const userId = sessionData?.user?.id;
 
   const { getLabels, getLabel } = useOptionLabels();
 
@@ -65,7 +65,7 @@ const ProfilePage: React.FC = () => {
     error: overviewError,
     isLoading: isLoadingOverview,
     isFetching: isFetchingOverview,
-  } = useGetProfileOverviewQuery(userId ?? "", {
+  } = useGetProfileOverviewQuery(userId?.toString() ?? "", {
     skip: !userId,
   });
 
@@ -331,7 +331,7 @@ const ProfilePage: React.FC = () => {
     });
     try {
       const profileUpdatePayload = {
-        id: userId,
+        id: userId?.toString(),
         name: profileDetails.name,
         type: [profileDetails.type],
         phone: profileDetails.phone,

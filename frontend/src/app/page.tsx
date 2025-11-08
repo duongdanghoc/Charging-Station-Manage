@@ -1,4 +1,3 @@
-import ShowcaseSection from "./_ShowcaseSection";
 import RoutingPage from "./routing/page";
 
 export const revalidate = 300; // Revalidate this page every 5 minutes

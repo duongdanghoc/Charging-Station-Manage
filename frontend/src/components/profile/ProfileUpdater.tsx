@@ -13,7 +13,7 @@ import {
  */
 export default function ProfileUpdater() {
   const { data: sessionData } = useGetSessionQuery();
-  const userId = sessionData?.session?.user?.id;
+  const userId = sessionData?.user?.id;
   const [updateProfile] = useUpdateProfileMutation();
   const [uploadAvatar] = useUploadAvatarMutation();
 
@@ -29,7 +29,7 @@ export default function ProfileUpdater() {
 
     const pendingPhone = localStorage.getItem("pending-phone-update");
     if (pendingPhone) {
-      updateProfile({ id: userId, phone: pendingPhone })
+      updateProfile({ id: userId?.toString(), phone: pendingPhone })
         .unwrap()
         .then(() => {
           localStorage.removeItem("pending-phone-update");
@@ -49,7 +49,7 @@ export default function ProfileUpdater() {
       if (!userId) return;
 
       const googleAvatarUrl =
-        sessionData?.session?.user?.user_metadata?.avatar_url;
+        sessionData?.user?.user_metadata?.avatar_url;
       if (!googleAvatarUrl) return;
 
       try {
@@ -74,7 +74,7 @@ export default function ProfileUpdater() {
 
         // Sau khi upload thành công → cập nhật URL vào profile
         await updateProfile({
-          id: userId,
+          id: userId?.toString(),
           avatar_url: uploadResponse.publicUrl,
         }).unwrap();
       } catch (err) {
@@ -85,7 +85,7 @@ export default function ProfileUpdater() {
     copyGoogleAvatar();
   }, [
     userId,
-    sessionData?.session?.user?.user_metadata?.avatar_url,
+    sessionData?.user?.user_metadata?.avatar_url,
     uploadAvatar,
     updateProfile,
     handleMutationError,

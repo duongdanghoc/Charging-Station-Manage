@@ -7,7 +7,7 @@ export const DesktopLoginsSignups: React.FC = () => {
                 Đăng nhập
             </a>
             <a
-                href="/signup"
+                href="/register"
                 className="inline-block px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-semibold"
             >
                 Đăng ký
