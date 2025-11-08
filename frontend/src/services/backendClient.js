@@ -43,7 +43,7 @@ export const db = {
 };
 
 export const auth = {
-    async session() { return apiRequest('/api/auth/session'); },
+    async session() { return apiRequest('/api/auth/register'); },
     async signOut() { return apiRequest('/api/auth/signout', { method: 'POST' }); },
     oauthRedirect(provider) { window.location.href = `/api/auth/oauth/${provider}`; },
 };

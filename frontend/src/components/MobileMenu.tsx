@@ -145,7 +145,7 @@ export default function MobileMenu() {
                     Đăng nhập
                   </Link>
                   <Link
-                    href="/signup"
+                    href="/register"
                     className="py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                     onClick={() => setIsOpen(false)}
                   >

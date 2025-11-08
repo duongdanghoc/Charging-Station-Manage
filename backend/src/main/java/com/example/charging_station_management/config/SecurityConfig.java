@@ -5,6 +5,7 @@ import com.example.charging_station_management.utils.AuthTokenFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -52,6 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/product").hasAuthority("ADMIN")
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/order").hasAnyAuthority("USER","ADMIN")
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webfonts/**", "/fonts/**").permitAll()
                         .anyRequest().authenticated()

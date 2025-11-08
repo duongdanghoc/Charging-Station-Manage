@@ -27,7 +27,7 @@ export default function AdminCheck({ children, fallback }: AdminCheckProps) {
     data: isAdmin,
     isLoading: isAdminCheckLoading,
     error: adminCheckError,
-  } = useCheckAdminStatusQuery(userId ?? "", {
+  } = useCheckAdminStatusQuery(userId?.toString() ?? "", {
     skip: !userId,
   });
 

@@ -7,7 +7,7 @@ Documentation tối ưu cho AI agents để hiểu nhanh source code.
 ```
 src/
 ├── app/              # Next.js pages (App Router)
-│   ├── login/signup/profile/  # Auth & user pages
+│   ├── login/register/profile/  # Auth & user pages
 │   ├── map/routing/           # Map interfaces
 │   ├── add-instance/          # VRP instance builder
 │   └── api/                   # API routes
