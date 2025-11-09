@@ -91,7 +91,8 @@ export const StationPinTool: React.FC<StationPinToolProps> = ({
       };
 
       // ✅ Gửi dữ liệu lên backend thay vì Supabase
-      const res = await fetch("http://localhost:8080/api/v1/stations", {
+      const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+      const res = await fetch(`${API_HOST}/api/v1/stations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(station),

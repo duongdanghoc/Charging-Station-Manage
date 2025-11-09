@@ -9,7 +9,4 @@ import java.util.Optional;
 @Repository
 public interface VendorRepository extends JpaRepository<Vendor, Integer> {
 
-    boolean existsByEmail(String email);
-
-    Optional<Vendor> findByEmail(String email);
 }

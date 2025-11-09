@@ -72,7 +72,7 @@ export interface FundingInfoPayload {
 export const profileApi = createApi({
   reducerPath: "profileApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080",
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001",
     credentials: "include",
   }),
   tagTypes: ["Profile", "Project"],

@@ -124,7 +124,7 @@ export default function MobileMenu() {
 
             {/* Auth Links */}
             <div className="mt-12 border-t border-gray-100 pt-8">
-              {data?.session ? (
+              {data ? (
                 <div className="space-y-6">
                   <div className="flex flex-col space-y-4">
                     <button

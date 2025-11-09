@@ -2,6 +2,7 @@ package com.example.charging_station_management.utils;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class JwtUtils {
 
@@ -25,50 +27,76 @@ public class JwtUtils {
     public String generateJwtToken(Authentication authentication) {
         CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
 
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+
         return Jwts.builder()
-                .subject(userPrincipal.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey())
+                .setSubject(userPrincipal.getUsername())
+                .claim("id", userPrincipal.getId())
+                .claim("name", userPrincipal.getName())
+                .claim("phone", userPrincipal.getPhone())
+                .claim("role", userPrincipal.getRole().name())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public String generateTokenFromUsername(String username) {
-        return Jwts.builder()
-                .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey())
-                .compact();
-    }
+    /**
+     * Get email from JWT token
+     */
+    public String getEmailFromJwtToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
 
-    public String getUserNameFromJwtToken(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .setSigningKey(key)
                 .build()
-                .parseSignedClaims(token)
-                .getPayload()
+                .parseClaimsJws(token)
+                .getBody()
                 .getSubject();
     }
 
+    /**
+     * Get user ID from JWT token
+     */
+    public Integer getUserIdFromJwtToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+
+        Claims claims = Jwts.parser()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.get("id", Integer.class);
+    }
+
+    /**
+     * Validate JWT token
+     */
     public boolean validateJwtToken(String authToken) {
         try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+
             Jwts.parser()
-                    .verifyWith(getSigningKey())
+                    .setSigningKey(key)
                     .build()
-                    .parseSignedClaims(authToken);
+                    .parseClaimsJws(authToken);
+
             return true;
         } catch (MalformedJwtException e) {
-            System.err.println("Invalid JWT token: " + e.getMessage());
+            log.error("Invalid JWT token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
-            System.err.println("JWT token is expired: " + e.getMessage());
+            log.error("JWT token is expired: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
-            System.err.println("JWT token is unsupported: " + e.getMessage());
+            log.error("JWT token is unsupported: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("JWT claims string is empty: " + e.getMessage());
-        } catch (JwtException e) {
-            System.err.println("JWT error: " + e.getMessage());
+            log.error("JWT claims string is empty: {}", e.getMessage());
         }
+
         return false;
     }
+
 }

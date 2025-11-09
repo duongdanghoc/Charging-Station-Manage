@@ -1,7 +1,8 @@
 // src/lib/services/StationService.ts
 import type { Station } from "./StationPinTool";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1/stations";
+const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+const API_BASE = `${API_HOST}/api/v1/stations`;
 
 export class StationService {
     /** Lưu trạm mới vào backend */

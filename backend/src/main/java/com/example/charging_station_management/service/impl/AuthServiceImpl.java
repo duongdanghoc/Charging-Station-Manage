@@ -1,15 +1,27 @@
 package com.example.charging_station_management.service.impl;
 
+import com.example.charging_station_management.dto.request.LoginRequest;
 import com.example.charging_station_management.dto.request.RegisterRequest;
+import com.example.charging_station_management.dto.response.JwtResponse;
 import com.example.charging_station_management.dto.response.RegisterResponse;
 import com.example.charging_station_management.entity.converters.Customer;
+import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
 import com.example.charging_station_management.entity.enums.Role;
 import com.example.charging_station_management.repository.CustomerRepository;
+import com.example.charging_station_management.repository.UserRepository;
 import com.example.charging_station_management.repository.VendorRepository;
 import com.example.charging_station_management.service.AuthService;
+import com.example.charging_station_management.utils.CustomUserDetails;
+import com.example.charging_station_management.utils.JwtUtils;
+import com.example.charging_station_management.utils.helper.UserHelper;
+import com.example.charging_station_management.utils.validation.UserValidation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +34,11 @@ public class AuthServiceImpl implements AuthService {
 
     private final CustomerRepository customerRepository;
     private final VendorRepository vendorRepository;
+    private final UserRepository userRepository;
+    private final UserValidation userValidation;
+    private final UserHelper userHelper;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -30,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Registering new user with email: {}", request.getEmail());
 
-        if (isEmailExists(request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             log.warn("Registration failed: Email already exists - {}", request.getEmail());
             throw new RuntimeException("Email đã được sử dụng");
         }
@@ -46,6 +63,39 @@ public class AuthServiceImpl implements AuthService {
             log.error("Invalid role: {}", request.getRole());
             throw new RuntimeException("Vai trò không hợp lệ");
         }
+    }
+
+    @Override
+    public JwtResponse authenticateUser(LoginRequest loginRequest){
+
+        userValidation.validateLoginCredentials(loginRequest);
+
+        User user = userHelper.findUserByEmail(loginRequest.getEmail());
+
+        userValidation.validateUserAccountActive(user);
+
+        // Authenticate user
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequest.getEmail(),
+                        loginRequest.getPassword()
+                )
+        );
+
+        // Set authentication context
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Generate JWT token
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        return new JwtResponse(
+                jwt,
+                user.getEmail(),
+                user.getName(),
+                determineUserRole(user)
+        );
     }
 
     private RegisterResponse registerCustomer(RegisterRequest request, String encodedPassword) {
@@ -94,10 +144,13 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    private boolean isEmailExists(String email) {
-        boolean exists = customerRepository.existsByEmail(email) ||
-                vendorRepository.existsByEmail(email);
-        log.debug("Email {} exists: {}", email, exists);
-        return exists;
+    private Role determineUserRole(User user) {
+        if (user instanceof Customer) {
+            return Role.CUSTOMER;
+        } else if (user instanceof Vendor) {
+            return Role.VENDOR;
+        }
+        throw new RuntimeException("Unknown user type");
     }
+
 }

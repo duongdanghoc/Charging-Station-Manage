@@ -3,33 +3,22 @@ package com.example.charging_station_management.entity.converters;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+
 import java.util.List;
 
-@Entity
-@Table(name = "vendors")
 @Data
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Vendor {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private String email;
-
-    @Column(nullable = false)
-    private String password;
-
-    @Column(nullable = false, length = 11)
-    private String phone;
-
-    private Integer status;
+@EqualsAndHashCode(callSuper = true)
+@Entity
+@Table(name = "vendors")
+@DiscriminatorValue("VENDOR")
+@PrimaryKeyJoinColumn(name = "user_id")
+public class Vendor extends User{
 
     @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL)
     private List<Station> stations;
