@@ -25,7 +25,7 @@ public class ElectricVehicle {
     private Customer customer;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "station_type")
+    @Column(nullable = false, length = 100)
     private VehicleType vehicleType;
 
     @Column(nullable = false)
@@ -41,7 +41,7 @@ public class ElectricVehicle {
     private BigDecimal batteryCapacity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "connector_type")
+    @Column(nullable = false, length = 100)
     private ConnectorType connectorType;
 
     @OneToMany(mappedBy = "electricVehicle", cascade = CascadeType.ALL)

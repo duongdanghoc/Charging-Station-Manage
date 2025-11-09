@@ -1,5 +1,7 @@
 package com.example.charging_station_management.entity.converters;
 
+import com.example.charging_station_management.entity.enums.ConnectorStatus;
+import com.example.charging_station_management.entity.enums.ConnectorType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,24 +25,16 @@ public class ChargingConnector {
     private ChargingPole pole;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "connector_type")
+    @Column(nullable = false, length = 100)
     private ConnectorType connectorType;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal maxPower;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "connector_status")
-    private ConnectorStatus status = ConnectorStatus.available;
+    @Column(nullable = false, length = 100)
+    private ConnectorStatus status = ConnectorStatus.AVAILABALE;
 
     @OneToMany(mappedBy = "chargingConnector", cascade = CascadeType.ALL)
     private List<ChargingSession> chargingSessions;
-
-    public enum ConnectorType {
-        Type1, Type2, CHAdeMO, CCS, Tesla
-    }
-
-    public enum ConnectorStatus {
-        available, in_use, out_of_service
-    }
 }
