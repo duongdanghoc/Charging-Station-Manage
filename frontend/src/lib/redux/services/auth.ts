@@ -11,14 +11,10 @@ interface User {
   email: string;
   phone: string;
   role: "CUSTOMER" | "VENDOR";
+  token?: string;
   user_metadata?: {
     avatar_url?: string;
   };
-}
-
-interface Session {
-  token: string;
-  expiresAt?: string;
 }
 
 // ============================================
@@ -28,7 +24,6 @@ interface Session {
 interface LoginCredentials {
   email: string;
   password: string;
-  role: "CUSTOMER" | "VENDOR";
 }
 
 interface SignupCredentials {
@@ -58,8 +53,10 @@ interface RegisterResponse {
 
 interface LoginResponse {
   token: string;
-  user: User;
-  message: string;
+  type?: string;     // "Bearer"
+  email: string;
+  name: string;
+  role: "CUSTOMER" | "VENDOR";
 }
 
 interface ValidationErrorResponse {
@@ -69,7 +66,6 @@ interface ValidationErrorResponse {
 
 interface AuthResponse {
   user: User | null;
-  session?: Session | null;
   error?: string | null;
 }
 
@@ -79,6 +75,13 @@ interface LogoutResponse {
 
 interface ResetPasswordResponse {
   message: string;
+}
+
+interface UserInfoResponse {
+  id: number;
+  email: string;
+  name: string;
+  role: "CUSTOMER" | "VENDOR";
 }
 
 // ============================================
@@ -108,7 +111,6 @@ export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080",
-    credentials: "include",
     prepareHeaders: (headers) => {
       // Add token from localStorage if exists
       const token = localStorage.getItem("authToken");
@@ -128,16 +130,6 @@ export const authApi = createApi({
         method: "POST",
         body,
       }),
-      async onQueryStarted(arg, { queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          // Save token and user to localStorage
-          localStorage.setItem("authToken", data.token);
-          localStorage.setItem("user", JSON.stringify(data.user));
-        } catch (error) {
-          console.error("Login failed:", error);
-        }
-      },
       invalidatesTags: ["Auth", "User"],
     }),
 
@@ -201,32 +193,50 @@ export const authApi = createApi({
       invalidatesTags: ["Auth", "User"],
     }),
 
-    /** 🧠 Get current session - TO BE IMPLEMENTED IN BACKEND */
+    /** 🧠 Get current session using JWT token */
+    /** 🧠 Get current session using JWT token (calls /auth/me on backend)
+     *  If backend call fails, falls back to localStorage-stored user/token.
+     */
     getSession: builder.query<AuthResponse, void>({
-      query: () => "/api/auth/register",
-      providesTags: ["Auth"],
-      transformResponse: (response: AuthResponse): AuthResponse => {
-        // Try to get user from localStorage if API response is empty
-        if (!response.user) {
-          const storedUser = localStorage.getItem("user");
-          const storedToken = localStorage.getItem("authToken");
+      query: () => ({
+        url: "/api/auth/me",
+        method: "GET",
+      }),
+      transformResponse: (response: unknown): AuthResponse => {
+        // If API call returns a user-like object, return it directly
+        const resp = response as UserInfoResponse | null;
+        if (resp && resp.id) {
+          return { 
+            user: {
+              id: resp.id,
+              name: resp.name,
+              email: resp.email,
+              role: resp.role,
+              phone: "",
+            },
+            error: null
+          };
+        }
 
-          if (storedUser && storedToken) {
-            try {
-              const parsedUser = JSON.parse(storedUser) as User;
-              return {
-                user: parsedUser,
-                session: { token: storedToken },
-                error: null,
-              };
-            } catch (error) {
-              console.error("Failed to parse stored user:", error);
-            }
+        // Otherwise fallback to localStorage
+        const storedUser = localStorage.getItem("user");
+        const storedToken = localStorage.getItem("authToken");
+
+        if (storedUser && storedToken) {
+          try {
+            const parsedUser = JSON.parse(storedUser) as User;
+            return {
+              user: { ...parsedUser, token: storedToken },
+              error: null,
+            };
+          } catch (e) {
+            console.error("Failed to parse stored user:", e);
           }
         }
 
-        return response;
+        return { user: null, error: null };
       },
+      providesTags: ["Auth"],
     }),
 
     /** 👤 Get current user from localStorage */

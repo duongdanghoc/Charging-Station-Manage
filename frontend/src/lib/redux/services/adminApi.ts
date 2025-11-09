@@ -6,7 +6,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const adminApi = createApi({
   reducerPath: "adminApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080", // đổi sang URL BE thật
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001", // đổi sang URL BE thật
   }),
   tagTypes: ["AdminStatus"],
   endpoints: (builder) => ({
