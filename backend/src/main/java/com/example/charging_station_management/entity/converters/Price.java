@@ -1,5 +1,6 @@
 package com.example.charging_station_management.entity.converters;
 
+import com.example.charging_station_management.entity.enums.PriceName;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -23,7 +24,7 @@ public class Price {
     private ChargingPole chargingPole;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "price_name")
+    @Column(nullable = false, length = 100)
     private PriceName name;
 
     @Column(precision = 15, scale = 2)
@@ -39,19 +40,4 @@ public class Price {
 
     @Column(nullable = false)
     private LocalTime endTime;
-
-    public enum PriceName {
-        PENALTY("phí phạt"),
-        CHARGING("phí sạc");
-
-        private final String displayName;
-
-        PriceName(String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
-    }
 }

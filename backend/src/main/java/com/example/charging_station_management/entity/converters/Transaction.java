@@ -32,11 +32,11 @@ public class Transaction {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "payment_method")
+    @Column(nullable = false, length = 100)
     private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "payment_status")
+    @Column(nullable = false, length = 100)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     private String bankName;

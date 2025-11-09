@@ -39,7 +39,7 @@ public class Station {
     private Integer status;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "station_type")
+    @Column(nullable = false, length = 100)
     private VehicleType type;
 
     @OneToMany(mappedBy = "station", cascade = CascadeType.ALL)

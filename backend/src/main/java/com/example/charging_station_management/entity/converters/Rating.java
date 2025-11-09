@@ -25,7 +25,7 @@ public class Rating {
     private Customer customer;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "target_type")
+    @Column(nullable = false, length = 100)
     private TargetType targetType;
 
     @Column(nullable = false)

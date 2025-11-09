@@ -1,5 +1,6 @@
 package com.example.charging_station_management.entity.converters;
 
+import com.example.charging_station_management.entity.enums.SessionStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,13 +38,9 @@ public class ChargingSession {
     private BigDecimal cost;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "session_status")
-    private SessionStatus status = SessionStatus.pending;
+    @Column(nullable = false, length = 100)
+    private SessionStatus status = SessionStatus.PENDING;
 
     @OneToOne(mappedBy = "chargingSession", cascade = CascadeType.ALL)
     private Transaction transaction;
-
-    public enum SessionStatus {
-        pending, charging, completed, cancelled, failed
-    }
 }

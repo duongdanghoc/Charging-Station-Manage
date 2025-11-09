@@ -24,7 +24,7 @@ DROP TABLE IF EXISTS users CASCADE;
 -- =============================================
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('CUSTOMER', 'VENDOR')),
+    user_type VARCHAR(20) NOT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -72,8 +72,8 @@ CREATE TABLE stations (
     name VARCHAR(255) NOT NULL,
     open_time TIME NOT NULL,
     close_time TIME NOT NULL,
-    status SMALLINT DEFAULT 1 CHECK (status IN (0, 1)),
-    type VARCHAR(50) NOT NULL CHECK (type IN ('CAR', 'MOTORBIKE', 'BICYCLE')),
+    status SMALLINT,
+    type VARCHAR(50) NOT NULL,
     FOREIGN KEY (vendor_id) REFERENCES vendors(user_id) ON DELETE CASCADE,
     FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
 );
@@ -84,7 +84,7 @@ CREATE TABLE stations (
 CREATE TABLE ratings (
     id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL,
-    target_type VARCHAR(50) NOT NULL CHECK (target_type IN ('VENDOR', 'STATION', 'RESCUE_STATION')),
+    target_type VARCHAR(50) NOT NULL,
     target_id INT NOT NULL,
     stars INT NOT NULL CHECK (stars BETWEEN 1 AND 5),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -112,9 +112,9 @@ CREATE TABLE charging_poles (
 CREATE TABLE charging_connectors (
     id SERIAL PRIMARY KEY,
     pole_id INT NOT NULL,
-    connector_type VARCHAR(50) NOT NULL CHECK (connector_type IN ('TYPE1', 'TYPE2', 'CHADEMO', 'CCS', 'TESLA')),
+    connector_type VARCHAR(50) NOT NULL,
     max_power DECIMAL(10,2) NOT NULL,
-    status VARCHAR(50) DEFAULT 'AVAILABLE' CHECK (status IN ('AVAILABLE', 'IN_USE', 'OUT_OF_SERVICE')),
+    status VARCHAR(50),
     FOREIGN KEY (pole_id) REFERENCES charging_poles(id) ON DELETE CASCADE
 );
 
@@ -124,12 +124,12 @@ CREATE TABLE charging_connectors (
 CREATE TABLE electric_vehicles (
     id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL,
-    vehicle_type VARCHAR(50) NOT NULL CHECK (vehicle_type IN ('CAR', 'MOTORBIKE', 'BICYCLE')),
+    vehicle_type VARCHAR(50) NOT NULL,
     brand VARCHAR(255) NOT NULL,
     model VARCHAR(255) NOT NULL,
     license_plate VARCHAR(50) UNIQUE NOT NULL,
     battery_capacity DECIMAL(10,2) NOT NULL,
-    connector_type VARCHAR(50) NOT NULL CHECK (connector_type IN ('TYPE1', 'TYPE2', 'CHADEMO', 'CCS', 'TESLA')),
+    connector_type VARCHAR(50) NOT NULL,
     FOREIGN KEY (customer_id) REFERENCES customers(user_id) ON DELETE CASCADE
 );
 
@@ -144,7 +144,7 @@ CREATE TABLE charging_sessions (
     end_time TIMESTAMP,
     energy_kwh DECIMAL(10,2),
     cost DECIMAL(15,2),
-    status VARCHAR(50) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CHARGING', 'COMPLETED', 'CANCELLED', 'FAILED')),
+    status VARCHAR(50),
     FOREIGN KEY (electric_vehicle_id) REFERENCES electric_vehicles(id) ON DELETE CASCADE,
     FOREIGN KEY (charging_connector_id) REFERENCES charging_connectors(id) ON DELETE CASCADE
 );
@@ -157,8 +157,8 @@ CREATE TABLE transactions (
     charging_session_id INT UNIQUE NOT NULL,
     customer_id INT NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
-    payment_method VARCHAR(50) NOT NULL CHECK (payment_method IN ('CASH', 'CREDIT_CARD', 'E_WALLET', 'BANK_TRANSFER')),
-    payment_status VARCHAR(50) DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
+    payment_method VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(50),
     bank_name VARCHAR(255),
     account_number VARCHAR(50),
     payment_time TIMESTAMP,
@@ -173,7 +173,7 @@ CREATE TABLE transactions (
 CREATE TABLE prices (
     id SERIAL PRIMARY KEY,
     charging_pole_id INT NOT NULL,
-    name VARCHAR(50) NOT NULL CHECK (name IN ('PENALTY', 'CHARGING')),
+    name VARCHAR(50) NOT NULL,
     price DECIMAL(15,2) NOT NULL,
     effective_from DATE NOT NULL,
     effective_to DATE,
