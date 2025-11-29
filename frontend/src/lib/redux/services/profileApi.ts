@@ -46,6 +46,19 @@ export interface ProfileOverview {
   project: ProjectWithFounder | null;
 }
 
+export interface RecentActivity {
+  id: string;
+  type: string;
+  stationName?: string;
+  description?: string;
+  timestamp: string;
+}
+
+export interface DashboardResponse {
+  profile: DbProfile | null;
+  recentActivities: RecentActivity[] | null;
+}
+
 export interface ProjectBasicsPayload {
   title: string | null;
   tags: string[];
@@ -72,7 +85,7 @@ export interface FundingInfoPayload {
 export const profileApi = createApi({
   reducerPath: "profileApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001",
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     credentials: "include",
   }),
   tagTypes: ["Profile", "Project"],
@@ -147,6 +160,13 @@ export const profileApi = createApi({
           : [],
     }),
 
+    // 🔹 Get customer dashboard
+    getDashboard: builder.query<DashboardResponse, string>({
+      query: (userId) => `/api/customer/dashboard?userId=${userId}`,
+      providesTags: (result, error, userId) =>
+        userId ? [{ type: "Profile", id: userId }, { type: "Project", id: userId }] : [],
+    }),
+
     // 🔹 Update project basics
     updateProjectBasics: builder.mutation<
       DbProject,
@@ -218,6 +238,8 @@ export const {
   useUpdateProfileMutation,
   useUploadAvatarMutation,
   useGetProfileOverviewQuery,
+  // Dashboard API
+  useGetDashboardQuery,
   useGetAllProjectsQuery,
   useGetProjectQuery,
   useGetProjectByIdQuery,

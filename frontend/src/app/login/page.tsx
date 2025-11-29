@@ -83,11 +83,11 @@ function LoginContent() {
 
       console.log("Login successful, redirecting...");
 
-      // Redirect based on role
+      // Redirect based on role (replace to prevent navigation history issues)
       if (decoded.role === "VENDOR") {
-        router.push("/vendor/dashboard");
+        router.replace("/vendor/dashboard");
       } else {
-        router.push("/customer/dashboard");
+        router.replace("/customer/dashboard");
       }
     } catch (err: unknown) {
       console.error("Đăng nhập thất bại:", err);
@@ -99,8 +99,8 @@ function LoginContent() {
           alert(
             "❌ Không thể kết nối đến server!\n\n" +
               "✅ Kiểm tra:\n" +
-              "1. Backend đang chạy? (port 8080)\n" +
-              "2. File .env.local có NEXT_PUBLIC_API_BASE_URL=http://localhost:8080?\n" +
+                  "1. Backend đang chạy? (port 8080)\n" +
+                  "2. File .env.local có NEXT_PUBLIC_API_BASE_URL=http://localhost:8080?\n" +
               "3. CORS đã cấu hình?"
           );
         } else if (error.data?.message) {

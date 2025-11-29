@@ -220,7 +220,7 @@ const AddInstanceBuilder: React.FC<AddInstanceBuilderProps> = ({ onBack, onInsta
 
     const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string) => {
         setNotification({ type, message });
-        window.setTimeout(() => setNotification(null), 3000);
+        window.setTimeout(() => setNotification(null), 8080);
     }, []);
 
     // Map parsed Instance (from reader) to local builder state

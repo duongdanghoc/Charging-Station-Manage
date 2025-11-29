@@ -54,7 +54,7 @@ export default function ProfileUpdater() {
 
       try {
         // Kiểm tra avatar hiện tại trong backend
-        const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+        const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL;
         const profileRes = await fetch(`${API_HOST}/api/v1/profile/${userId}`);
         const profile = await profileRes.json();
 

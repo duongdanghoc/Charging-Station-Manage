@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
     setError(null);
 
     try {
-      const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+      const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL;
       const res = await fetch(`${API_HOST}/api/v1/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,7 +62,7 @@ export default function ResetPasswordPage() {
       }
 
       setSuccess(true);
-      setTimeout(() => router.push("/login"), 3000);
+      setTimeout(() => router.push("/login"), 8080);
     } catch (err) {
       console.error(err);
       setError("Đã xảy ra lỗi hệ thống. Vui lòng thử lại.");
