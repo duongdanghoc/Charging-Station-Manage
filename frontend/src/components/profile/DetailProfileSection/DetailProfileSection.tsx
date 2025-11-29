@@ -11,7 +11,6 @@ import {
     useUpdateCustomerProfileMutation, 
     useUpdateVendorProfileMutation 
 } from "@/lib/redux/services/auth";
-import { useGetSessionQuery } from "@/lib/redux/services/auth";
 
 const STATUS_RESET_TIMEOUT = 2400;
 
