@@ -8,7 +8,6 @@ import {
   PROFILE_TYPE_OPTIONS,
   PROJECT_CATEGORY_OPTIONS,
 } from "@/lib/constants/options";
-import { Currency } from "lucide-react";
 
 /**
  * Combines class names with Tailwind's merge function

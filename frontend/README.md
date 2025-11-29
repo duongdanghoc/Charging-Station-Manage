@@ -154,7 +154,7 @@ NEXT_PUBLIC_GEOCODING_PROVIDER=goong
 NEXT_PUBLIC_GOONG_API_KEY=your_goong_key
 
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_API_BASE_PATH=/api
 
 # Branding
@@ -187,7 +187,7 @@ NEXT_PUBLIC_DEFAULT_RESTART_THRESHOLD=2
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000) trong browser.
+Mở [http://localhost:8080](http://localhost:8080) trong browser.
 
 ### Bước 5: Build cho production
 

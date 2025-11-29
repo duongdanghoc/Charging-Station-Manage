@@ -1,7 +1,7 @@
 // src/config/config.ts
 const config = {
     api: {
-        baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+        baseURL: process.env.NEXT_PUBLIC_API_URL,
         basePath: process.env.NEXT_PUBLIC_API_BASE_PATH || '/api'
     },
     mapbox: {

@@ -110,7 +110,7 @@ function isErrorWithData(
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080",
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     prepareHeaders: (headers) => {
       // Add token from localStorage if exists
       const token = localStorage.getItem("authToken");
@@ -198,43 +198,57 @@ export const authApi = createApi({
      *  If backend call fails, falls back to localStorage-stored user/token.
      */
     getSession: builder.query<AuthResponse, void>({
-      query: () => ({
-        url: "/api/auth/me",
-        method: "GET",
-      }),
-      transformResponse: (response: unknown): AuthResponse => {
-        // If API call returns a user-like object, return it directly
-        const resp = response as UserInfoResponse | null;
+      async queryFn(_arg, _queryApi, _extraOptions, fetchWithBQ) {
+        // Try server session first (returns 200 + user body when token is valid)
+        const result = await fetchWithBQ({ url: "/api/auth/me", method: "GET" });
+        if (result.error) {
+          // If server returns an error (401/403 or network error), fall back to localStorage
+          const storedUser = localStorage.getItem("user");
+          const storedToken = localStorage.getItem("authToken");
+          if (storedUser && storedToken) {
+            try {
+              const parsedUser = JSON.parse(storedUser) as User;
+              return {
+                data: { user: { ...parsedUser, token: storedToken }, error: null },
+              };
+            } catch (e) {
+              console.error("Failed to parse stored user:", e);
+            }
+          }
+          return { error: result.error as FetchBaseQueryError };
+        }
+
+        // On success, map server response to AuthResponse
+        const resp = result.data as UserInfoResponse | null;
         if (resp && resp.id) {
-          return { 
-            user: {
-              id: resp.id,
-              name: resp.name,
-              email: resp.email,
-              role: resp.role,
-              phone: "",
+          return {
+            data: {
+              user: {
+                id: resp.id,
+                name: resp.name,
+                email: resp.email,
+                role: resp.role,
+                phone: "",
+              },
+              error: null,
             },
-            error: null
           };
         }
 
-        // Otherwise fallback to localStorage
+        // If server response is unexpected, fallback to localStorage
         const storedUser = localStorage.getItem("user");
         const storedToken = localStorage.getItem("authToken");
-
         if (storedUser && storedToken) {
           try {
             const parsedUser = JSON.parse(storedUser) as User;
             return {
-              user: { ...parsedUser, token: storedToken },
-              error: null,
+              data: { user: { ...parsedUser, token: storedToken }, error: null },
             };
           } catch (e) {
             console.error("Failed to parse stored user:", e);
           }
         }
-
-        return { user: null, error: null };
+        return { data: { user: null, error: null } };
       },
       providesTags: ["Auth"],
     }),

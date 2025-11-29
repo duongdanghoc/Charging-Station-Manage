@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-  const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+  const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL;
   const res = await fetch(`${API_HOST}/api/v1/admin/check?userId=${userId}`);
     const data = await res.json();
 
