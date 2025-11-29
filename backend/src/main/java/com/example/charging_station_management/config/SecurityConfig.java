@@ -76,22 +76,22 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable()) // Disable CSRF for API
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless session for JWT
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Allow OPTIONS requests (CORS preflight)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Allow public access to auth endpoints
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
-                        // Require authentication for /me endpoint
                         .requestMatchers("/api/auth/me").authenticated()
-                        // All other requests need authentication
+                        .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")
+                        .requestMatchers("/api/profile/**").authenticated()
+                        .requestMatchers("/api/profiles/**").authenticated()
+                        .requestMatchers("/api/vendor/**").hasRole("VENDOR")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Add JWT filter
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
