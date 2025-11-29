@@ -7,6 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TagInput from "@/components/common/TagInput";
 import { UserRole, roleLabels } from "../types";
+import { 
+    useUpdateCustomerProfileMutation, 
+    useUpdateVendorProfileMutation 
+} from "@/lib/redux/services/auth";
+import { useGetSessionQuery } from "@/lib/redux/services/auth";
 
 const STATUS_RESET_TIMEOUT = 2400;
 
@@ -125,6 +130,7 @@ const CustomerDetailForm: React.FC<FormWithStatusProps<CustomerDetail>> = ({
 }) => {
     const [formValues, setFormValues] = useState(defaultValues);
     const [isSaved, setIsSaved] = useState(false);
+    const [updateCustomerProfile, { isLoading: isUpdating, error }] = useUpdateCustomerProfileMutation();
 
     const handleChange = (field: keyof CustomerDetail) => (
         event: React.ChangeEvent<HTMLInputElement>
@@ -132,12 +138,27 @@ const CustomerDetailForm: React.FC<FormWithStatusProps<CustomerDetail>> = ({
         setFormValues((prev) => ({ ...prev, [field]: event.target.value }));
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        onSubmit?.(formValues);
-        setIsSaved(true);
-        const timeout = setTimeout(() => setIsSaved(false), STATUS_RESET_TIMEOUT);
-        return () => clearTimeout(timeout);
+        
+        try {
+            // Call API to update profile
+            await updateCustomerProfile({
+                name: formValues.fullName,
+                phone: formValues.phone,
+                password: formValues.password !== "********" ? formValues.password : undefined,
+            }).unwrap();
+            
+            // Call parent callback if provided
+            onSubmit?.(formValues);
+            
+            setIsSaved(true);
+            const timeout = setTimeout(() => setIsSaved(false), STATUS_RESET_TIMEOUT);
+            return () => clearTimeout(timeout);
+        } catch (err) {
+            console.error("Failed to update customer profile:", err);
+            // You can add error handling UI here
+        }
     };
 
     return (
@@ -183,7 +204,16 @@ const CustomerDetailForm: React.FC<FormWithStatusProps<CustomerDetail>> = ({
                     />
                 </Field>
             </div>
-            <FormActions isSaved={isSaved} />
+            {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">
+                        {'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data
+                            ? String(error.data.message)
+                            : 'Có lỗi xảy ra khi cập nhật thông tin'}
+                    </p>
+                </div>
+            )}
+            <FormActions isSaved={isSaved} isLoading={isUpdating} />
         </form>
     );
 };
@@ -194,6 +224,7 @@ const SupplierDetailForm: React.FC<FormWithStatusProps<SupplierDetail>> = ({
 }) => {
     const [formValues, setFormValues] = useState(defaultValues);
     const [isSaved, setIsSaved] = useState(false);
+    const [updateVendorProfile, { isLoading: isUpdating, error }] = useUpdateVendorProfileMutation();
 
     const handleChange = (field: keyof SupplierDetail) => (
         event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -205,12 +236,27 @@ const SupplierDetailForm: React.FC<FormWithStatusProps<SupplierDetail>> = ({
         setFormValues((prev) => ({ ...prev, verified: !prev.verified }));
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        onSubmit?.(formValues);
-        setIsSaved(true);
-        const timeout = setTimeout(() => setIsSaved(false), STATUS_RESET_TIMEOUT);
-        return () => clearTimeout(timeout);
+        
+        try {
+            // Call API to update vendor profile
+            await updateVendorProfile({
+                legalEntity: formValues.legalEntity,
+                address: formValues.address,
+                representative: formValues.representative,
+                verified: formValues.verified,
+            }).unwrap();
+            
+            // Call parent callback if provided
+            onSubmit?.(formValues);
+            
+            setIsSaved(true);
+            const timeout = setTimeout(() => setIsSaved(false), STATUS_RESET_TIMEOUT);
+            return () => clearTimeout(timeout);
+        } catch (err) {
+            console.error("Failed to update vendor profile:", err);
+        }
     };
 
     return (
@@ -267,7 +313,16 @@ const SupplierDetailForm: React.FC<FormWithStatusProps<SupplierDetail>> = ({
                     {formValues.verified ? "Hủy xác thực" : "Đánh dấu đã xác thực"}
                 </Button>
             </div>
-            <FormActions isSaved={isSaved} />
+            {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">
+                        {'data' in error && error.data && typeof error.data === 'object' && 'message' in error.data
+                            ? String(error.data.message)
+                            : 'Có lỗi xảy ra khi cập nhật thông tin'}
+                    </p>
+                </div>
+            )}
+            <FormActions isSaved={isSaved} isLoading={isUpdating} />
         </form>
     );
 };
@@ -357,9 +412,10 @@ const Field: React.FC<FieldProps> = ({ label, htmlFor, children }) => (
 
 interface FormActionsProps {
     isSaved: boolean;
+    isLoading?: boolean;
 }
 
-const FormActions: React.FC<FormActionsProps> = ({ isSaved }) => (
+const FormActions: React.FC<FormActionsProps> = ({ isSaved, isLoading = false }) => (
     <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-100">
         <p className="text-xs text-gray-500">
             Thay đổi sẽ được lưu vào hồ sơ của bạn sau khi bấm &ldquo;Lưu cập nhật&rdquo;.
@@ -370,7 +426,9 @@ const FormActions: React.FC<FormActionsProps> = ({ isSaved }) => (
                     <CheckCircle2 className="size-4" /> Đã lưu bản nháp
                 </span>
             )}
-            <Button type="submit">Lưu cập nhật</Button>
+            <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Đang lưu..." : "Lưu cập nhật"}
+            </Button>
         </div>
     </div>
 );

@@ -38,6 +38,19 @@ interface ResetPasswordCredentials {
   email: string;
 }
 
+interface UpdateCustomerProfileRequest {
+  name: string;
+  phone: string;
+  password?: string;
+}
+
+interface UpdateVendorProfileRequest {
+  legalEntity: string;
+  address: string;
+  representative: string;
+  verified?: boolean;
+}
+
 // ============================================
 // Response Types
 // ============================================
@@ -82,6 +95,11 @@ interface UserInfoResponse {
   email: string;
   name: string;
   role: "CUSTOMER" | "VENDOR";
+}
+
+interface UpdateProfileResponse {
+  message: string;
+  user: User;
 }
 
 // ============================================
@@ -272,6 +290,48 @@ export const authApi = createApi({
       },
       providesTags: ["User"],
     }),
+
+    /** 📝 Update customer profile */
+    updateCustomerProfile: builder.mutation<UpdateProfileResponse, UpdateCustomerProfileRequest>({
+      query: (body) => ({
+        url: "/api/customer/profile",
+        method: "PUT",
+        body,
+      }),
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          // Update localStorage with new user data
+          if (data.user) {
+            localStorage.setItem("user", JSON.stringify(data.user));
+          }
+        } catch (error) {
+          console.error("Failed to update customer profile:", error);
+        }
+      },
+      invalidatesTags: ["Auth", "User"],
+    }),
+
+    /** 📝 Update vendor profile */
+    updateVendorProfile: builder.mutation<UpdateProfileResponse, UpdateVendorProfileRequest>({
+      query: (body) => ({
+        url: "/api/vendor/profile",
+        method: "PUT",
+        body,
+      }),
+      async onQueryStarted(arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          // Update localStorage with new user data
+          if (data.user) {
+            localStorage.setItem("user", JSON.stringify(data.user));
+          }
+        } catch (error) {
+          console.error("Failed to update vendor profile:", error);
+        }
+      },
+      invalidatesTags: ["Auth", "User"],
+    }),
   }),
 });
 
@@ -282,6 +342,8 @@ export const {
   useGetSessionQuery,
   useResetPasswordMutation,
   useGetCurrentUserQuery,
+  useUpdateCustomerProfileMutation,
+  useUpdateVendorProfileMutation,
 } = authApi;
 
 // ============================================
@@ -298,6 +360,9 @@ export type {
   AuthResponse,
   LogoutResponse,
   ResetPasswordResponse,
+  UpdateCustomerProfileRequest,
+  UpdateVendorProfileRequest,
+  UpdateProfileResponse,
 };
 
 // ============================================
