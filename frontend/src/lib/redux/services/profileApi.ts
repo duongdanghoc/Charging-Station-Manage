@@ -1,6 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// --- Interfaces ---
 export interface DbProfile {
   id: string;
   name: string | null;
@@ -81,24 +80,29 @@ export interface FundingInfoPayload {
   endDate?: string | null;
 }
 
-// --- API Slice ---
 export const profileApi = createApi({
   reducerPath: "profileApi",
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      headers.set("Content-Type", "application/json");
+      return headers;
+    },
     credentials: "include",
   }),
   tagTypes: ["Profile", "Project"],
 
   endpoints: (builder) => ({
-    // 🔹 Get user profile
     getProfile: builder.query<DbProfile, string>({
       query: (userId) => `/api/profile/${userId}`,
       providesTags: (result) =>
         result ? [{ type: "Profile", id: result.id }] : [],
     }),
 
-    // 🔹 Update profile
     updateProfile: builder.mutation<DbProfile, Partial<DbProfile> & { id: string }>({
       query: ({ id, ...body }) => ({
         url: `/api/profile/${id}`,
@@ -109,7 +113,6 @@ export const profileApi = createApi({
         arg ? [{ type: "Profile", id: arg.id }] : [],
     }),
 
-    // 🔹 Upload avatar
     uploadAvatar: builder.mutation<{ path: string; publicUrl: string }, { file: File }>({
       query: ({ file }) => {
         const formData = new FormData();
@@ -122,7 +125,6 @@ export const profileApi = createApi({
       },
     }),
 
-    // 🔹 Get all projects
     getAllProjects: builder.query<ProjectWithFounder[], void>({
       query: () => `/api/projects`,
       providesTags: (result) =>
@@ -134,21 +136,18 @@ export const profileApi = createApi({
           : [{ type: "Project", id: "LIST" }],
     }),
 
-    // 🔹 Get project by user ID
     getProject: builder.query<DbProject, string>({
       query: (userId) => `/api/projects/user/${userId}`,
       providesTags: (result, error, userId) =>
         userId ? [{ type: "Project", id: userId }] : [],
     }),
 
-    // 🔹 Get project by project ID
     getProjectById: builder.query<ProjectWithFounder, string>({
       query: (projectId) => `/api/projects/${projectId}`,
       providesTags: (result, error, id) =>
         id ? [{ type: "Project", id }] : [],
     }),
 
-    // 🔹 Get profile overview
     getProfileOverview: builder.query<ProfileOverview, string>({
       query: (userId) => `/api/profile/${userId}/overview`,
       providesTags: (result, error, userId) =>
@@ -160,14 +159,12 @@ export const profileApi = createApi({
           : [],
     }),
 
-    // 🔹 Get customer dashboard
     getDashboard: builder.query<DashboardResponse, string>({
       query: (userId) => `/api/customer/dashboard?userId=${userId}`,
       providesTags: (result, error, userId) =>
         userId ? [{ type: "Profile", id: userId }, { type: "Project", id: userId }] : [],
     }),
 
-    // 🔹 Update project basics
     updateProjectBasics: builder.mutation<
       DbProject,
       { userId: string; basics: ProjectBasicsPayload }
@@ -183,7 +180,6 @@ export const profileApi = createApi({
       ],
     }),
 
-    // 🔹 Update contact info
     updateProjectContact: builder.mutation<
       DbProject,
       { userId: string; contact: ProjectContactInfoPayload }
@@ -199,7 +195,6 @@ export const profileApi = createApi({
       ],
     }),
 
-    // 🔹 Update funding info
     updateProjectFunding: builder.mutation<
       DbProject,
       { userId: string; fundingInfo: FundingInfoPayload }
@@ -215,7 +210,6 @@ export const profileApi = createApi({
       ],
     }),
 
-    // 🔹 Update about
     updateProjectAbout: builder.mutation<
       DbProject,
       { userId: string; about: string }
@@ -238,7 +232,6 @@ export const {
   useUpdateProfileMutation,
   useUploadAvatarMutation,
   useGetProfileOverviewQuery,
-  // Dashboard API
   useGetDashboardQuery,
   useGetAllProjectsQuery,
   useGetProjectQuery,
