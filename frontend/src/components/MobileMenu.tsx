@@ -31,10 +31,20 @@ export default function MobileMenu() {
   const handleLogout = async () => {
     try {
       await logout().unwrap();
-      setIsOpen(false);
-      router.push("/login");
     } catch (error) {
       console.error("Logout failed:", error);
+    } finally {
+      // Ensure client-side session cleared and UI refreshed
+      try {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
+      } catch (e) {
+        console.warn("Failed to clear localStorage during logout:", e);
+      }
+      setIsOpen(false);
+      try {
+        router.refresh();
+      } catch (_) {}
       router.push("/login");
     }
   };
