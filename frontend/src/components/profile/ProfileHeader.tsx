@@ -24,7 +24,14 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onEdit }) => {
     <header className="flex flex-col sm:flex-row items-center gap-6 sm:pr-8">
       <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
         <Image
-          src={user.avatarUrl || "/avatar/default-avatar.jpg"}
+          src={
+            user.avatarUrl ||
+            (user.roleDisplayText === "VENDOR"
+              ? "/vendor.png"
+              : user.roleDisplayText === "ADMIN"
+              ? "/admin.png"
+              : "/customer.png")
+          }
           alt={`${user.name}'s avatar`}
           fill
           className="rounded-full object-cover border-2 border-white shadow-md"

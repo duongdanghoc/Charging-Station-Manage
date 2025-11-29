@@ -178,16 +178,18 @@ export const authApi = createApi({
         url: "/api/auth/logout",
         method: "POST",
       }),
-      async onQueryStarted(arg, { queryFulfilled }) {
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
-          // Clear localStorage
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("user");
         } catch {
-          // Clear localStorage even if API call fails
+          // Continue even if API call fails
+        } finally {
+          // Always clear localStorage and reset cache
           localStorage.removeItem("authToken");
           localStorage.removeItem("user");
+          
+          // Reset the entire auth API cache
+          dispatch(authApi.util.resetApiState());
         }
       },
       invalidatesTags: ["Auth", "User"],
