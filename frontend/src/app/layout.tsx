@@ -85,7 +85,8 @@ export default function RootLayout({
                     </Link>
 
                     {/* Desktop Navigation Links (map-aware) */}
-                    <MapHeader defaultLinks={navLinks} mapLinks={MAP_LINKS} />
+                    {/* TODO bổ sung các header tại đây*/}
+                    {/* <MapHeader defaultLinks={navLinks} mapLinks={MAP_LINKS} /> */}
                   </div>
 
                   {/* User navigation and mobile menu */}

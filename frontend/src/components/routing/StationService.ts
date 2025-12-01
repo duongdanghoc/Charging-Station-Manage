@@ -2,7 +2,7 @@
 import type { Station } from "./StationPinTool";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL;
-const API_BASE = `${API_HOST}/api/v1/stations`;
+const API_BASE = `${API_HOST}/api/stations`;
 
 export class StationService {
     /** Lưu trạm mới vào backend */
@@ -25,14 +25,16 @@ export class StationService {
     static async getAllStations(): Promise<Station[]> {
         const res = await fetch(`${API_BASE}`);
         if (!res.ok) throw new Error("Không thể lấy danh sách trạm");
-        return res.json();
+        const data = await res.json();
+        return this.processResponse(data);
     }
 
     /** Lấy trạm theo loại */
     static async getStationsByType(type: string): Promise<Station[]> {
         const res = await fetch(`${API_BASE}?type=${encodeURIComponent(type)}`);
         if (!res.ok) throw new Error("Không thể lấy trạm theo loại");
-        return res.json();
+        const data = await res.json();
+        return this.processResponse(data);
     }
 
     /** Lấy trạm trong vùng toạ độ */
@@ -50,7 +52,32 @@ export class StationService {
         });
         const res = await fetch(`${API_BASE}/bounds?${query}`);
         if (!res.ok) throw new Error("Không thể lấy trạm trong khu vực");
-        return res.json();
+        const data = await res.json();
+        return this.processResponse(data);
+    }
+
+    /** Xử lý response từ API (hỗ trợ cả array và Page object) */
+    private static processResponse(data: any): Station[] {
+        const items = Array.isArray(data) ? data : (data.content || []);
+        return items.map((item: any) => this.mapToStation(item));
+    }
+
+    /** Map dữ liệu từ API sang model Station của frontend */
+    private static mapToStation(item: any): Station {
+        return {
+            id: item.id?.toString(),
+            name: item.name,
+            // Map API type (CAR/MOTORBIKE) to frontend type (charging/rescue)
+            type: "charging", 
+            lat: Number(item.latitude), // Ensure number
+            lng: Number(item.longitude), // Ensure number
+            description: item.address, 
+            contact: item.vendorName,
+            // Preserve original data and map extra fields for StationListItem
+            ...item,
+            rating: item.averageRating,
+            status: item.status === 1 ? "Hoạt động" : "Bảo trì",
+        };
     }
 
     /** Cập nhật thông tin trạm */
