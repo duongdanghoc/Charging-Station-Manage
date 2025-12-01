@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import TagInput from "@/components/common/TagInput";
 import { UserRole, roleLabels } from "../types";
 import { 
+    useGetSessionQuery,
     useUpdateCustomerProfileMutation, 
     useUpdateVendorProfileMutation 
 } from "@/lib/redux/services/auth";
@@ -137,15 +138,18 @@ const CustomerDetailForm: React.FC<FormWithStatusProps<CustomerDetail>> = ({
         setFormValues((prev) => ({ ...prev, [field]: event.target.value }));
     };
 
+    const { data: session } = useGetSessionQuery();
+    const userId = session?.user?.id;
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         
         try {
             // Call API to update profile
             await updateCustomerProfile({
+                userId : userId!,
                 name: formValues.fullName,
                 phone: formValues.phone,
-                password: formValues.password !== "********" ? formValues.password : undefined,
             }).unwrap();
             
             // Call parent callback if provided
@@ -179,27 +183,6 @@ const CustomerDetailForm: React.FC<FormWithStatusProps<CustomerDetail>> = ({
                         onChange={handleChange("phone")}
                         placeholder="VD: 0901 234 567"
                         required
-                    />
-                </Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Mật khẩu" htmlFor="customer-password">
-                    <Input
-                        id="customer-password"
-                        type="password"
-                        value={formValues.password}
-                        onChange={handleChange("password")}
-                        placeholder="********"
-                        required
-                    />
-                </Field>
-                <Field label="Xác nhận mật khẩu" htmlFor="customer-password-confirm">
-                    <Input
-                        id="customer-password-confirm"
-                        type="password"
-                        placeholder="Nhập lại mật khẩu"
-                        value={formValues.password}
-                        readOnly
                     />
                 </Field>
             </div>

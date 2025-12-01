@@ -54,7 +54,9 @@ public class CustomerService {
 
         return new UpdateProfileResponse(
                 savedUser.getName(),
-                savedUser.getPhone());
+                savedUser.getPhone(),
+                "Cập nhật thông tin thành công"
+        );
     }
 
     @Transactional(readOnly = true)

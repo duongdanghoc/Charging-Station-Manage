@@ -39,9 +39,9 @@ interface ResetPasswordCredentials {
 }
 
 interface UpdateCustomerProfileRequest {
+  userId: number;
   name: string;
   phone: string;
-  password?: string;
 }
 
 interface UpdateVendorProfileRequest {
@@ -293,8 +293,8 @@ export const authApi = createApi({
 
     /** 📝 Update customer profile */
     updateCustomerProfile: builder.mutation<UpdateProfileResponse, UpdateCustomerProfileRequest>({
-      query: (body) => ({
-        url: "/api/customer/profile",
+      query: ({ userId, ...body }) => ({
+        url: `/api/customer/${userId}`,
         method: "PUT",
         body,
       }),
