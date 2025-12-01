@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Zap, Wrench, MapPin, Phone, Clock, Trash2, Edit, Info, PanelLeftOpen, PanelRightOpen, Star, Navigation } from 'lucide-react';
+import { Zap, Wrench, MapPin, Home, Clock, Trash2, Edit, Info, PanelLeftOpen, PanelRightOpen, Star, Navigation } from 'lucide-react';
 import { StationService } from './StationService';
 import type { Station, StationType } from './StationPinTool';
 import { formatDistance } from './formatters';
@@ -291,7 +291,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
 
                                             {station.contact && (
                                                 <span className="inline-flex items-center gap-1">
-                                                    <Phone className="h-3.5 w-3.5 text-slate-300" />
+                                                    <Home className="h-3.5 w-3.5 text-slate-300" />
                                                     <span className="truncate">{station.contact}</span>
                                                 </span>
                                             )}
@@ -323,7 +323,12 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                                 <div className="flex flex-wrap items-center gap-3">
                                     <span className="inline-flex items-center gap-1">
                                         <Clock className="h-3.5 w-3.5 text-slate-300" />
-                                        <span>{formatDate(station.created_at)}</span>
+                                        <span>
+                                            {station.openTime && station.closeTime 
+                                                ? `${station.openTime.substring(0, 5)} - ${station.closeTime.substring(0, 5)}`
+                                                : formatDate(station.created_at)
+                                            }
+                                        </span>
                                     </span>
                                 </div>
 

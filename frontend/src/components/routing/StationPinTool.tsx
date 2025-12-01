@@ -16,6 +16,8 @@ export interface Station {
   contact?: string;
   created_at?: string;
   updated_at?: string;
+  openTime?: string;
+  closeTime?: string;
 }
 
 interface StationPinToolProps {
