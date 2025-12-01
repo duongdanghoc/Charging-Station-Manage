@@ -98,14 +98,14 @@ export const profileApi = createApi({
 
   endpoints: (builder) => ({
     getProfile: builder.query<DbProfile, string>({
-      query: (userId) => `/api/profile/${userId}`,
+      query: (userId) => `/api/customer/profile/${userId}`,
       providesTags: (result) =>
         result ? [{ type: "Profile", id: result.id }] : [],
     }),
 
     updateProfile: builder.mutation<DbProfile, Partial<DbProfile> & { id: string }>({
       query: ({ id, ...body }) => ({
-        url: `/api/profile/${id}`,
+        url: `/api/customer/profile/${id}`,
         method: "PUT",
         body,
       }),
@@ -118,7 +118,7 @@ export const profileApi = createApi({
         const formData = new FormData();
         formData.append("file", file);
         return {
-          url: `/api/profile/avatar`,
+          url: `/api/customer/profile/avatar`,
           method: "POST",
           body: formData,
         };
@@ -149,7 +149,7 @@ export const profileApi = createApi({
     }),
 
     getProfileOverview: builder.query<ProfileOverview, string>({
-      query: (userId) => `/api/profile/${userId}/overview`,
+      query: (userId) => `/api/customer/profile/${userId}/overview`,
       providesTags: (result, error, userId) =>
         userId
           ? [
