@@ -12,6 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
 import org.springframework.web.bind.annotation.*;
 import com.example.charging_station_management.utils.CustomUserDetails;
 
@@ -19,7 +23,7 @@ import com.example.charging_station_management.utils.CustomUserDetails;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:3001" })
 public class AuthController {
 
     private final AuthService authService;
@@ -67,5 +71,37 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Logout: clear server-side session / security context and any refresh-token
+     * cookies.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            log.info("Logout request received for user: {}",
+                    userDetails == null ? "anonymous" : userDetails.getEmail());
+
+            SecurityContextHolder.clearContext();
+
+            try {
+                Cookie cookie = new Cookie("refreshToken", null);
+                cookie.setMaxAge(0);
+                cookie.setPath("/");
+                cookie.setHttpOnly(true);
+                response.addCookie(cookie);
+            } catch (Exception e) {
+                log.debug("No refresh token cookie to clear or cookie clearing not necessary.", e);
+            }
+
+            return ResponseEntity.ok().body(java.util.Map.of("message", "Logged out successfully"));
+        } catch (Exception e) {
+            log.error("Error during logout", e);
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 }
