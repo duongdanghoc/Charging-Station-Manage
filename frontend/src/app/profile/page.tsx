@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
+ "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -141,6 +140,7 @@ const ProfilePage: React.FC = () => {
   const currentProfile: Partial<DbProfile> = profileData ?? {};
   const currentProject: Partial<DbProject> = projectData ?? {};
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const profileRoleArray = Array.isArray(currentProfile.role)
     ? currentProfile.role
     : currentProfile.role
