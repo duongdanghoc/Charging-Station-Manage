@@ -69,13 +69,12 @@ public class AuthController {
 
         log.info("User info requested for: {}", userDetails.getEmail());
 
-        UserInfoResponse response = UserInfoResponse.builder()
-                .id(userDetails.getId())
-                .email(userDetails.getEmail())
-                .name(userDetails.getName())
-                .phone(userDetails.getPhone())
-                .role(userDetails.getRole())
-                .build();
+        UserInfoResponse response = new UserInfoResponse(
+                userDetails.getId(),
+                userDetails.getEmail(),
+                userDetails.getName(),
+                userDetails.getPhone(),
+                userDetails.getRole());
 
         return ResponseEntity.ok(response);
     }

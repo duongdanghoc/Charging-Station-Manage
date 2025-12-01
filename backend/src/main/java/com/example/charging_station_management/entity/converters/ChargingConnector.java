@@ -33,7 +33,7 @@ public class ChargingConnector {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)
-    private ConnectorStatus status = ConnectorStatus.AVAILABALE;
+    private ConnectorStatus status = ConnectorStatus.AVAILABLE;
 
     @OneToMany(mappedBy = "chargingConnector", cascade = CascadeType.ALL)
     private List<ChargingSession> chargingSessions;

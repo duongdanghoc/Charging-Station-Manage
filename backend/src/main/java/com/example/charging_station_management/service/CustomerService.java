@@ -30,15 +30,15 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public UserInfoResponse getProfile(Integer userId) {
-        UserInfoResponse userInfoResponse = new UserInfoResponse();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-        userInfoResponse.setId(user.getId());
-        userInfoResponse.setName(user.getName());
-        userInfoResponse.setRole(Role.CUSTOMER);
-        userInfoResponse.setEmail(user.getEmail());
-        userInfoResponse.setPhone(user.getPhone());
-        return userInfoResponse;
+
+        return new UserInfoResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getPhone(),
+                Role.CUSTOMER);
     }
 
     @Transactional
