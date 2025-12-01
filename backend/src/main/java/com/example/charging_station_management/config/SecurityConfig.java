@@ -80,7 +80,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
+                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/auth/change-password").authenticated()
                         .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")
                         .requestMatchers("/api/profile/**").authenticated()
                         .requestMatchers("/api/profiles/**").authenticated()

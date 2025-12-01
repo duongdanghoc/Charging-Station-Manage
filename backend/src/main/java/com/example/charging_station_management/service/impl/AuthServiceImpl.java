@@ -1,13 +1,16 @@
 package com.example.charging_station_management.service.impl;
 
+import com.example.charging_station_management.dto.request.ChangePasswordRequest;
 import com.example.charging_station_management.dto.request.LoginRequest;
 import com.example.charging_station_management.dto.request.RegisterRequest;
+import com.example.charging_station_management.dto.response.ChangePasswordResponse;
 import com.example.charging_station_management.dto.response.JwtResponse;
 import com.example.charging_station_management.dto.response.RegisterResponse;
 import com.example.charging_station_management.entity.converters.Customer;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
 import com.example.charging_station_management.entity.enums.Role;
+import com.example.charging_station_management.exception.PasswordValidationException;
 import com.example.charging_station_management.repository.CustomerRepository;
 import com.example.charging_station_management.repository.UserRepository;
 import com.example.charging_station_management.repository.VendorRepository;
@@ -24,6 +27,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -90,6 +95,44 @@ public class AuthServiceImpl implements AuthService {
                 user.getEmail(),
                 user.getName(),
                 determineUserRole(user));
+    }
+
+    @Override
+    @Transactional(readOnly = false)
+    public ChangePasswordResponse changePassword(Integer userId, ChangePasswordRequest request) {
+        log.info("Change password request for user ID: {}", userId);
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            log.warn("Password confirmation does not match for user ID: {}", userId);
+            throw new PasswordValidationException("Mật khẩu xác nhận không khớp");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("User not found with ID: {}", userId);
+                    return new RuntimeException("Người dùng không tồn tại");
+                });
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            log.warn("Current password is incorrect for user: {}", user.getEmail());
+            throw new PasswordValidationException("Mật khẩu hiện tại không đúng");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            log.warn("New password is same as current password for user: {}", user.getEmail());
+            throw new PasswordValidationException("Mật khẩu mới không được trùng với mật khẩu hiện tại");
+        }
+
+        String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedNewPassword);
+        userRepository.save(user);
+
+        log.info("Password changed successfully for user: {}", user.getEmail());
+
+        return new ChangePasswordResponse(
+                "Đổi mật khẩu thành công",
+                user.getEmail(),
+                LocalDateTime.now());
     }
 
     private RegisterResponse registerCustomer(RegisterRequest request, String encodedPassword) {
