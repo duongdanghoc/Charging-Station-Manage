@@ -1,10 +1,13 @@
 package com.example.charging_station_management.controller.auth;
 
+import com.example.charging_station_management.dto.request.ChangePasswordRequest;
 import com.example.charging_station_management.dto.request.LoginRequest;
 import com.example.charging_station_management.dto.request.RegisterRequest;
+import com.example.charging_station_management.dto.response.ChangePasswordResponse;
 import com.example.charging_station_management.dto.response.JwtResponse;
 import com.example.charging_station_management.dto.response.RegisterResponse;
 import com.example.charging_station_management.dto.response.UserInfoResponse;
+import com.example.charging_station_management.exception.PasswordValidationException;
 import com.example.charging_station_management.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +19,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Cookie;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import com.example.charging_station_management.utils.CustomUserDetails;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -102,6 +109,49 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error during logout", e);
             return ResponseEntity.internalServerError().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Change password for authenticated user
+     */
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            BindingResult bindingResult,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        try {
+            // Check authentication
+            if (userDetails == null) {
+                log.warn("Unauthenticated request to change password");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Bạn cần đăng nhập để thực hiện chức năng này"));
+            }
+
+            if (bindingResult.hasErrors()) {
+                Map<String, String> errors = new HashMap<>();
+                bindingResult.getFieldErrors().forEach(error ->
+                        errors.put(error.getField(), error.getDefaultMessage())
+                );
+                log.warn("Validation errors for change password: {}", errors);
+                return ResponseEntity.badRequest().body(Map.of("errors", errors));
+            }
+
+            ChangePasswordResponse response = authService.changePassword(
+                    userDetails.getId(),
+                    request
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (PasswordValidationException e) {
+            log.warn("Password validation failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error changing password", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Có lỗi xảy ra khi đổi mật khẩu"));
         }
     }
 }
