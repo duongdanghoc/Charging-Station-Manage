@@ -1,6 +1,5 @@
 package com.example.charging_station_management.entity.converters;
 
-import com.example.charging_station_management.entity.enums.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

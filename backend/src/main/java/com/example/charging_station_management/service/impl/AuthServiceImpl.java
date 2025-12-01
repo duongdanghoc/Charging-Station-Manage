@@ -12,7 +12,6 @@ import com.example.charging_station_management.repository.CustomerRepository;
 import com.example.charging_station_management.repository.UserRepository;
 import com.example.charging_station_management.repository.VendorRepository;
 import com.example.charging_station_management.service.AuthService;
-import com.example.charging_station_management.utils.CustomUserDetails;
 import com.example.charging_station_management.utils.JwtUtils;
 import com.example.charging_station_management.utils.helper.UserHelper;
 import com.example.charging_station_management.utils.validation.UserValidation;
@@ -66,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public JwtResponse authenticateUser(LoginRequest loginRequest){
+    public JwtResponse authenticateUser(LoginRequest loginRequest) {
 
         userValidation.validateLoginCredentials(loginRequest);
 
@@ -78,9 +77,7 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+                        loginRequest.getPassword()));
 
         // Set authentication context
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -88,14 +85,11 @@ public class AuthServiceImpl implements AuthService {
         // Generate JWT token
         String jwt = jwtUtils.generateJwtToken(authentication);
 
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-
         return new JwtResponse(
                 jwt,
                 user.getEmail(),
                 user.getName(),
-                determineUserRole(user)
-        );
+                determineUserRole(user));
     }
 
     private RegisterResponse registerCustomer(RegisterRequest request, String encodedPassword) {
@@ -117,8 +111,7 @@ public class AuthServiceImpl implements AuthService {
                 savedCustomer.getEmail(),
                 savedCustomer.getPhone(),
                 Role.CUSTOMER,
-                "Đăng ký khách hàng thành công"
-        );
+                "Đăng ký khách hàng thành công");
     }
 
     private RegisterResponse registerVendor(RegisterRequest request, String encodedPassword) {
@@ -140,8 +133,7 @@ public class AuthServiceImpl implements AuthService {
                 savedVendor.getEmail(),
                 savedVendor.getPhone(),
                 Role.VENDOR,
-                "Đăng ký nhà cung cấp thành công"
-        );
+                "Đăng ký nhà cung cấp thành công");
     }
 
     private Role determineUserRole(User user) {

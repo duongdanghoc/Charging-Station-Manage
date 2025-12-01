@@ -44,7 +44,7 @@ export default function MobileMenu() {
       setIsOpen(false);
       try {
         router.refresh();
-      } catch (_) {}
+      } catch {}
       router.push("/login");
     }
   };

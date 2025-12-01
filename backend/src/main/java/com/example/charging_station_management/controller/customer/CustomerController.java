@@ -23,7 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/customer")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080"})
+@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
 public class CustomerController {
 
     private final CustomerService cutomerService;
@@ -31,8 +31,7 @@ public class CustomerController {
     @GetMapping("/{userId}")
     public ResponseEntity<?> getProfile(
             @PathVariable Integer userId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             if (userDetails != null && (userDetails.getId() != userId)) {
                 log.warn("Access denied: User {} tried to access profile {}", userDetails.getId(), userId);
@@ -51,8 +50,7 @@ public class CustomerController {
             @PathVariable Integer userId,
             @Valid @RequestBody UpdateProfileRequest request,
             BindingResult bindingResult,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             if (userDetails != null && (userDetails.getId() != userId)) {
                 log.warn("Access denied: User {} tried to access profile {}", userDetails.getId(), userId);
@@ -61,9 +59,8 @@ public class CustomerController {
 
             if (bindingResult.hasErrors()) {
                 Map<String, String> errors = new HashMap<>();
-                bindingResult.getFieldErrors().forEach(error ->
-                        errors.put(error.getField(), error.getDefaultMessage())
-                );
+                bindingResult.getFieldErrors()
+                        .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
                 log.warn("Validation errors for user {}: {}", userId, errors);
                 return ResponseEntity.badRequest().body(Map.of("errors", errors));
             }
@@ -81,46 +78,40 @@ public class CustomerController {
     @GetMapping("/dashboard")
     public ResponseEntity<?> getDashboardData(
             @RequestParam(required = false) Long userId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             Long actualUserId = userDetails != null ? userDetails.getId() : userId;
 
             log.info("Getting dashboard data for user: {}", actualUserId);
-
-            if (actualUserId == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "User ID is required"));
-            }
 
             Map<String, Object> profile = new HashMap<>();
             profile.put("id", String.valueOf(actualUserId));
             profile.put("name", userDetails != null ? userDetails.getName() : "Nguyễn Văn A");
             profile.put("phone", userDetails != null ? userDetails.getPhone() : "0123456789");
             profile.put("avatar_url", null);
-            profile.put("type", userDetails != null ? Collections.singletonList(userDetails.getRole()) : Collections.singletonList("CUSTOMER"));
-            profile.put("role", userDetails != null ? Collections.singletonList(userDetails.getRole()) : Collections.singletonList("CUSTOMER"));
+            profile.put("type", userDetails != null ? Collections.singletonList(userDetails.getRole())
+                    : Collections.singletonList("CUSTOMER"));
+            profile.put("role", userDetails != null ? Collections.singletonList(userDetails.getRole())
+                    : Collections.singletonList("CUSTOMER"));
             profile.put("intro", "Khách hàng thân thiết");
 
             Map<String, Object> activity1 = Map.of(
                     "id", "1",
                     "type", "CHARGING",
                     "description", "Sạc pin tại Trạm A - Hoàn thành",
-                    "timestamp", LocalDateTime.now().minusHours(2).toString()
-            );
+                    "timestamp", LocalDateTime.now().minusHours(2).toString());
 
             Map<String, Object> activity2 = Map.of(
                     "id", "2",
                     "type", "PAYMENT",
                     "description", "Thanh toán 50.000 VNĐ",
-                    "timestamp", LocalDateTime.now().minusDays(1).toString()
-            );
+                    "timestamp", LocalDateTime.now().minusDays(1).toString());
 
             List<Map<String, Object>> recentActivities = List.of(activity1, activity2);
 
             Map<String, Object> response = Map.of(
                     "profile", profile,
-                    "recentActivities", recentActivities
-            );
+                    "recentActivities", recentActivities);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -132,8 +123,7 @@ public class CustomerController {
     @GetMapping("/profile/{userId}/overview")
     public ResponseEntity<?> getProfileOverview(
             @PathVariable Long userId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             log.info("Getting profile overview for user: {}", userId);
 
@@ -142,13 +132,14 @@ public class CustomerController {
             profile.put("name", userDetails != null ? userDetails.getName() : "Nguyễn Văn A");
             profile.put("phone", userDetails != null ? userDetails.getPhone() : "0123456789");
             profile.put("avatar_url", null);
-            profile.put("type", userDetails != null ? Collections.singletonList(userDetails.getRole()) : Collections.singletonList("CUSTOMER"));
-            profile.put("role", userDetails != null ? Collections.singletonList(userDetails.getRole()) : Collections.singletonList("CUSTOMER"));
+            profile.put("type", userDetails != null ? Collections.singletonList(userDetails.getRole())
+                    : Collections.singletonList("CUSTOMER"));
+            profile.put("role", userDetails != null ? Collections.singletonList(userDetails.getRole())
+                    : Collections.singletonList("CUSTOMER"));
             profile.put("intro", "Khách hàng thân thiết");
 
             Map<String, Object> response = Map.of(
-                    "profile", profile
-            );
+                    "profile", profile);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -161,8 +152,7 @@ public class CustomerController {
     public ResponseEntity<?> updateProfile(
             @PathVariable Long userId,
             @RequestBody Map<String, Object> profileData,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             log.info("Updating profile for user: {}", userId);
             log.info("Profile data: {}", profileData);
@@ -173,7 +163,8 @@ public class CustomerController {
             updatedProfile.put("phone", profileData.getOrDefault("phone", "0123456789"));
             updatedProfile.put("avatar_url", profileData.get("avatar_url"));
             updatedProfile.put("type", Collections.singletonList("CUSTOMER"));
-            updatedProfile.put("role", userDetails != null ? Collections.singletonList(userDetails.getRole()) : Collections.singletonList("CUSTOMER"));
+            updatedProfile.put("role", userDetails != null ? Collections.singletonList(userDetails.getRole())
+                    : Collections.singletonList("CUSTOMER"));
             updatedProfile.put("intro", profileData.getOrDefault("intro", ""));
 
             return ResponseEntity.ok(updatedProfile);
