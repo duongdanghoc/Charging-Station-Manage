@@ -80,12 +80,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/auth/change-password").authenticated()
+                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/auth/change-password")
+                        .authenticated()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
                         .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")
                         .requestMatchers("/api/profile/**").authenticated()
                         .requestMatchers("/api/profiles/**").authenticated()
-                        .requestMatchers("/api/vendor/connectors/**").hasRole("VENDOR")
+                        .requestMatchers("/api/vendor/**").hasRole("VENDOR")
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

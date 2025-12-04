@@ -1,11 +1,18 @@
 package com.example.charging_station_management.repository;
 
-import java.util.Optional;
-
 import com.example.charging_station_management.entity.converters.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor; // <-- Thêm import này
+import org.springframework.stereotype.Repository;
 
-public interface UserRepository extends JpaRepository<User, Integer> {
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends
+    JpaRepository<User, Integer>,
+    JpaSpecificationExecutor<User> { // <-- THÊM JpaSpecificationExecutor
+
     Optional<User> findByEmail(String email);
-    boolean existsByEmail(String email);
+
+    Boolean existsByEmail(String email);
 }

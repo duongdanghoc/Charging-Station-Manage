@@ -2,83 +2,67 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCheckAdminStatusQuery } from "@/lib/redux/services/adminApi";
-import { useGetSessionQuery } from "@/lib/redux/services/auth";
+import { useSelector } from "react-redux";
+import { RootState } from "@/lib/redux/store";
 
-/**
- * Props for the AdminCheck component
- */
 interface AdminCheckProps {
   children: ReactNode;
   fallback?: ReactNode;
 }
 
-/**
- * Component that restricts access to admin-only content
- * Redirects non-admin users to the home page
- */
 export default function AdminCheck({ children, fallback }: AdminCheckProps) {
   const router = useRouter();
-  const [isChecked, setIsChecked] = useState(false);
-  const { data: session, isLoading: isSessionLoading } = useGetSessionQuery();
-  const userId = session?.user?.id;
 
-  const {
-    data: isAdmin,
-    isLoading: isAdminCheckLoading,
-    error: adminCheckError,
-  } = useCheckAdminStatusQuery(userId?.toString() ?? "", {
-    skip: !userId,
-  });
+  // 1. Lấy thông tin User trực tiếp từ Redux Store (không cần gọi API nữa)
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  // State để tránh lỗi hydration (màn hình chớp nháy giữa server/client)
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (!isSessionLoading && !isAdminCheckLoading) {
-      setIsChecked(true);
+    setIsClient(true);
+  }, []);
 
-      // Redirect to home if not admin and not loading
-      if (!userId || !isAdmin) {
-        router.push("/");
-      }
+  useEffect(() => {
+    if (!isClient) return;
+
+    // 2. Logic kiểm tra: Nếu đã load xong mà không phải Admin -> Đá về trang chủ
+    if (isAuthenticated) {
+        // Kiểm tra cả 'ADMIN' và 'ROLE_ADMIN' cho chắc chắn
+        const role = user?.role;
+        if (role !== "ADMIN" && role !== "ROLE_ADMIN") {
+            router.replace("/");
+        }
+    } else {
+        // Chưa đăng nhập -> Đá về Login
+        router.replace("/login");
     }
-  }, [userId, isAdmin, isSessionLoading, isAdminCheckLoading, router]);
+  }, [isAuthenticated, user, router, isClient]);
 
-  // Show loading state while checking permissions
-  if (!isChecked || isSessionLoading || isAdminCheckLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">
-            Checking admin access...
-          </h2>
-          <p className="text-gray-600">
-            Please wait while we verify your permissions.
-          </p>
-        </div>
-      </div>
-    );
+  // Nếu chưa render xong ở client, hiện màn hình chờ
+  if (!isClient) {
+     return <div className="flex justify-center p-10">Đang tải...</div>;
   }
 
-  // Show error state
-  if (adminCheckError) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-red-600">
-            Access Error
-          </h2>
-          <p className="text-gray-600">
-            There was a problem verifying your admin access.
-          </p>
-        </div>
-      </div>
-    );
+  // 3. Nếu là Admin -> Cho phép xem nội dung
+  if (isAuthenticated && (user?.role === "ADMIN" || user?.role === "ROLE_ADMIN")) {
+    return <>{children}</>;
   }
 
-  // Show fallback content if user is not admin
-  if (!isAdmin && fallback) {
+  // 4. Nếu không phải Admin -> Hiện Fallback hoặc Access Denied
+  if (fallback) {
     return <>{fallback}</>;
   }
 
-  // Show admin content if user is admin
-  return <>{children}</>;
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold mb-2 text-red-600">Access Denied</h2>
+        <p className="text-gray-600">
+          Bạn không có quyền truy cập trang này. <br/>
+          Vui lòng đăng nhập bằng tài khoản Admin.
+        </p>
+      </div>
+    </div>
+  );
 }

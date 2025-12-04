@@ -250,3 +250,12 @@ INSERT INTO electric_vehicles (customer_id, vehicle_type, brand, model, license_
 ((SELECT user_id FROM customers LIMIT 1 OFFSET 0), 'CAR', 'VinFast', 'VF8', '30A-12345', 87.70, 'CCS'),
 ((SELECT user_id FROM customers LIMIT 1 OFFSET 1), 'CAR', 'Tesla', 'Model 3', '51G-67890', 75.00, 'TESLA'),
 ((SELECT user_id FROM customers LIMIT 1 OFFSET 2), 'MOTORBIKE', 'VinFast', 'Klara S', '29X-11111', 3.50, 'TYPE2');
+-- 1. Tạo thông tin cơ bản trong bảng USERS
+-- Lưu ý: user_type phải là 'ADMIN' để khớp với @DiscriminatorValue("ADMIN") trong code Java
+INSERT INTO users (id, name, email, password, phone, status, user_type)
+VALUES (999, 'Super Admin', 'admin@wayo.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQiy.u', '0909000000', 1, 'ADMIN');
+-- (Mật khẩu trên là mã hóa của: 123456)
+
+-- 2. Tạo thông tin chi tiết trong bảng ADMINS
+-- ID phải trùng với ID ở bảng users (999)
+INSERT INTO admins (id) VALUES (999);

@@ -1,52 +1,52 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import React from "react";
 import Pagination from "./Pagination";
+import { SetStateAction } from "react"; // Import để sử dụng type
 
+// Định nghĩa Props mới, phù hợp với AdminPage đang truyền vào
 interface PaginationClientProps {
-    initialPage: number;
+    page: number; // Đã đổi tên prop cho khớp với AdminPage.tsx
     totalPages: number;
-    baseHref?: string; // e.g. '/news?page='
+    onPageChange: (newPage: number) => void; // Prop mới, chỉ nhận số trang mới
 }
 
 /**
- * Client-side wrapper around the existing `Pagination` component.
- * - Keeps local state for `currentPage` (required by Pagination).
- * - Navigates to `baseHref + page` when page changes, so the server page
- *   can fetch the corresponding data based on query params.
+ * Client-side wrapper:
+ * Chuyển đổi callback onPageChange thành hàm setter mà Pagination.tsx yêu cầu.
  */
 export default function PaginationClient({
-    initialPage,
+    page,
     totalPages,
-    baseHref = "/news?page=",
+    onPageChange,
 }: PaginationClientProps) {
-    const router = useRouter();
-    const [currentPage, setCurrentPage] = useState<number>(initialPage);
 
-    // Keep local state in sync when server provides a different initial page
-    useEffect(() => {
-        setCurrentPage(initialPage);
-    }, [initialPage]);
+    /**
+     * Tạo một hàm handler thỏa mãn kiểu React.Dispatch<React.SetStateAction<number>>
+     * mà Pagination.tsx đang yêu cầu.
+     */
+    const handleSetPage = (action: SetStateAction<number>) => {
+        let newPage: number;
 
-    // When user clicks to change the page, navigate to the new URL so the
-    // server can re-render with the proper `searchParams` and fetch data.
-    useEffect(() => {
-        if (currentPage !== initialPage) {
-            const href = `${baseHref}${currentPage}`;
-            // push a new URL which will trigger a server render of the page
-            router.push(href);
+        if (typeof action === 'function') {
+            // Nếu Pagination.tsx gọi setCurrentPage(prev => prev - 1),
+            // ta thực thi hàm đó trên giá trị 'page' hiện tại (filters.page)
+            const updateFn = action as (prevState: number) => number;
+            newPage = updateFn(page);
+        } else {
+            // Nếu Pagination.tsx gọi setCurrentPage(3), ta lấy giá trị đó
+            newPage = action;
         }
-        // We intentionally only depend on `currentPage` and `initialPage`.
-        // `router` and `baseHref` are stable in this usage.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentPage, initialPage]);
+
+        // Gọi callback của AdminPage.tsx với số trang cuối cùng đã tính
+        onPageChange(newPage);
+    };
 
     return (
         <Pagination
-            currentPage={currentPage}
+            currentPage={page} // Truyền page hiện tại
             totalPages={totalPages}
-            setCurrentPage={setCurrentPage}
+            setCurrentPage={handleSetPage} // Truyền hàm handler đã tùy chỉnh
         />
     );
 }

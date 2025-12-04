@@ -5,7 +5,7 @@ interface User {
   name: string;
   email: string;
   phone: string;
-  role: "CUSTOMER" | "VENDOR";
+  role: "CUSTOMER" | "VENDOR" | "ADMIN" | "ROLE_ADMIN";
 }
 
 interface AuthState {
@@ -19,7 +19,7 @@ const getInitialState = (): AuthState => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('authToken');
     const userStr = localStorage.getItem('user');
-    
+
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
@@ -33,7 +33,7 @@ const getInitialState = (): AuthState => {
       }
     }
   }
-  
+
   return {
     token: null,
     user: null,
@@ -52,7 +52,7 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.user = action.payload.user;
       state.isAuthenticated = true;
-      
+
       // Sync to localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('authToken', action.payload.token);
@@ -63,7 +63,7 @@ const authSlice = createSlice({
       state.token = null;
       state.user = null;
       state.isAuthenticated = false;
-      
+
       // Clear localStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authToken');
