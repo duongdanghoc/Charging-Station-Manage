@@ -9,11 +9,11 @@ import Link from "next/link";
 import { jwtDecode } from "jwt-decode";
 
 interface JwtPayload {
-  sub: string; 
-  id: number;   
+  sub: string;
+  id: number;
   name: string;
   phone: string;
-  role: string; 
+  role: string;
   exp: number;
 }
 
@@ -86,6 +86,8 @@ function LoginContent() {
       // Redirect based on role (replace to prevent navigation history issues)
       if (decoded.role === "VENDOR") {
         router.replace("/vendor/dashboard");
+      } else if (decoded.role === "ADMIN" || decoded.role === "ROLE_ADMIN") { // Thêm dòng này
+        router.replace("/admin");
       } else {
         router.replace("/customer/dashboard");
       }

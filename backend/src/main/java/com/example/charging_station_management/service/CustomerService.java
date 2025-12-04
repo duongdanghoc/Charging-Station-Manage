@@ -55,14 +55,7 @@ public class CustomerService {
         return new UpdateProfileResponse(
                 savedUser.getName(),
                 savedUser.getPhone(),
-                "Cập nhật thông tin thành công"
-        );
-    }
-
-    @Transactional(readOnly = true)
-    public Page<StationResponse> getAllStations(Pageable pageable) {
-        return stationRepository.findAll(pageable)
-                .map(this::convertToStationResponse);
+                "Cập nhật thông tin thành công");
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +76,7 @@ public class CustomerService {
         if (!stationRepository.existsById(stationId)) {
             throw new RuntimeException("Station not found: " + stationId);
         }
-        
+
         return ratingRepository.findByTargetTypeAndTargetId(TargetType.STATION, stationId, pageable)
                 .map(rating -> ReviewResponse.builder()
                         .id(rating.getId())
@@ -107,8 +100,14 @@ public class CustomerService {
                 .status(station.getStatus())
                 .type(station.getType())
                 .vendorName(station.getVendor().getName())
-                .averageRating(0.0) 
+                .averageRating(0.0)
                 .totalRatings(0)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StationResponse> getAllStations(Pageable pageable) {
+        return stationRepository.findAll(pageable)
+                .map(this::convertToStationResponse);
     }
 }

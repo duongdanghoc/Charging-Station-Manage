@@ -4,6 +4,7 @@ import com.example.charging_station_management.entity.converters.Customer;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
 import com.example.charging_station_management.entity.enums.Role;
+import com.example.charging_station_management.entity.converters.Admin;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
@@ -71,7 +72,9 @@ public class CustomUserDetails implements UserDetails {
             return Role.CUSTOMER;
         } else if (user instanceof Vendor) {
             return Role.VENDOR;
-        }
+        } else if (user instanceof Admin) {
+            return Role.ADMIN;
+    }
         throw new IllegalArgumentException("Unknown user type: " + user.getClass().getName());
     }
 }
