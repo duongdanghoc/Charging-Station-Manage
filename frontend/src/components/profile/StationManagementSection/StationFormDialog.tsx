@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Station, CreateStationRequest } from "@/lib/redux/services/stationApi";
+import { getDirtyValues } from "@/utils/getDirtyValues";
 
 interface StationFormDialogProps {
     open: boolean;
@@ -39,6 +40,8 @@ const StationFormDialog: React.FC<StationFormDialogProps> = ({
         },
     });
 
+    const { formState: { dirtyFields } } = form;
+
     // Reset form when opening for create, or fill data when editing
     useEffect(() => {
         if (open) {
@@ -69,13 +72,39 @@ const StationFormDialog: React.FC<StationFormDialogProps> = ({
     }, [open, initialData, form]);
 
     const handleSubmit = (values: CreateStationRequest) => {
-        // Append seconds to time for LocalTime Java parsing if needed
-        const formattedValues = {
-            ...values,
-            openTime: values.openTime.length === 5 ? `${values.openTime}:00` : values.openTime,
-            closeTime: values.closeTime.length === 5 ? `${values.closeTime}:00` : values.closeTime,
-        };
-        onSubmit(formattedValues);
+        // A. XỬ LÝ CHO TRƯỜNG HỢP UPDATE (Chỉ gửi các trường đã thay đổi)
+        if (initialData) {
+            // Lấy ra các trường đã thay đổi
+            const changedValues = getDirtyValues(dirtyFields, values);
+
+            // Nếu không có gì thay đổi thì không gọi API, chỉ đóng modal (hoặc báo thông báo)
+            if (Object.keys(changedValues).length === 0) {
+                onOpenChange(false);
+                return;
+            }
+
+            // Xử lý format giờ giấc (nếu trường giờ có bị thay đổi)
+            if (changedValues.openTime && changedValues.openTime.length === 5) {
+                changedValues.openTime = `${changedValues.openTime}:00`;
+            }
+            if (changedValues.closeTime && changedValues.closeTime.length === 5) {
+                changedValues.closeTime = `${changedValues.closeTime}:00`;
+            }
+
+            // Gửi đi payload chỉ chứa các trường thay đổi
+            // Cần ép kiểu về CreateStationRequest vì changedValues là Partial
+            onSubmit(changedValues as CreateStationRequest);
+        }
+
+        // B. XỬ LÝ CHO TRƯỜNG HỢP CREATE (Gửi tất cả)
+        else {
+            const formattedValues = {
+                ...values,
+                openTime: values.openTime.length === 5 ? `${values.openTime}:00` : values.openTime,
+                closeTime: values.closeTime.length === 5 ? `${values.closeTime}:00` : values.closeTime,
+            };
+            onSubmit(formattedValues);
+        }
     };
 
     return (
