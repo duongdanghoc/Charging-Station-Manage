@@ -201,19 +201,20 @@ CREATE TABLE rescue_stations (
 -- =============================================
 
 -- Insert users (customers)
+-- Tất cả mật khẩu là 123456
 INSERT INTO users (user_type, name, email, password, phone, status) VALUES
-('CUSTOMER', 'Nguyễn Văn A', 'nguyenvana@gmail.com', '$2a$10$encrypted_password_1', '0912345678', 1),
-('CUSTOMER', 'Trần Thị B', 'tranthib@gmail.com', '$2a$10$encrypted_password_2', '0987654321', 1),
-('CUSTOMER', 'Lê Văn C', 'levanc@gmail.com', '$2a$10$encrypted_password_3', '0901234567', 1);
+('CUSTOMER', 'Nguyễn Văn A', 'nguyenvana@gmail.com', '$2a$12$rW9C1ViKWn1sOS5IAZHmY.aczIT5h6td32V5Nc/pEhqYDEXZDVfO2', '0912345678', 1),
+('CUSTOMER', 'Trần Thị B', 'tranthib@gmail.com', '$2a$12$rW9C1ViKWn1sOS5IAZHmY.aczIT5h6td32V5Nc/pEhqYDEXZDVfO2', '0987654321', 1),
+('CUSTOMER', 'Lê Văn C', 'levanc@gmail.com', '$2a$12$rW9C1ViKWn1sOS5IAZHmY.aczIT5h6td32V5Nc/pEhqYDEXZDVfO2', '0901234567', 1);
 
 INSERT INTO customers (user_id)
 SELECT id FROM users WHERE user_type = 'CUSTOMER';
 
 -- Insert vendors
 INSERT INTO users (user_type, name, email, password, phone, status) VALUES
-('VENDOR', 'VinFast Charging', 'contact@vinfast.vn', '$2a$10$encrypted_password_4', '02412345678', 1),
-('VENDOR', 'EVN Charging', 'info@evn.vn', '$2a$10$encrypted_password_5', '02487654321', 1),
-('VENDOR', 'Green Energy', 'support@greenenergy.vn', '$2a$10$encrypted_password_6', '02456789012', 1);
+('VENDOR', 'VinFast Charging', 'contact@vinfast.vn', '$2a$12$rW9C1ViKWn1sOS5IAZHmY.aczIT5h6td32V5Nc/pEhqYDEXZDVfO2', '02412345678', 1),
+('VENDOR', 'EVN Charging', 'info@evn.vn', '$2a$12$rW9C1ViKWn1sOS5IAZHmY.aczIT5h6td32V5Nc/pEhqYDEXZDVfO2', '02487654321', 1),
+('VENDOR', 'Green Energy', 'support@greenenergy.vn', '$2a$12$rW9C1ViKWn1sOS5IAZHmY.aczIT5h6td32V5Nc/pEhqYDEXZDVfO2', '02456789012', 1);
 
 INSERT INTO vendors (user_id, company_name, business_license, tax_code)
 SELECT id, name, 'BL' || id, 'TC' || id
@@ -234,6 +235,7 @@ INSERT INTO stations (vendor_id, location_id, name, open_time, close_time, statu
 -- Charging poles
 INSERT INTO charging_poles (station_id, manufacturer, max_power, connector_count, install_date) VALUES
 (1, 'ABB', 150.00, 2, '2024-01-15'),
+(1, 'ABBCD', 120.00, 3, '2024-12-27'),
 (2, 'Schneider', 120.00, 4, '2024-02-20'),
 (3, 'Siemens', 50.00, 2, '2024-03-10');
 
@@ -241,9 +243,12 @@ INSERT INTO charging_poles (station_id, manufacturer, max_power, connector_count
 INSERT INTO charging_connectors (pole_id, connector_type, max_power, status) VALUES
 (1, 'CCS', 150.00, 'AVAILABLE'),
 (1, 'TYPE2', 100.00, 'AVAILABLE'),
-(2, 'CCS', 120.00, 'IN_USE'),
-(2, 'CHADEMO', 100.00, 'AVAILABLE'),
-(3, 'TYPE2', 50.00, 'AVAILABLE');
+(2, 'CCS', 120.00, 'INUSE'),
+(2, 'TYPE2', 50.00, 'OUTOFSERVICE'),
+(2, 'CHADEMO', 150.00, 'AVAILABLE'),
+(3, 'CCS', 120.00, 'INUSE'),
+(3, 'CHADEMO', 100.00, 'AVAILABLE'),
+(4, 'TYPE2', 50.00, 'AVAILABLE');
 
 -- Electric vehicles
 INSERT INTO electric_vehicles (customer_id, vehicle_type, brand, model, license_plate, battery_capacity, connector_type) VALUES

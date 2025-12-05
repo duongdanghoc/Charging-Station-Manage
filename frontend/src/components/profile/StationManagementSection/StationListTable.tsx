@@ -1,12 +1,13 @@
 'use client';
 
 import React from "react";
-import { Building2, MapPin, Pencil, Power, Trash2, WifiOff } from "lucide-react";
+import { Building2, Eye, MapPin, Pencil, Power, Trash2, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Station } from "@/lib/redux/services/stationApi";
 
 interface StationListTableProps {
     stations: Station[];
+    onViewDetail: (station: Station) => void;
     onEdit: (station: Station) => void;
     onDelete: (id: number) => void;
     onToggleStatus: (station: Station) => void;
@@ -14,6 +15,7 @@ interface StationListTableProps {
 
 const StationListTable: React.FC<StationListTableProps> = ({
     stations,
+    onViewDetail,
     onEdit,
     onDelete,
     onToggleStatus
@@ -37,7 +39,7 @@ const StationListTable: React.FC<StationListTableProps> = ({
                             <th className="px-6 py-3 font-medium">Địa chỉ</th>
                             <th className="px-6 py-3 font-medium">Loại xe</th>
                             <th className="px-6 py-3 font-medium">Trạng thái</th>
-                            <th className="px-6 py-3 font-medium text-right">Hành động</th>
+                            <th className="px-6 py-3 font-medium text-center">Hành động</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
@@ -64,8 +66,8 @@ const StationListTable: React.FC<StationListTableProps> = ({
                                 <td className="px-6 py-3">
                                     <span
                                         className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${station.status === 1
-                                                ? "bg-emerald-50 text-emerald-600"
-                                                : "bg-gray-100 text-gray-500"
+                                            ? "bg-emerald-50 text-emerald-600"
+                                            : "bg-gray-100 text-gray-500"
                                             }`}
                                     >
                                         {station.status === 1 ? <Power className="size-3" /> : <WifiOff className="size-3" />}
@@ -74,6 +76,15 @@ const StationListTable: React.FC<StationListTableProps> = ({
                                 </td>
                                 <td className="px-6 py-3">
                                     <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => onViewDetail(station)}
+                                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                            title="Xem chi tiết"
+                                        >
+                                            <Eye className="size-4" />
+                                        </Button>
                                         <Button
                                             size="sm"
                                             variant="ghost"

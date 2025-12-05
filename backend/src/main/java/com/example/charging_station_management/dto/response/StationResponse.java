@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -26,4 +27,5 @@ public class StationResponse {
     private String vendorName;
     private Double averageRating;
     private Integer totalRatings;
+    private List<ChargingPoleResponse> poles;
 }
