@@ -1,5 +1,21 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
+export interface ChargingConnector {
+  id: number;
+  connectorType: string; // TYPE1, TYPE2, CCS...
+  maxPower: number;
+  status: "AVAILABLE" | "INUSE" | "OUTOFSERVICE";
+}
+
+export interface ChargingPole {
+  id: number;
+  manufacturer: string;
+  maxPower: number;
+  connectorCount: number;
+  installDate: string;
+  connectors: ChargingConnector[];
+}
+
 export interface Station {
   id: number;
   name: string;
@@ -12,6 +28,7 @@ export interface Station {
   status: number; // 1: Active, 0: Inactive
   type: "CAR" | "MOTORBIKE" | "BICYCLE";
   vendorName?: string;
+  poles?: ChargingPole[]; 
 }
 
 export interface CreateStationRequest {

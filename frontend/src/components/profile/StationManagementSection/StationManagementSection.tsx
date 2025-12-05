@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
+import StationDetailSheet from "./StationDetailSheet";
 import StationListTable from "./StationListTable";
 import StationFormDialog from "./StationFormDialog";
 import ConfirmModal from "@/components/common/ConfirmModal";
@@ -27,6 +28,8 @@ const StationManagementSection: React.FC = () => {
     const [selectedStation, setSelectedStation] = useState<Station | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [stationToDelete, setStationToDelete] = useState<number | null>(null);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [detailStation, setDetailStation] = useState<Station | null>(null);
 
     // --- API Integration ---
     const { data: stationPage, isLoading } = useGetMyStationsQuery({ page: 0, size: 100 });
@@ -35,6 +38,11 @@ const StationManagementSection: React.FC = () => {
     const [deleteStation] = useDeleteStationMutation();
 
     // --- Handlers ---
+    const handleViewDetail = (station: Station) => {
+        setDetailStation(station);
+        setIsDetailOpen(true);
+    };
+
     const handleOpenCreate = () => {
         setSelectedStation(null);
         setIsDialogOpen(true);
@@ -108,7 +116,7 @@ const StationManagementSection: React.FC = () => {
                     Quản lý trạm sạc
                 </h2>
                 <p className="text-sm text-gray-600 max-w-3xl">
-                    Bảng điều khiển giúp chủ trạm theo dõi trạng thái hoạt động, cập nhật thông tin chi tiết và bật/tắt trạm ngay lập tức. Giao diện này mô phỏng luồng quản trị thường gặp ở doanh nghiệp vận hành hạ tầng sạc.
+                    Bảng điều khiển giúp chủ trạm theo dõi trạng thái hoạt động, cập nhật thông tin chi tiết và bật/tắt trạm sạc.
                 </p>
             </div>
 
@@ -125,6 +133,7 @@ const StationManagementSection: React.FC = () => {
             ) : (
                 <StationListTable
                     stations={stationPage?.content || []}
+                    onViewDetail={handleViewDetail}
                     onEdit={handleEdit}
                     onDelete={onClickDelete}
                     onToggleStatus={handleToggleStatus}
@@ -153,7 +162,13 @@ const StationManagementSection: React.FC = () => {
                 onConfirm={onConfirmDelete}
                 confirmLabel="Xóa"
                 cancelLabel="Giữ lại"
-                isLoading={false} 
+                isLoading={false}
+            />
+
+            <StationDetailSheet
+                open={isDetailOpen}
+                onOpenChange={setIsDetailOpen}
+                station={detailStation}
             />
         </section>
     );

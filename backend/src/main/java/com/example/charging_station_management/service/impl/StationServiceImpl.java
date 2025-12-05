@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.charging_station_management.dto.mapper.StationMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +28,7 @@ public class StationServiceImpl implements StationService {
     private final StationRepository stationRepository;
     private final LocationRepository locationRepository;
     private final UserHelper userHelper;
+    private final StationMapper stationMapper;
 
     // Helper method để lấy Vendor hiện tại từ SecurityContext
     private Vendor getCurrentVendor() {
@@ -65,7 +67,7 @@ public class StationServiceImpl implements StationService {
         station.setLocation(savedLocation);
 
         Station savedStation = stationRepository.save(station);
-        return mapToResponse(savedStation);
+        return stationMapper.toResponse(savedStation);
     }
 
     @Override
@@ -113,7 +115,7 @@ public class StationServiceImpl implements StationService {
         }
 
         Station updatedStation = stationRepository.save(station);
-        return mapToResponse(updatedStation);
+        return stationMapper.toResponse(updatedStation);
     }
 
     @Override
@@ -129,25 +131,10 @@ public class StationServiceImpl implements StationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<StationResponse> getMyStations(Pageable pageable) {
         Vendor vendor = getCurrentVendor();
         Page<Station> stations = stationRepository.findByVendorId(vendor.getId(), pageable);
-        return stations.map(this::mapToResponse);
-    }
-
-    private StationResponse mapToResponse(Station station) {
-        return StationResponse.builder()
-                .id(station.getId())
-                .name(station.getName())
-                .address(station.getLocation().getAddressDetail())
-                .city(station.getLocation().getProvince())
-                .latitude(station.getLocation().getLatitude().doubleValue())
-                .longitude(station.getLocation().getLongitude().doubleValue())
-                .openTime(station.getOpenTime())
-                .closeTime(station.getCloseTime())
-                .status(station.getStatus())
-                .type(station.getType())
-                .vendorName(station.getVendor().getName())
-                .build();
+        return stations.map(stationMapper::toResponse);
     }
 }
