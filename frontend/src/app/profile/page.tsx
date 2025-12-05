@@ -188,6 +188,11 @@ const ProfilePage: React.FC = () => {
     : [];
 
   const resolvedRole: UserRole = React.useMemo(() => {
+
+    if (profileRoleArray.includes("VENDOR")) {
+      return "SUPPLIER";
+    }
+    
     const validRoles: UserRole[] = ["CUSTOMER", "SUPPLIER", "TECH"];
     const match = profileRoleArray.find((role): role is UserRole =>
       validRoles.includes(role as UserRole)

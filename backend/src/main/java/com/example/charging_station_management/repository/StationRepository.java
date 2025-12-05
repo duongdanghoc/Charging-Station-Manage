@@ -24,4 +24,6 @@ public interface StationRepository extends JpaRepository<Station, Integer> {
             "LOWER(s.location.addressDetail) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(s.location.province) LIKE LOWER(CONCAT('%', :query, '%'))")
     Page<Station> searchStations(@Param("query") String query, Pageable pageable);
+
+    Page<Station> findByVendorId(Integer vendorId, Pageable pageable);
 }
