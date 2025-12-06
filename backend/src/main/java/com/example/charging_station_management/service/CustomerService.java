@@ -19,4 +19,6 @@ public interface CustomerService {
     Page<ReviewResponse> getStationReviews(Integer stationId, Pageable pageable);
 
     Page<ChargingHistoryResponse> getChargingHistory(Integer userId, Pageable pageable);
+
+    Page<TransactionHistoryResponse> getTransactionHistory(Integer userId, Pageable pageable);
 }

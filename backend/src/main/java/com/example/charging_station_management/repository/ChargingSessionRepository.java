@@ -1,6 +1,5 @@
 package com.example.charging_station_management.repository;
 
-import com.example.charging_station_management.dto.response.ChargingHistoryResponse;
 import com.example.charging_station_management.entity.converters.ChargingSession;
 import com.example.charging_station_management.entity.enums.SessionStatus;
 

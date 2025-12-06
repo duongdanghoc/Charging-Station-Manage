@@ -2,8 +2,10 @@ package com.example.charging_station_management.service.impl;
 
 import com.example.charging_station_management.dto.mapper.ChargingSessionMapper;
 import com.example.charging_station_management.dto.mapper.StationMapper;
+import com.example.charging_station_management.dto.mapper.TransactionMapper;
 import com.example.charging_station_management.dto.request.UpdateProfileRequest;
 import com.example.charging_station_management.dto.response.StationResponse;
+import com.example.charging_station_management.dto.response.TransactionHistoryResponse;
 import com.example.charging_station_management.dto.response.ChargingHistoryResponse;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.UpdateProfileResponse;
@@ -15,6 +17,7 @@ import com.example.charging_station_management.entity.enums.TargetType;
 import com.example.charging_station_management.repository.ChargingSessionRepository;
 import com.example.charging_station_management.repository.RatingRepository;
 import com.example.charging_station_management.repository.StationRepository;
+import com.example.charging_station_management.repository.TransactionRepository;
 import com.example.charging_station_management.repository.UserRepository;
 import com.example.charging_station_management.service.CustomerService;
 
@@ -35,10 +38,13 @@ public class CustomerServiceImpl implements CustomerService {
     private final StationRepository stationRepository;
     private final RatingRepository ratingRepository;
     private final ChargingSessionRepository chargingSessionRepository;
+    private final TransactionRepository transactionRepository;
 
     private final StationMapper stationMapper;
     private final ChargingSessionMapper chargingSessionMapper;
+    private final TransactionMapper transactionMapper;
 
+    @Override
     public UserInfoResponse getProfile(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
@@ -51,6 +57,7 @@ public class CustomerServiceImpl implements CustomerService {
                 Role.CUSTOMER);
     }
 
+    @Override
     @Transactional
     public UpdateProfileResponse updateProfile(Integer userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
@@ -68,17 +75,20 @@ public class CustomerServiceImpl implements CustomerService {
                 "Cập nhật thông tin thành công");
     }
 
+    @Override
     public Page<StationResponse> searchStations(String query, Pageable pageable) {
         return stationRepository.searchStations(query, pageable)
                 .map(stationMapper::toResponse);
     }
 
+    @Override
     public StationResponse getStationById(Integer id) {
         Station station = stationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Station not found: " + id));
         return stationMapper.toResponse(station);
     }
 
+    @Override
     public Page<ReviewResponse> getStationReviews(Integer stationId, Pageable pageable) {
         if (!stationRepository.existsById(stationId)) {
             throw new RuntimeException("Station not found: " + stationId);
@@ -94,11 +104,13 @@ public class CustomerServiceImpl implements CustomerService {
                         .build());
     }
 
+    @Override
     public Page<StationResponse> getAllStations(Pageable pageable) {
         return stationRepository.findAll(pageable)
                 .map(stationMapper::toResponse);
     }
 
+    @Override
     public Page<ChargingHistoryResponse> getChargingHistory(Integer userId, Pageable pageable) {
         if (!userRepository.existsById(userId)) {
             throw new RuntimeException("User not found: " + userId);
@@ -106,5 +118,14 @@ public class CustomerServiceImpl implements CustomerService {
         
         return chargingSessionRepository.findByElectricVehicle_Customer_IdOrderByStartTimeDesc(userId, pageable)
                 .map(chargingSessionMapper::toHistoryResponse);
+    }
+
+    @Override
+    public Page<TransactionHistoryResponse> getTransactionHistory(Integer userId, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found: " + userId);
+        }
+        return transactionRepository.findByCustomer_IdOrderByPaymentTimeDesc(userId, pageable)
+                .map(transactionMapper::toResponse);
     }
 }
