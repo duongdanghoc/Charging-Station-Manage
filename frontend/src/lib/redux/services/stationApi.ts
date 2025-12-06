@@ -28,7 +28,7 @@ export interface Station {
   status: number; // 1: Active, 0: Inactive
   type: "CAR" | "MOTORBIKE" | "BICYCLE";
   vendorName?: string;
-  poles?: ChargingPole[]; 
+  poles?: ChargingPole[];
 }
 
 export interface CreateStationRequest {
@@ -40,6 +40,14 @@ export interface CreateStationRequest {
   longitude: number;
   province: string;
   addressDetail: string;
+}
+
+export interface StationFilterParams {
+  page: number;
+  size: number;
+  search?: string;
+  status?: number; // 1 | 0
+  type?: "CAR" | "MOTORBIKE" | "BICYCLE";
 }
 
 export interface UpdateStationRequest extends Partial<CreateStationRequest> {
@@ -69,8 +77,18 @@ export const stationApi = createApi({
   tagTypes: ["Stations"],
   endpoints: (builder) => ({
     // Lấy danh sách trạm của Vendor (API /me vừa tạo)
-    getMyStations: builder.query<PageResponse<Station>, { page: number; size: number }>({
-      query: ({ page, size }) => `/api/stations/me?page=${page}&size=${size}`,
+    getMyStations: builder.query<PageResponse<Station>, StationFilterParams>({
+      query: (params) => {
+        // Build query string
+        const qs = new URLSearchParams();
+        qs.append("page", params.page.toString());
+        qs.append("size", params.size.toString());
+        if (params.search) qs.append("search", params.search);
+        if (params.status !== undefined) qs.append("status", params.status.toString());
+        if (params.type) qs.append("type", params.type);
+
+        return `/api/stations/me?${qs.toString()}`;
+      },
       providesTags: ["Stations"],
     }),
 

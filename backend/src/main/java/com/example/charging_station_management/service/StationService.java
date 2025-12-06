@@ -3,6 +3,8 @@ package com.example.charging_station_management.service;
 import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
 import com.example.charging_station_management.dto.response.StationResponse;
+import com.example.charging_station_management.entity.enums.VehicleType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,5 +16,5 @@ public interface StationService {
 
     void deleteStation(Integer stationId);
 
-    Page<StationResponse> getMyStations(Pageable pageable);
+    Page<StationResponse> getMyStations(String search, Integer status, VehicleType type, Pageable pageable);
 }

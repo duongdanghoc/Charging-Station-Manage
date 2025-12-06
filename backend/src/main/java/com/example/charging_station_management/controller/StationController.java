@@ -4,6 +4,7 @@ import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
+import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.service.CustomerService;
 import com.example.charging_station_management.service.StationService;
 
@@ -75,8 +76,11 @@ public class StationController {
     @GetMapping("/me")
     @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<Page<StationResponse>> getMyStations(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) VehicleType type,
             @PageableDefault(size = 10) Pageable pageable) {
-        stationService.getMyStations(pageable);
-        return ResponseEntity.ok(stationService.getMyStations(pageable));
+
+        return ResponseEntity.ok(stationService.getMyStations(search, status, type, pageable));
     }
 }

@@ -4,6 +4,7 @@ import com.example.charging_station_management.entity.converters.Station;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface StationRepository extends JpaRepository<Station, Integer> {
+public interface StationRepository extends JpaRepository<Station, Integer>, JpaSpecificationExecutor<Station> {
 
     List<Station> findByVendorId(Integer vendorId);
 
