@@ -7,9 +7,11 @@ import com.example.charging_station_management.entity.converters.Location;
 import com.example.charging_station_management.entity.converters.Station;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
+import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.exception.ResourceNotFoundException;
 import com.example.charging_station_management.repository.LocationRepository;
 import com.example.charging_station_management.repository.StationRepository;
+import com.example.charging_station_management.repository.specification.StationSpecification;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.utils.helper.UserHelper;
 import lombok.RequiredArgsConstructor;
@@ -132,9 +134,13 @@ public class StationServiceImpl implements StationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<StationResponse> getMyStations(Pageable pageable) {
+    public Page<StationResponse> getMyStations(String search, Integer status, VehicleType type, Pageable pageable) {
         Vendor vendor = getCurrentVendor();
-        Page<Station> stations = stationRepository.findByVendorId(vendor.getId(), pageable);
+
+        Page<Station> stations = stationRepository.findAll(
+                StationSpecification.filterStations(vendor.getId(), search, status, type),
+                pageable);
+
         return stations.map(stationMapper::toResponse);
     }
 }
