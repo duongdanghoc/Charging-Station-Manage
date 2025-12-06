@@ -82,6 +82,16 @@ public class ApiExceptionHandler {
         
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, errorTitle, errorMessage, request, null);
     }
+    
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<BaseApiResponse<ErrorResponse>> handleIllegalStateException(
+        IllegalStateException ex, HttpServletRequest request) {
+
+        String errorTitle = getMessage("error.title.illegal.state");
+        String errorMessage = getMessage("error.illegal.state");
+
+        return buildErrorResponse(HttpStatus.CONFLICT, errorTitle, errorMessage, request, null);
+    }
 
     // ==============
     // HELPER METHOD 

@@ -90,6 +90,8 @@ const StationManagementSection: React.FC = () => {
         } catch (error) {
             console.error("Delete error:", error);
             toast.error("Xóa thất bại. Vui lòng thử lại sau.");
+            
+            setIsDeleteModalOpen(false);
         }
     };
 

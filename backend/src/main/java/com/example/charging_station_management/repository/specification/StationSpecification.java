@@ -29,6 +29,9 @@ public class StationSpecification {
             // 3. Lọc theo Status (1: Active, 0: Inactive)
             if (status != null) {
                 spec = spec.and((root2, query2, cb2) -> cb2.equal(root2.get("status"), status));
+            } else {
+                // MẶC ĐỊNH: Không hiển thị trạm đã xóa (status != -1)
+                spec = spec.and((root2, query2, cb2) -> cb2.notEqual(root2.get("status"), -1));
             }
 
             // 4. Lọc theo Type
