@@ -2,6 +2,7 @@ package com.example.charging_station_management.controller.customer;
 
 import com.example.charging_station_management.dto.request.UpdateProfileRequest;
 import com.example.charging_station_management.dto.response.ChargingHistoryResponse;
+import com.example.charging_station_management.dto.response.TransactionHistoryResponse;
 import com.example.charging_station_management.dto.response.UpdateProfileResponse;
 import com.example.charging_station_management.dto.response.UserInfoResponse;
 import com.example.charging_station_management.service.CustomerService;
@@ -193,6 +194,23 @@ public class CustomerController {
             return ResponseEntity.ok(history);
         } catch (Exception e) {
             log.error("Error getting history for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{userId}/transactions")
+    public ResponseEntity<?> getTransactionHistory(
+            @PathVariable Integer userId,
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            if (userDetails != null && (userDetails.getId() != userId)) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+            }
+            Page<TransactionHistoryResponse> history = cutomerService.getTransactionHistory(userId, pageable);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            log.error("Error getting transaction history for user {}", userId, e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }

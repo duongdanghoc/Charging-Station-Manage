@@ -102,6 +102,25 @@ export interface ChargingHistoryItem {
   paymentMethod: string | null;
 }
 
+export interface TransactionHistoryItem {
+  transactionId: number;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  bankName: string | null;
+  accountNumber: string | null;
+  paymentTime: string | null;
+  description: string;
+}
+
+export interface TransactionHistoryResponse {
+  content: TransactionHistoryItem[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+}
+
 export const profileApi = createApi({
   reducerPath: "profileApi",
   baseQuery: fetchBaseQuery({
@@ -253,6 +272,13 @@ export const profileApi = createApi({
       providesTags: (result, error, { userId }) =>
         result ? [{ type: "Profile", id: `${userId}-history` }] : [],
     }),
+
+    getTransactions: builder.query<TransactionHistoryResponse, { userId: string; page?: number; size?: number }>({
+      query: ({ userId, page = 0, size = 10 }) =>
+        `/api/customer/${userId}/transactions?page=${page}&size=${size}`,
+      providesTags: (result, error, { userId }) =>
+        result ? [{ type: "Profile", id: `${userId}-transactions` }] : [],
+    }),
   }),
 });
 
@@ -270,4 +296,5 @@ export const {
   useUpdateProjectFundingMutation,
   useUpdateProjectAboutMutation,
   useGetChargingHistoryQuery,
+  useGetTransactionsQuery,
 } = profileApi;
