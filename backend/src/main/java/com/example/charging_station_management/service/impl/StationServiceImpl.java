@@ -7,14 +7,20 @@ import com.example.charging_station_management.entity.converters.Location;
 import com.example.charging_station_management.entity.converters.Station;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
+import com.example.charging_station_management.entity.enums.SessionStatus;
+import com.example.charging_station_management.entity.enums.StationStatus;
 import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.exception.ResourceNotFoundException;
+import com.example.charging_station_management.repository.ChargingSessionRepository;
 import com.example.charging_station_management.repository.LocationRepository;
 import com.example.charging_station_management.repository.StationRepository;
 import com.example.charging_station_management.repository.specification.StationSpecification;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.utils.helper.UserHelper;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -24,11 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.charging_station_management.dto.mapper.StationMapper;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class StationServiceImpl implements StationService {
 
     private final StationRepository stationRepository;
     private final LocationRepository locationRepository;
+    private final ChargingSessionRepository chargingSessionRepository;
     private final UserHelper userHelper;
     private final StationMapper stationMapper;
 
@@ -124,16 +132,36 @@ public class StationServiceImpl implements StationService {
     @Transactional
     public void deleteStation(Integer stationId) {
         Vendor vendor = getCurrentVendor();
+        
+        // 1. Tìm trạm và check quyền sở hữu
         Station station = stationRepository.findByIdAndVendorId(stationId, vendor.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm hoặc bạn không có quyền xóa"));
 
-        // Thực hiện xóa mềm (chuyển status về INACTIVE = 0) hoặc xóa cứng tùy nghiệp vụ
-        // Ở đây tạm thời dùng xóa cứng của JPA
-        stationRepository.delete(station);
+        // 2. CHECK RÀNG BUỘC: Có đang hoạt động không?
+        // Các trạng thái coi là "đang hoạt động"
+        List<SessionStatus> activeStatuses = List.of(SessionStatus.PENDING, SessionStatus.CHARGING);
+        long activeSessions = chargingSessionRepository.countByStationIdAndStatusIn(stationId, activeStatuses);
+
+        if (activeSessions > 0) {
+            throw new IllegalStateException("Không thể xóa: Trạm đang có phiên sạc đang diễn ra.");
+        }
+
+        // 3. XÓA MỀM hay XÓA CỨNG?
+        // Kiểm tra xem trạm đã từng có giao dịch/lịch sử chưa (Completed, Cancelled, Failed)
+        List<SessionStatus> historyStatuses = List.of(SessionStatus.COMPLETED, SessionStatus.CANCELLED, SessionStatus.FAILED);
+        long historySessions = chargingSessionRepository.countByStationIdAndStatusIn(stationId, historyStatuses);
+
+        if (historySessions > 0) {
+            // A. Có lịch sử -> Xóa mềm (Chuyển status sang DELETED = -1)
+            station.setStatus(StationStatus.DELETED.getValue());
+            stationRepository.save(station);
+        } else {
+            // B. Trạm mới tinh, chưa dùng bao giờ -> Xóa cứng (Bay màu khỏi DB)
+            stationRepository.delete(station);
+        }
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<StationResponse> getMyStations(String search, Integer status, VehicleType type, Pageable pageable) {
         Vendor vendor = getCurrentVendor();
 
