@@ -377,6 +377,7 @@ const ProfilePage: React.FC = () => {
         />
 
         <ProfileTabs
+          userId={profileData?.id}
           role={resolvedRole}
           project={{
             title: currentProject.title ?? "Untitled Project",

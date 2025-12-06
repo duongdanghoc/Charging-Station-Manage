@@ -2,6 +2,7 @@ package com.example.charging_station_management.service;
 
 import com.example.charging_station_management.dto.request.UpdateProfileRequest;
 import com.example.charging_station_management.dto.response.StationResponse;
+import com.example.charging_station_management.dto.response.ChargingHistoryResponse;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.UpdateProfileResponse;
 import com.example.charging_station_management.dto.response.UserInfoResponse;
@@ -9,6 +10,7 @@ import com.example.charging_station_management.entity.converters.Station;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.enums.Role;
 import com.example.charging_station_management.entity.enums.TargetType;
+import com.example.charging_station_management.repository.ChargingSessionRepository;
 import com.example.charging_station_management.repository.RatingRepository;
 import com.example.charging_station_management.repository.StationRepository;
 import com.example.charging_station_management.repository.UserRepository;
@@ -22,13 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CustomerService {
 
     private final UserRepository userRepository;
     private final StationRepository stationRepository;
     private final RatingRepository ratingRepository;
+    private final ChargingSessionRepository chargingSessionRepository;
 
-    @Transactional(readOnly = true)
     public UserInfoResponse getProfile(Integer userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
@@ -58,20 +61,17 @@ public class CustomerService {
                 "Cập nhật thông tin thành công");
     }
 
-    @Transactional(readOnly = true)
     public Page<StationResponse> searchStations(String query, Pageable pageable) {
         return stationRepository.searchStations(query, pageable)
                 .map(this::convertToStationResponse);
     }
 
-    @Transactional(readOnly = true)
     public StationResponse getStationById(Integer id) {
         Station station = stationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Station not found: " + id));
         return convertToStationResponse(station);
     }
 
-    @Transactional(readOnly = true)
     public Page<ReviewResponse> getStationReviews(Integer stationId, Pageable pageable) {
         if (!stationRepository.existsById(stationId)) {
             throw new RuntimeException("Station not found: " + stationId);
@@ -105,9 +105,15 @@ public class CustomerService {
                 .build();
     }
 
-    @Transactional(readOnly = true)
     public Page<StationResponse> getAllStations(Pageable pageable) {
         return stationRepository.findAll(pageable)
                 .map(this::convertToStationResponse);
+    }
+
+    public Page<ChargingHistoryResponse> getChargingHistory(Integer userId, Pageable pageable) {
+        if (!userRepository.existsById(userId)) {
+             throw new RuntimeException("User not found: " + userId);
+        }
+        return chargingSessionRepository.findHistoryByCustomerId(userId, pageable);
     }
 }

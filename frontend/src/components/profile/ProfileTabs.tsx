@@ -31,6 +31,7 @@ interface FundingInfo {
 }
 
 interface ProfileTabsProps {
+  userId: string | undefined;
   role: UserRole;
   project: {
     title: string;
@@ -57,6 +58,7 @@ interface ProfileTabsProps {
  * @returns {JSX.Element} The profile tabs component.
  */
 const ProfileTabs: React.FC<ProfileTabsProps> = ({
+  userId,
   role,
   project,
   detailInfo,
@@ -187,13 +189,13 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
       name: "Lịch sử hoạt động",
       content: (
         <div className="space-y-8">
-          <HistorySection role={role} />
+          <HistorySection role={role} currentUserId={userId} />
         </div>
       ),
     });
 
     return baseTabs;
-  }, [detailInfo?.customer, detailInfo?.supplier, detailInfo?.tech, onEditAbout, onEditContact, onEditFunding, onEditProject, project.contactInfo, project.description, project.fundingInfo, project.tags, project.title, role]);
+  }, [userId, detailInfo?.customer, detailInfo?.supplier, detailInfo?.tech, onEditAbout, onEditContact, onEditFunding, onEditProject, project.contactInfo, project.description, project.fundingInfo, project.tags, project.title, role]);
 
   const [activeTabId, setActiveTabId] = useState<string>(tabConfigs[0]?.id ?? "project");
 
