@@ -5,8 +5,8 @@ import com.example.charging_station_management.dto.request.UpdateStationRequest;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
 import com.example.charging_station_management.entity.enums.VehicleType;
-import com.example.charging_station_management.service.CustomerService;
 import com.example.charging_station_management.service.StationService;
+import com.example.charging_station_management.service.impl.CustomerServiceImpl;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
 public class StationController {
 
-    private final CustomerService customerService;
+    private final CustomerServiceImpl customerService;
     private final StationService stationService;
 
     @GetMapping
