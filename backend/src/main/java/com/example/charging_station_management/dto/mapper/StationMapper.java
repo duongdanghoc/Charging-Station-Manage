@@ -20,6 +20,8 @@ public interface StationMapper {
     @Mapping(source = "location.longitude", target = "longitude")
     @Mapping(source = "vendor.name", target = "vendorName")
     @Mapping(source = "chargingPoles", target = "poles")
+    @Mapping(target = "averageRating", constant = "0.0")
+    @Mapping(target = "totalRatings", constant = "0")
     StationResponse toResponse(Station station);
 
     @Mapping(source = "chargingConnectors", target = "connectors") 
