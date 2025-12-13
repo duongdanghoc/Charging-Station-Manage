@@ -35,7 +35,7 @@ public class StationController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) VehicleType vehicleType,
             @RequestParam(required = false) ConnectorType connectorType,
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 100) Pageable pageable) {
         return ResponseEntity.ok(customerService.filterStations(search, status, vehicleType, connectorType, pageable));
     }
 

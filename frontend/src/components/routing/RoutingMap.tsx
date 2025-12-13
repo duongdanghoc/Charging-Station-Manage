@@ -18,6 +18,7 @@ import { createVehicleMarkerElement, updateVehicleMarkerElementColor } from './V
 import type { Station } from './StationPinTool';
 import { StationFilter } from './StationFilter';
 import { StationService } from './StationService';
+import { StationDetailModal } from './StationDetailModal';
 import { createStationMarkerElement } from './StationMarker';
 
 type Profile = 'driving' | 'walking' | 'cycling' | 'driving-traffic';
@@ -244,6 +245,7 @@ export default function RoutingMap() {
 
     // Station state
     const [stations, setStations] = useState<Station[]>([]);
+    const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
     const stationMarkersRef = useRef<mapboxgl.Marker[]>([]);
     useEffect(() => {
         routesRef.current = routes;
@@ -2245,9 +2247,19 @@ export default function RoutingMap() {
                     onStationDelete={handleStationDelete}
                     onStationAdded={handleStationAdded}
                     onStationNavigate={handleStationNavigate}
+                    onStationDetail={setSelectedStationId}
                     map={mapRef.current}
                 />
             </div>
+            
+            {/* Station Detail Modal */}
+            {selectedStationId && (
+                <StationDetailModal
+                    stationId={selectedStationId}
+                    onClose={() => setSelectedStationId(null)}
+                />
+            )}
+            
             {error ? (
                 <div className="p-4 text-red-600 text-sm">{error}</div>
             ) : null}

@@ -125,6 +125,25 @@ export class StationService {
         if (!res.ok) throw new Error("Không thể xóa trạm");
     }
 
+    /** Lấy chi tiết trạm theo ID */
+    static async getStationById(id: string): Promise<any> {
+        const res = await fetch(`${API_BASE}/${id}`);
+        if (!res.ok) throw new Error("Không thể lấy thông tin trạm");
+        return res.json();
+    }
+
+    /** Lấy danh sách đánh giá của trạm */
+    static async getStationReviews(id: string, page: number = 0, size: number = 20): Promise<any[]> {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            size: size.toString(),
+        });
+        const res = await fetch(`${API_BASE}/${id}/reviews?${params}`);
+        if (!res.ok) throw new Error("Không thể lấy đánh giá");
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.content || []);
+    }
+
     /** Tìm trạm gần nhất (client-side tính khoảng cách) */
     static async findNearestStations(
         lat: number,

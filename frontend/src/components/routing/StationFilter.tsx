@@ -22,6 +22,7 @@ interface StationFilterProps {
     onStationDelete?: (stationId: string) => void;
     onStationAdded?: (station: Station) => void;
     onStationNavigate?: (station: Station) => void;
+    onStationDetail?: (stationId: string) => void;
     map?: mapboxgl.Map | null;
     className?: string;
 }
@@ -32,6 +33,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
     onStationDelete,
     onStationAdded,
     onStationNavigate,
+    onStationDetail,
     map,
     className = '',
 }) => {
@@ -360,7 +362,8 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                     return (
                         <div
                             key={station.id}
-                            className="mb-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition-all hover:-translate-y-[1px] hover:border-blue-300 hover:shadow-md"
+                            onClick={() => onStationDetail?.(station.id!)}
+                            className="mb-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition-all hover:-translate-y-[1px] hover:border-blue-300 hover:shadow-md cursor-pointer"
                         >
                             {/* Header */}
                             <div className="flex items-start gap-2.5">
@@ -373,18 +376,9 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                                 <div className="min-w-0 flex-1 space-y-1">
                                     {/* Name & Status */}
                                     <div className="flex items-center gap-1.5">
-                                        {onStationClick ? (
-                                            <button
-                                                onClick={() => onStationClick(station)}
-                                                className="truncate text-left text-xs font-semibold text-slate-900 hover:text-blue-600"
-                                            >
-                                                {station.name}
-                                            </button>
-                                        ) : (
-                                            <span className="truncate text-xs font-semibold text-slate-900">
-                                                {station.name}
-                                            </span>
-                                        )}
+                                        <span className="truncate text-xs font-semibold text-slate-900">
+                                            {station.name}
+                                        </span>
 
                                         {statusLabel && (
                                             <span className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
@@ -450,7 +444,10 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                             <div className="mt-2 flex items-center justify-end gap-1 border-t border-slate-100 pt-2">
                                 {onStationNavigate && (
                                     <button
-                                        onClick={() => onStationNavigate(station)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onStationNavigate(station);
+                                        }}
                                         className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-600 transition-colors hover:bg-blue-100"
                                         title="Chỉ đường"
                                     >
@@ -461,7 +458,10 @@ export const StationFilter: React.FC<StationFilterProps> = ({
 
                                 {onStationEdit && (
                                     <button
-                                        onClick={() => onStationEdit(station)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onStationEdit(station);
+                                        }}
                                         className="rounded-md p-1 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                                         title="Chỉnh sửa"
                                     >
@@ -471,7 +471,10 @@ export const StationFilter: React.FC<StationFilterProps> = ({
 
                                 {onStationDelete && (
                                     <button
-                                        onClick={() => handleDelete(station.id!)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(station.id!);
+                                        }}
                                         disabled={deletingId === station.id}
                                         className="rounded-md p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                                         title="Xóa"
