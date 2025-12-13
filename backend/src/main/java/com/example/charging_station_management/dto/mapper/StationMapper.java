@@ -9,7 +9,6 @@ import com.example.charging_station_management.entity.converters.Station;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface StationMapper {
@@ -19,9 +18,13 @@ public interface StationMapper {
     @Mapping(source = "location.latitude", target = "latitude")
     @Mapping(source = "location.longitude", target = "longitude")
     @Mapping(source = "vendor.name", target = "vendorName")
-    @Mapping(source = "chargingPoles", target = "poles")
+    @Mapping(target = "poles", expression = "java(station.getChargingPoles() != null ? station.getChargingPoles().size() : 0)")
+    @Mapping(target = "ports", expression = "java(calculateTotalPorts(station))")
     @Mapping(target = "averageRating", constant = "0.0")
     @Mapping(target = "totalRatings", constant = "0")
+    @Mapping(target = "status2", expression = "java(mapStatusToString(station.getStatus()))")
+    @Mapping(target = "revenue", expression = "java(java.math.BigDecimal.ZERO)")
+    @Mapping(target = "lastCheck", expression = "java(station.getUpdatedAt() != null ? station.getUpdatedAt().toString() : null)")
     StationResponse toResponse(Station station);
 
     @Mapping(source = "chargingConnectors", target = "connectors")
@@ -29,5 +32,23 @@ public interface StationMapper {
 
     ChargingConnectorResponse toConnectorResponse(ChargingConnector connector);
 
-    List<ChargingPoleResponse> toPoleResponseList(List<ChargingPole> poles);
+    // Tính tổng số cổng sạc (ports)
+    default Integer calculateTotalPorts(Station station) {
+        if (station.getChargingPoles() == null)
+            return 0;
+        return station.getChargingPoles().stream()
+                .mapToInt(pole -> pole.getChargingConnectors() != null ? pole.getChargingConnectors().size() : 0)
+                .sum();
+    }
+
+    // Map status Integer sang String
+    default String mapStatusToString(Integer status) {
+        if (status == null)
+            return "Unknown";
+        return switch (status) {
+            case 1 -> "Active";
+            case 0 -> "Inactive";
+            default -> "Unknown";
+        };
+    }
 }

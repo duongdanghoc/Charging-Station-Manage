@@ -1,12 +1,29 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { RootState } from '../store';
 
-// 👇 1. KHAI BÁO CÁC INTERFACE BỊ THIẾU (Dựa trên DTO Java)
+// --- 1. ĐỊNH NGHĨA CÁC INTERFACE (Types) ---
+
+// Response chuẩn từ Backend (BaseApiResponse)
+export interface ApiResponse<T> {
+  status: number;
+  message: string;
+  data: T;
+}
+
+// Response phân trang từ Backend (Page)
+export interface PageResponse<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+}
+
 export interface RegisterRequest {
   name: string;
   email: string;
   phone: string;
-  password?: string; // Tạm thời để optional vì Admin tự tạo
+  password?: string;
   role: 'CUSTOMER' | 'VENDOR';
 }
 
@@ -18,7 +35,6 @@ export interface RegisterResponse {
   role: 'CUSTOMER' | 'VENDOR';
   message: string;
 }
-// --------------------------------------------------------------------
 
 export interface UserFilterParams {
   keyword?: string;
@@ -30,9 +46,42 @@ export interface UserFilterParams {
   sortDirection?: 'asc' | 'desc';
 }
 
+// 👇 Interface cho dữ liệu Dashboard & Biểu đồ
+export interface ChartData {
+  name: string;
+  value: number;
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  totalVendors: number;
+  totalCustomers: number;
+  totalStations: number;
+  totalSessions: number;
+  totalRevenue: number;
+  revenueChartData: ChartData[];
+  sessionChartData: ChartData[];
+}
+
+// 👇 Interface cho Trạm Cứu Hộ (Nên định nghĩa rõ thay vì dùng any)
+export interface RescueStationRequest {
+    name: string;
+    phone: string;
+    email?: string;
+    addressDetail: string;
+    province: string;
+    openTime: string; // HH:mm
+    closeTime: string; // HH:mm
+    latitude?: number;
+    longitude?: number;
+}
+// ----------------------------------------------------
+
+// --- 2. CẤU HÌNH API ---
+
 export const adminApi = createApi({
   reducerPath: 'adminApi',
-  tagTypes: ['Users', 'Stats'],
+  tagTypes: ['Users', 'Stats', 'Rescue'],
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_URL + '/api/admin',
     prepareHeaders: (headers, { getState }) => {
@@ -44,14 +93,20 @@ export const adminApi = createApi({
     },
   }),
   endpoints: (builder) => ({
-    // 1. Lấy thống kê
-    getDashboardStats: builder.query<any, void>({
+    // 1. Lấy thống kê đơn giản
+    getDashboardStats: builder.query<ApiResponse<any>, void>({
       query: () => '/stats',
       providesTags: ['Stats'],
     }),
 
-    // 2. Lấy danh sách user
-    getUsers: builder.query<any, UserFilterParams>({
+    // 2. Lấy thống kê Dashboard Chi tiết
+    getDashboardOverview: builder.query<ApiResponse<DashboardStats>, void>({
+      query: () => '/dashboard-stats',
+      providesTags: ['Stats'],
+    }),
+
+    // 3. Lấy danh sách user
+    getUsers: builder.query<ApiResponse<PageResponse<any>>, UserFilterParams>({
       query: (params) => ({
         url: '/users',
         params: params,
@@ -65,8 +120,8 @@ export const adminApi = createApi({
           : [{ type: 'Users', id: 'LIST' }],
     }),
 
-    // 3. Xóa user
-    deleteUser: builder.mutation<any, number>({
+    // 4. Xóa user
+    deleteUser: builder.mutation<ApiResponse<any>, number>({
       query: (id) => ({
         url: `/users/${id}`,
         method: 'DELETE',
@@ -74,8 +129,8 @@ export const adminApi = createApi({
       invalidatesTags: ['Users', 'Stats'],
     }),
 
-    // 4. Tạo user
-    createUser: builder.mutation<RegisterResponse, RegisterRequest>({
+    // 5. Tạo user mới
+    createUser: builder.mutation<ApiResponse<RegisterResponse>, RegisterRequest>({
       query: (body) => ({
         url: `/users`,
         method: 'POST',
@@ -83,13 +138,74 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ['Users', 'Stats'],
     }),
+
+    // 6. Lấy danh sách Trạm sạc của Vendor
+    getVendorStations: builder.query<ApiResponse<PageResponse<any>>, { id: number; page?: number }>({
+      query: ({ id, page }) => ({
+        url: `/vendors/${id}/stations`,
+        params: { page: page ?? 0, size: 5 }
+      }),
+    }),
+
+    // 7. Lấy danh sách Xe của Customer
+    getCustomerVehicles: builder.query<ApiResponse<PageResponse<any>>, { id: number; page?: number }>({
+      query: ({ id, page }) => ({
+        url: `/customers/${id}/vehicles`,
+        params: { page: page ?? 0, size: 5 }
+      }),
+    }),
+
+ // 1. Get List (Có Search & Page)
+    getRescueStations: builder.query<ApiResponse<PageResponse<any>>, { page?: number, keyword?: string }>({
+      query: ({ page, keyword }) => ({
+        url: '/rescue-stations',
+        params: { page: page ?? 0, size: 6, keyword: keyword ?? '' }
+      }),
+      providesTags: ['Rescue'],
+    }),
+
+    // 2. Create
+    createRescueStation: builder.mutation<ApiResponse<any>, RescueStationRequest>({
+      query: (body) => ({
+        url: '/rescue-stations',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Rescue'],
+    }),
+
+    // 3. Update (QUAN TRỌNG: Bạn cần đoạn này để có hook useUpdate...)
+    updateRescueStation: builder.mutation<ApiResponse<any>, { id: number, data: RescueStationRequest }>({
+      query: ({ id, data }) => ({
+        url: `/rescue-stations/${id}`,
+        method: 'PUT',
+        body: data,
+      }),
+      invalidatesTags: ['Rescue'],
+    }),
+
+    // 4. Delete
+    deleteRescueStation: builder.mutation<ApiResponse<any>, number>({
+      query: (id) => ({
+        url: `/rescue-stations/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Rescue'],
+    }),
+
   }),
 });
-
-// 👇 5. SỬA LỖI CÚ PHÁP: THÊM DẤU PHẨY
+// --- 3. EXPORT HOOKS ---
 export const {
   useGetDashboardStatsQuery,
   useGetUsersQuery,
-  useDeleteUserMutation, // <--- DẤU PHẨY ĐÃ ĐƯỢC THÊM
-  useCreateUserMutation
+  useDeleteUserMutation,
+  useCreateUserMutation,
+  useGetVendorStationsQuery,
+  useGetCustomerVehiclesQuery,
+  useGetDashboardOverviewQuery, // 👈 Đã thêm dấu phẩy ở đây (Code cũ bị thiếu)
+  useGetRescueStationsQuery,
+  useCreateRescueStationMutation,
+  useDeleteRescueStationMutation,
+  useUpdateRescueStationMutation,
 } = adminApi;

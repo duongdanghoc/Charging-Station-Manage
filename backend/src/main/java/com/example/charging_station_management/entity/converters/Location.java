@@ -15,18 +15,18 @@ import java.util.List;
 @AllArgsConstructor
 public class Location {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Integer id;
 
-    @Column(nullable = false, precision = 10, scale = 8)
-    private BigDecimal latitude;
+  @Column(nullable = false, precision = 10, scale = 8)
+  private BigDecimal latitude;
 
-    @Column(nullable = false, precision = 11, scale = 8)
-    private BigDecimal longitude;
+  @Column(nullable = false, precision = 11, scale = 8)
+  private BigDecimal longitude;
 
-    @Column(nullable = false)
-    private String province;
+  @Column(nullable = false)
+  private String province;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String addressDetail;

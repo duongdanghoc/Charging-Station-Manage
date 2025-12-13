@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // Quan trọng để dùng @PreAuthorize ở Controller
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -54,10 +56,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // Cho phép các domain Frontend
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:3001",
-                "http://localhost:8080"));
+                "http://localhost:8080",
+                "http://localhost:5173" // Thường Vite/React dùng port này, thêm cho chắc
+        ));
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -65,6 +70,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -78,16 +84,37 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Cho phép Options (Preflight request)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Public Auth endpoints (Login/Register)
                         .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/auth/change-password")
-                        .authenticated()
+
+                        // 3. Authenticated Auth endpoints (Đổi pass, xem profile...)
+                        // QUAN TRỌNG: Phải đặt trước wildcard /api/auth/** nếu có
+                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/auth/change-password").authenticated()
+
+                        // 4. ADMIN endpoints (Bảo vệ nghiêm ngặt nhất)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
-                        .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")
-                        .requestMatchers("/api/profile/**").authenticated()
-                        .requestMatchers("/api/profiles/**").authenticated()
+                        .requestMatchers("/api/stations/admin/**").hasRole("ADMIN")
+                        
+                        // 5. VENDOR endpoints
                         .requestMatchers("/api/vendor/**").hasRole("VENDOR")
+                        // Create/Update/Delete Station cần quyền Vendor
+                        .requestMatchers(HttpMethod.POST, "/api/stations").hasRole("VENDOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/stations/**").hasRole("VENDOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/stations/**").hasRole("VENDOR")
+
+                        // 6. CUSTOMER endpoints
+                        .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")
+
+                        // 7. PUBLIC GET endpoints (Xem danh sách trạm)
+                        .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
+
+                        // 8. Profile endpoints
+                        .requestMatchers("/api/profile/**", "/api/profiles/**").authenticated()
+
+                        // 9. Tất cả request còn lại phải đăng nhập
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -100,7 +127,7 @@ public class SecurityConfig {
         return (authorities) -> authorities.stream()
                 .map(authority -> {
                     String role = authority.getAuthority();
-                    // Nếu role chưa có tiền tố ROLE_, thì thêm vào
+                    // Spring Security mặc định cần prefix ROLE_
                     if (!role.startsWith("ROLE_")) {
                         return new SimpleGrantedAuthority("ROLE_" + role);
                     }
