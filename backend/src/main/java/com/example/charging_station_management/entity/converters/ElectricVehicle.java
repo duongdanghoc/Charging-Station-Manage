@@ -2,6 +2,7 @@ package com.example.charging_station_management.entity.converters;
 
 import com.example.charging_station_management.entity.enums.ConnectorType;
 import com.example.charging_station_management.entity.enums.VehicleType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,6 +23,7 @@ public class ElectricVehicle {
 
     @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
+    @JsonIgnore
     private Customer customer;
 
     @Enumerated(EnumType.STRING)
@@ -45,5 +47,6 @@ public class ElectricVehicle {
     private ConnectorType connectorType;
 
     @OneToMany(mappedBy = "electricVehicle", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<ChargingSession> chargingSessions;
 }
