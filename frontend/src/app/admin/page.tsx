@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from 'react';
-// 👇 1. SỬA LỖI: Thêm Ambulance vào import
-import { LayoutDashboard, Users, Zap, BarChart3, Ambulance } from "lucide-react";
+import { LayoutDashboard, Users, Zap, BarChart3, Ambulance, BatteryCharging, CreditCard } from "lucide-react";
 
 import AdminCheck from "./_AdminCheck";
 import StationManagement from "./StationManagement";
 import UserManagement from "./UserManagement";
 import DashboardOverview from "./DashboardOverview";
 import RescueStationManagement from "./RescueStationManagement";
+import ChargingSessionManagement from "./ChargingSessionManagement";
+import TransactionManagement from "./TransactionManagement";
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'stations' | 'users' | 'rescue'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'stations' | 'users' | 'rescue' | 'charging-sessions' | 'transactions'>('dashboard');
 
   return (
     <AdminCheck fallback={<div className="min-h-screen flex items-center justify-center font-medium text-gray-500">Đang tải quyền Admin...</div>}>
@@ -75,6 +76,31 @@ export default function AdminPage() {
               <Ambulance className="w-5 h-5" />
               <span className="font-medium">Cứu Hộ</span>
             </button>
+
+            {/* TAB CHARGING SESSIONS */}
+            <button
+              onClick={() => setActiveTab('charging-sessions')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'charging-sessions'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+            >
+              <BatteryCharging className="w-5 h-5" />
+              <span className="font-medium">Phiên Sạc</span>
+            </button>
+
+            {/* TAB TRANSACTIONS */}
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'transactions'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/50'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+            >
+              <CreditCard className="w-5 h-5" />
+              <span className="font-medium">Giao Dịch</span>
+            </button>
+
           </nav>
         </aside>
 
@@ -83,9 +109,9 @@ export default function AdminPage() {
           {activeTab === 'dashboard' && <DashboardOverview />}
           {activeTab === 'stations' && <StationManagement />}
           {activeTab === 'users' && <UserManagement />}
-
-          {/* 👇 2. SỬA LỖI: Thêm dòng này để hiển thị trang Cứu hộ */}
           {activeTab === 'rescue' && <RescueStationManagement />}
+          {activeTab === 'charging-sessions' && <ChargingSessionManagement />}
+          {activeTab === 'transactions' && <TransactionManagement />}
         </main>
       </div>
     </AdminCheck>

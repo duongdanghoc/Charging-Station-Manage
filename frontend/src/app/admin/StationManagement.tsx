@@ -20,7 +20,6 @@ interface Station {
   ports: number;
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   revenue: number;
-  lastCheck: string;
   poles: number;
 }
 
@@ -235,7 +234,6 @@ export default function StationManagement() {
                 <label className="text-sm font-medium text-gray-500 block mb-2">Trạng thái kỹ thuật</label>
                 <div className="flex items-center gap-2 text-sm text-gray-800 bg-green-50 p-3 rounded-lg border border-green-100">
                   <Activity className="w-4 h-4 text-green-600" />
-                  <span>Hệ thống hoạt động ổn định. Kiểm tra lần cuối: <strong>{selectedStation.lastCheck}</strong></span>
                 </div>
               </div>
               <div className="pt-4 border-t flex justify-end gap-2">

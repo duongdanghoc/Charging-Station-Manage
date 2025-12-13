@@ -161,8 +161,7 @@ public class StationServiceImpl implements StationService {
         List<SessionStatus> historyStatuses = List.of(
                 SessionStatus.COMPLETED,
                 SessionStatus.CANCELLED,
-                SessionStatus.FAILED
-        );
+                SessionStatus.FAILED);
         long historySessions = chargingSessionRepository.countByStationIdAndStatusIn(stationId, historyStatuses);
 
         if (historySessions > 0) {
@@ -234,9 +233,11 @@ public class StationServiceImpl implements StationService {
             String fullAddress = "Chưa cập nhật";
             if (station.getLocation() != null) {
                 String detail = station.getLocation().getAddressDetail() != null
-                        ? station.getLocation().getAddressDetail() : "";
+                        ? station.getLocation().getAddressDetail()
+                        : "";
                 String province = station.getLocation().getProvince() != null
-                        ? station.getLocation().getProvince() : "";
+                        ? station.getLocation().getProvince()
+                        : "";
                 fullAddress = detail + ", " + province;
             }
 
@@ -265,7 +266,6 @@ public class StationServiceImpl implements StationService {
                     .ports(totalPorts)
                     .status2(statusStr)
                     .revenue(BigDecimal.ZERO)
-                    .lastCheck("2024-06-01")
                     .build();
 
         } catch (Exception e) {
@@ -282,7 +282,6 @@ public class StationServiceImpl implements StationService {
                     .ports(0)
                     .status2("UNKNOWN")
                     .revenue(BigDecimal.ZERO)
-                    .lastCheck("N/A")
                     .build();
         }
     }

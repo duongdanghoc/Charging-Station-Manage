@@ -9,6 +9,7 @@ import com.example.charging_station_management.entity.converters.Station;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface StationMapper {
@@ -24,13 +25,14 @@ public interface StationMapper {
     @Mapping(target = "totalRatings", constant = "0")
     @Mapping(target = "status2", expression = "java(mapStatusToString(station.getStatus()))")
     @Mapping(target = "revenue", expression = "java(java.math.BigDecimal.ZERO)")
-    @Mapping(target = "lastCheck", expression = "java(station.getUpdatedAt() != null ? station.getUpdatedAt().toString() : null)")
     StationResponse toResponse(Station station);
 
     @Mapping(source = "chargingConnectors", target = "connectors")
     ChargingPoleResponse toPoleResponse(ChargingPole pole);
 
     ChargingConnectorResponse toConnectorResponse(ChargingConnector connector);
+
+    List<ChargingPoleResponse> toPoleResponseList(List<ChargingPole> poles);
 
     // Tính tổng số cổng sạc (ports)
     default Integer calculateTotalPorts(Station station) {
@@ -45,10 +47,13 @@ public interface StationMapper {
     default String mapStatusToString(Integer status) {
         if (status == null)
             return "Unknown";
-        return switch (status) {
-            case 1 -> "Active";
-            case 0 -> "Inactive";
-            default -> "Unknown";
-        };
+        switch (status) {
+            case 1:
+                return "Active";
+            case 0:
+                return "Inactive";
+            default:
+                return "Unknown";
+        }
     }
 }

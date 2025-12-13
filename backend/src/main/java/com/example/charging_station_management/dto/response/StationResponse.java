@@ -30,6 +30,5 @@ public class StationResponse {
     private String status2;
     private Integer ports;
     private BigDecimal revenue;
-    private String lastCheck;
     private Integer poles;
 }

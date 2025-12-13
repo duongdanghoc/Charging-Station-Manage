@@ -305,7 +305,6 @@ public class AdminServiceImpl implements AdminService {
           .ports(totalPorts)
           .status2(statusStr)
           .revenue(BigDecimal.ZERO)
-          .lastCheck("2024-06-01")
           .build();
     } catch (Exception e) {
       e.printStackTrace();

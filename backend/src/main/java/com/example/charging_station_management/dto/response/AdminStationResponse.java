@@ -1,4 +1,5 @@
 package com.example.charging_station_management.dto.response;
+
 import lombok.Data;
 import java.math.BigDecimal;
 
@@ -13,5 +14,4 @@ public class AdminStationResponse {
     private String status;
 
     private BigDecimal revenue;
-    private String lastCheck; // Trả về dạng chuỗi "yyyy-MM-dd"
 }
