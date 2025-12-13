@@ -11,7 +11,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring") 
+@Mapper(componentModel = "spring")
 public interface StationMapper {
 
     @Mapping(source = "location.addressDetail", target = "address")
@@ -24,7 +24,7 @@ public interface StationMapper {
     @Mapping(target = "totalRatings", constant = "0")
     StationResponse toResponse(Station station);
 
-    @Mapping(source = "chargingConnectors", target = "connectors") 
+    @Mapping(source = "chargingConnectors", target = "connectors")
     ChargingPoleResponse toPoleResponse(ChargingPole pole);
 
     ChargingConnectorResponse toConnectorResponse(ChargingConnector connector);

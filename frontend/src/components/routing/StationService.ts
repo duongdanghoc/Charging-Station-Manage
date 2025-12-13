@@ -4,6 +4,15 @@ import type { Station } from "./StationPinTool";
 const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL;
 const API_BASE = `${API_HOST}/api/stations`;
 
+export interface FilterParams {
+    search?: string;
+    status?: number;
+    vehicleType?: 'CAR' | 'MOTORBIKE' | 'BICYCLE';
+    connectorType?: 'TYPE1' | 'TYPE2' | 'CHADEMO' | 'CCS' | 'TESLA';
+    page?: number;
+    size?: number;
+}
+
 export class StationService {
     /** Lưu trạm mới vào backend */
     static async saveStation(station: Omit<Station, "id">): Promise<Station> {
@@ -25,6 +34,25 @@ export class StationService {
     static async getAllStations(): Promise<Station[]> {
         const res = await fetch(`${API_BASE}`);
         if (!res.ok) throw new Error("Không thể lấy danh sách trạm");
+        const data = await res.json();
+        return this.processResponse(data);
+    }
+
+    /** Lọc trạm theo nhiều tiêu chí */
+    static async filterStations(filters: FilterParams): Promise<Station[]> {
+        const params = new URLSearchParams();
+        
+        if (filters.search) params.append('search', filters.search);
+        if (filters.status !== undefined) params.append('status', filters.status.toString());
+        if (filters.vehicleType) params.append('vehicleType', filters.vehicleType);
+        if (filters.connectorType) params.append('connectorType', filters.connectorType);
+        if (filters.page !== undefined) params.append('page', filters.page.toString());
+        if (filters.size !== undefined) params.append('size', filters.size.toString());
+
+        const url = params.toString() ? `${API_BASE}?${params}` : API_BASE;
+        const res = await fetch(url);
+        
+        if (!res.ok) throw new Error("Không thể lọc danh sách trạm");
         const data = await res.json();
         return this.processResponse(data);
     }
