@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import com.example.charging_station_management.service.AuthService;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +49,11 @@ public class AdminServiceImpl implements AdminService {
 
   @Override
   public RegisterResponse createUser(RegisterRequest request) {
+
+  @Override
+  public RegisterResponse createUser(RegisterRequest request) {
+    // Tái sử dụng logic đăng ký cốt lõi từ AuthService
+    // Logic này đã bao gồm mã hóa password và kiểm tra trùng email
     return authService.register(request);
   }
 
@@ -247,6 +253,15 @@ public class AdminServiceImpl implements AdminService {
     }
     Page<ElectricVehicle> vehicles = electricVehicleRepository.findByCustomerId(customerId, pageable);
     return vehicles.map(this::mapVehicleToDto);
+    // 1. Tìm user trong DB
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+    // 2. Thay vì xóa, ta đổi trạng thái thành 0 (Inactive)
+    user.setStatus(0);
+
+    // 3. Lưu lại
+    userRepository.save(user);
   }
 
   // --- MAPPER HELPER ---

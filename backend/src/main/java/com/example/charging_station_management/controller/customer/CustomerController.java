@@ -1,6 +1,8 @@
 package com.example.charging_station_management.controller.customer;
 
 import com.example.charging_station_management.dto.request.UpdateProfileRequest;
+import com.example.charging_station_management.dto.response.ChargingHistoryResponse;
+import com.example.charging_station_management.dto.response.TransactionHistoryResponse;
 import com.example.charging_station_management.dto.response.UpdateProfileResponse;
 import com.example.charging_station_management.dto.response.UserInfoResponse;
 import com.example.charging_station_management.service.CustomerService;
@@ -8,12 +10,12 @@ import com.example.charging_station_management.utils.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.example.charging_station_management.dto.response.StationResponse;
-import com.example.charging_station_management.dto.response.ReviewResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,7 @@ import java.util.Map;
 @RequestMapping("/api/customer")
 @RequiredArgsConstructor
 @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
+@PreAuthorize("hasRole('Customer')")
 public class CustomerController {
 
     private final CustomerService cutomerService;
@@ -175,6 +178,40 @@ public class CustomerController {
             return ResponseEntity.ok(updatedProfile);
         } catch (Exception e) {
             log.error("Error updating profile", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{userId}/history")
+    public ResponseEntity<?> getChargingHistory(
+            @PathVariable Integer userId,
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            if (userDetails != null && (userDetails.getId() != userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access denied"));
+            }
+            Page<ChargingHistoryResponse> history = cutomerService.getChargingHistory(userId, pageable);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            log.error("Error getting history for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{userId}/transactions")
+    public ResponseEntity<?> getTransactionHistory(
+            @PathVariable Integer userId,
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            if (userDetails != null && (userDetails.getId() != userId)) {
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+            }
+            Page<TransactionHistoryResponse> history = cutomerService.getTransactionHistory(userId, pageable);
+            return ResponseEntity.ok(history);
+        } catch (Exception e) {
+            log.error("Error getting transaction history for user {}", userId, e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }

@@ -1,5 +1,6 @@
 package com.example.charging_station_management.entity.converters;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +21,7 @@ import java.util.List;
 @PrimaryKeyJoinColumn(name = "user_id")
 public class Vendor extends User{
 
+    @JsonIgnore
     @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL)
     private List<Station> stations;
 }

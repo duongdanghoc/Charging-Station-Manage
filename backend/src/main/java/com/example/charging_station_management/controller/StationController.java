@@ -6,7 +6,10 @@ import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
 import com.example.charging_station_management.entity.enums.StationStatus;
 import com.example.charging_station_management.service.CustomerService;
+import com.example.charging_station_management.entity.enums.ConnectorType;
+import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.service.StationService;
+import com.example.charging_station_management.service.impl.CustomerServiceImpl;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*") // Hoặc cấu hình cụ thể domain frontend của bạn
 public class StationController {
 
-    private final CustomerService customerService;
+    private final CustomerServiceImpl customerService;
     private final StationService stationService;
 
     /* =================================================================
@@ -34,8 +37,13 @@ public class StationController {
     ================================================================= */
 
     @GetMapping
-    public ResponseEntity<Page<StationResponse>> getAllStations(@PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(customerService.getAllStations(pageable));
+    public ResponseEntity<Page<StationResponse>> getAllStations(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) VehicleType vehicleType,
+            @RequestParam(required = false) ConnectorType connectorType,
+            @PageableDefault(size = 100) Pageable pageable) {
+        return ResponseEntity.ok(customerService.filterStations(search, status, vehicleType, connectorType, pageable));
     }
 
     @GetMapping("/search")
@@ -86,8 +94,13 @@ public class StationController {
     @GetMapping("/me")
     @PreAuthorize("hasRole('VENDOR')")
     public ResponseEntity<Page<StationResponse>> getMyStations(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) VehicleType type,
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(stationService.getMyStations(pageable));
+
+        return ResponseEntity.ok(stationService.getMyStations(search, status, type, pageable));
     }
 
     /* =================================================================

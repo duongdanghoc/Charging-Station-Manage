@@ -28,12 +28,14 @@ public class Location {
   @Column(nullable = false)
   private String province;
 
-  @Column(nullable = false, columnDefinition = "TEXT")
-  private String addressDetail;
-  @JsonIgnore
-  @OneToMany(mappedBy = "location", cascade = CascadeType.ALL)
-  private List<Station> stations;
-  @JsonIgnore
-  @OneToMany(mappedBy = "location", cascade = CascadeType.ALL)
-  private List<RescueStation> rescueStations;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String addressDetail;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "location", cascade = CascadeType.ALL)
+    private List<Station> stations;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "location", cascade = CascadeType.ALL)
+    private List<RescueStation> rescueStations;
 }

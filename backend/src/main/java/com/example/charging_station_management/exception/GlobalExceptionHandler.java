@@ -1,5 +1,6 @@
 package com.example.charging_station_management.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -52,10 +54,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(
             Exception ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Đã xảy ra lỗi. Vui lòng thử lại sau.");
+        log.error("=== INTERNAL SERVER ERROR ===");
+        log.error("Exception type: {}", ex.getClass().getName());
+        log.error("Exception message: {}", ex.getMessage());
+        log.error("Full stack trace:", ex);
 
-        ex.printStackTrace();
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Đã xảy ra lỗi: " + ex.getMessage());
+        response.put("error", ex.getClass().getSimpleName());
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

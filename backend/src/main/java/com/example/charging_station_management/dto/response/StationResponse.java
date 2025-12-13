@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -31,5 +32,5 @@ public class StationResponse {
     private Integer ports;
     private BigDecimal revenue;
     private String lastCheck;
-    private int poles;
+    private List<ChargingPoleResponse> poles;
 }

@@ -80,6 +80,47 @@ export interface FundingInfoPayload {
   endDate?: string | null;
 }
 
+export interface ChargingHistoryResponse {
+  content: ChargingHistoryItem[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number; // current page index
+}
+
+export interface ChargingHistoryItem {
+  sessionId: number;
+  stationName: string;
+  address: string;
+  vehiclePlate: string;
+  startTime: string;
+  endTime: string | null;
+  energyKwh: number;
+  totalAmount: number | null;
+  sessionStatus: "PENDING" | "CHARGING" | "COMPLETED" | "CANCELLED" | "FAILED";
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
+  paymentMethod: string | null;
+}
+
+export interface TransactionHistoryItem {
+  transactionId: number;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  bankName: string | null;
+  accountNumber: string | null;
+  paymentTime: string | null;
+  description: string;
+}
+
+export interface TransactionHistoryResponse {
+  content: TransactionHistoryItem[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+}
+
 export const profileApi = createApi({
   reducerPath: "profileApi",
   baseQuery: fetchBaseQuery({
@@ -130,9 +171,9 @@ export const profileApi = createApi({
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: "Project" as const, id })),
-              { type: "Project", id: "LIST" },
-            ]
+            ...result.map(({ id }) => ({ type: "Project" as const, id })),
+            { type: "Project", id: "LIST" },
+          ]
           : [{ type: "Project", id: "LIST" }],
     }),
 
@@ -153,9 +194,9 @@ export const profileApi = createApi({
       providesTags: (result, error, userId) =>
         userId
           ? [
-              { type: "Profile", id: userId },
-              { type: "Project", id: userId },
-            ]
+            { type: "Profile", id: userId },
+            { type: "Project", id: userId },
+          ]
           : [],
     }),
 
@@ -224,6 +265,20 @@ export const profileApi = createApi({
         { type: "Project", id: "LIST" },
       ],
     }),
+
+    getChargingHistory: builder.query<ChargingHistoryResponse, { userId: string; page?: number; size?: number }>({
+      query: ({ userId, page = 0, size = 10 }) =>
+        `/api/customer/${userId}/history?page=${page}&size=${size}`,
+      providesTags: (result, error, { userId }) =>
+        result ? [{ type: "Profile", id: `${userId}-history` }] : [],
+    }),
+
+    getTransactions: builder.query<TransactionHistoryResponse, { userId: string; page?: number; size?: number }>({
+      query: ({ userId, page = 0, size = 10 }) =>
+        `/api/customer/${userId}/transactions?page=${page}&size=${size}`,
+      providesTags: (result, error, { userId }) =>
+        result ? [{ type: "Profile", id: `${userId}-transactions` }] : [],
+    }),
   }),
 });
 
@@ -240,4 +295,6 @@ export const {
   useUpdateProjectContactMutation,
   useUpdateProjectFundingMutation,
   useUpdateProjectAboutMutation,
+  useGetChargingHistoryQuery,
+  useGetTransactionsQuery,
 } = profileApi;
