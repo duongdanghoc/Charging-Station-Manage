@@ -161,7 +161,8 @@ public class StationServiceImpl implements StationService {
         List<SessionStatus> historyStatuses = List.of(
                 SessionStatus.COMPLETED,
                 SessionStatus.CANCELLED,
-                SessionStatus.FAILED);
+                SessionStatus.FAILED
+        );
         long historySessions = chargingSessionRepository.countByStationIdAndStatusIn(stationId, historyStatuses);
 
         if (historySessions > 0) {
