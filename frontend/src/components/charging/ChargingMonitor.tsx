@@ -1,0 +1,103 @@
+'use client';
+import React, { useEffect, useState } from "react";
+import { Zap, Clock, Battery, AlertTriangle } from "lucide-react";
+import { useGetCurrentSessionQuery, useStopSessionMutation } from "@/lib/redux/services/sessionApi";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+export default function ChargingMonitor() {
+    const { data: session, refetch } = useGetCurrentSessionQuery(undefined, {
+        pollingInterval: 5000, 
+    });
+    const [stopSession, { isLoading: isStopping }] = useStopSessionMutation();
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    const isCharging = session?.status === 'CHARGING';
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isCharging && session?.startTime) {
+            const start = new Date(session.startTime).getTime();
+            interval = setInterval(() => {
+                const now = new Date().getTime();
+                setElapsedTime(Math.floor((now - start) / 1000));
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isCharging, session?.startTime]);
+
+    const formatTime = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const handleStop = async () => {
+        if (!session) return;
+        try {
+            await stopSession(session.id).unwrap();
+            toast.success("Đã kết thúc phiên sạc!");
+            refetch();
+        } catch (error) {
+            toast.error("Không thể dừng sạc. Vui lòng thử lại.");
+        }
+    };
+
+    if (!isCharging) return null;
+
+    return (
+        <div className="fixed bottom-4 right-4 z-50 w-full max-w-sm bg-white rounded-lg shadow-xl border-l-4 border-rose-500 p-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="relative">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                        <div className="relative bg-rose-500 rounded-full p-1.5 text-white">
+                            <Zap size={16} className="fill-current" />
+                        </div>
+                    </div>
+                    <h3 className="font-bold text-gray-900">Đang sạc...</h3>
+                </div>
+                {/* Mock Energy Progress for visual effect */}
+                <div className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    #ID: {session.id}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 my-4">
+                <div className="bg-gray-50 rounded p-2 text-center">
+                    <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                        <Clock size={12} /> Thời gian
+                    </div>
+                    <div className="font-mono font-bold text-lg text-rose-600">
+                        {formatTime(elapsedTime)}
+                    </div>
+                </div>
+                <div className="bg-gray-50 rounded p-2 text-center">
+                    <div className="flex items-center justify-center gap-1 text-gray-500 text-xs mb-1">
+                        <Battery size={12} /> Điện năng
+                    </div>
+                    <div className="font-mono font-bold text-lg text-rose-600">
+                        {session.energyKwh} kWh
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500">Chi phí tạm tính:</span>
+                    <span className="font-bold text-gray-900">{session.cost?.toLocaleString()} VNĐ</span>
+                </div>
+                <Button 
+                    variant="destructive" 
+                    className="w-full bg-rose-600 hover:bg-rose-700" 
+                    onClick={handleStop}
+                    disabled={isStopping}
+                >
+                    {isStopping ? "Đang dừng..." : "Dừng sạc"}
+                </Button>
+            </div>
+        </div>
+    );
+}

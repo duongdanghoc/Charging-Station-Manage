@@ -46,7 +46,7 @@ export interface Station {
   type: "CAR" | "MOTORBIKE" | "BICYCLE";
   vendorName?: string;
   // 👇 QUAN TRỌNG: poles là number (số lượng)
-  poles: number; 
+  poles: number;
 }
 
 export interface CreateStationRequest {
@@ -114,12 +114,13 @@ export const stationApi = createApi({
     },
   }),
   // 👇 THÊM "Poles" VÀO ĐÂY
-  tagTypes: ["Stations", "Poles"], 
+  tagTypes: ["Stations", "Poles"],
   endpoints: (builder) => ({
-    
+
     // 1. Lấy danh sách trạm
     getMyStations: builder.query<PageResponse<Station>, StationFilterParams>({
       query: (params) => {
+        // Build query string
         const qs = new URLSearchParams();
         qs.append("page", params.page.toString());
         qs.append("size", params.size.toString());
@@ -177,7 +178,7 @@ export const stationApi = createApi({
         body,
       }),
       // 👇 Invalidate cả Stations (để cập nhật số lượng) và Poles (để cập nhật list chi tiết)
-      invalidatesTags: ["Stations", "Poles"], 
+      invalidatesTags: ["Stations", "Poles"],
     }),
 
     // 7. Xóa trụ sạc
@@ -227,6 +228,11 @@ export const stationApi = createApi({
       providesTags: (result, error, id) => [{ type: "Poles", id }],
     }),
 
+
+    // Get customer's vehicles
+    getCustomerVehicles: builder.query<any[], void>({
+        query: () => '/api/customer/vehicles',
+    }),
   }),
 });
 
@@ -236,17 +242,18 @@ export const {
   useCreateStationMutation,
   useUpdateStationMutation,
   useDeleteStationMutation,
+  useGetCustomerVehiclesQuery,
   useGetStationByIdQuery,
-  
+
   // Hooks Trụ sạc
   useCreateChargingPoleMutation,
   useDeleteChargingPoleMutation,
   useUpdateChargingPoleMutation,
-  
+
   // Hooks Đầu sạc
   useCreateConnectorMutation,
   useDeleteConnectorMutation,
 
   // 👇 Đừng quên Export cái này
-  useGetPolesByStationIdQuery, 
+  useGetPolesByStationIdQuery,
 } = stationApi;
