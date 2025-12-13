@@ -31,4 +31,5 @@ public class StationResponse {
     private Integer ports;
     private BigDecimal revenue;
     private String lastCheck;
+    private int poles;
 }

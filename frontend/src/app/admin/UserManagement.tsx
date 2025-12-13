@@ -10,7 +10,10 @@ import {
   useGetUsersQuery,
   useDeleteUserMutation,
   useCreateUserMutation,
-  UserFilterParams
+  UserFilterParams,
+  useGetVendorStationsQuery,
+  useGetCustomerVehiclesQuery
+
 } from "@/lib/redux/services/adminApi"; // Đường dẫn file api của bạn
 
 // --- MOCK DATA CHO CHI TIẾT (VÌ CHƯA CÓ API THẬT CHO PHẦN NÀY) ---
@@ -80,7 +83,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
         description: (
           <div className="mt-2 p-2 bg-slate-100 rounded text-xs font-mono">
             <strong>Mật khẩu tạm:</strong> {password}
-            <br/>(Hãy copy mật khẩu này)
+            <br />(Hãy copy mật khẩu này)
           </div>
         ),
         duration: 10000,
@@ -98,14 +101,14 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
 
       if (err?.data) {
         if (typeof err.data === 'string') {
-            errorMsg = err.data;
+          errorMsg = err.data;
         } else if (err.data.fieldErrors && Array.isArray(err.data.fieldErrors)) {
-            // Trường hợp Spring Boot trả về list lỗi validation
-            errorMsg = err.data.fieldErrors.map((e: any) => `${e.field}: ${e.message}`).join(", ");
+          // Trường hợp Spring Boot trả về list lỗi validation
+          errorMsg = err.data.fieldErrors.map((e: any) => `${e.field}: ${e.message}`).join(", ");
         } else if (err.data.message) {
-            errorMsg = err.data.message;
+          errorMsg = err.data.message;
         } else if (err.data.error) {
-            errorMsg = err.data.error;
+          errorMsg = err.data.error;
         }
       }
 
@@ -135,7 +138,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
               className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
               required
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder="Ví dụ: Nguyễn Văn A"
             />
           </div>
@@ -147,7 +150,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
               type="email"
               required
               value={form.email}
-              onChange={e => setForm({...form, email: e.target.value})}
+              onChange={e => setForm({ ...form, email: e.target.value })}
               placeholder="user@example.com"
             />
           </div>
@@ -158,7 +161,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
               className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
               required
               value={form.phone}
-              onChange={e => setForm({...form, phone: e.target.value})}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
               placeholder="09xxxxxxxx"
             />
           </div>
@@ -169,14 +172,14 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
               <select
                 className="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
                 value={form.role}
-                onChange={e => setForm({...form, role: e.target.value as 'VENDOR' | 'CUSTOMER'})}
+                onChange={e => setForm({ ...form, role: e.target.value as 'VENDOR' | 'CUSTOMER' })}
               >
                 <option value="CUSTOMER">Khách hàng (Customer)</option>
                 <option value="VENDOR">Đối tác (Vendor)</option>
               </select>
               {/* Mũi tên custom cho select box đẹp hơn */}
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
               </div>
             </div>
           </div>
@@ -203,8 +206,27 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
 
 // --- COMPONENT: MODAL CHI TIẾT USER ---
 function UserDetailModal({ user, onClose }: { user: any, onClose: () => void }) {
+  // Gọi API lấy dữ liệu chi tiết dựa trên Role
+  // skip: !user... nghĩa là nếu chưa có user hoặc sai role thì không gọi API
+  const { data: stationsData, isLoading: loadStations } = useGetVendorStationsQuery(
+    { id: user?.id },
+    { skip: !user || user.role !== 'VENDOR' }
+  );
+
+  const { data: vehiclesData, isLoading: loadVehicles } = useGetCustomerVehiclesQuery(
+    { id: user?.id },
+    { skip: !user || user.role !== 'CUSTOMER' }
+  );
+  // 👇 VỊ TRÍ 1: Xem toàn bộ cục data API trả về (bao gồm status, message, data...)
+  if (stationsData) console.log("🔥 API Full Response (Stations):", stationsData);
+  if (vehiclesData) console.log("🔥 API Full Response (Vehicles):", vehiclesData);
   if (!user) return null;
 
+  // Lấy list từ response API
+  const stations = stationsData?.data?.content || [];
+  const vehicles = vehiclesData?.data?.content || [];
+  console.log("✅ Final Stations List:", stations);
+  console.log("✅ Final Vehicles List:", vehicles);
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-in fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -224,28 +246,28 @@ function UserDetailModal({ user, onClose }: { user: any, onClose: () => void }) 
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white bg-white/10 p-1 rounded-full"><X className="w-5 h-5"/></button>
+          <button onClick={onClose} className="text-white/70 hover:text-white bg-white/10 p-1 rounded-full"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-6 space-y-6">
           {/* Thông tin cơ bản */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Mail className="w-3 h-3"/> Email</div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Mail className="w-3 h-3" /> Email</div>
               <div className="text-gray-900 font-medium break-all">{user.email}</div>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Phone className="w-3 h-3"/> Hotline</div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Phone className="w-3 h-3" /> Hotline</div>
               <div className="text-gray-900 font-medium">{user.phone}</div>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Shield className="w-3 h-3"/> Trạng thái</div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Shield className="w-3 h-3" /> Trạng thái</div>
               <div className={`font-medium ${user.status === 1 ? 'text-green-600' : 'text-red-600'}`}>
                 {user.status === 1 ? '● Đang hoạt động' : '● Đã bị khóa'}
               </div>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg border">
-              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Calendar className="w-3 h-3"/> Ngày tạo</div>
+              <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold"><Calendar className="w-3 h-3" /> Ngày tạo</div>
               <div className="text-gray-900 font-medium">20/05/2024 (Mock)</div>
             </div>
           </div>
@@ -254,21 +276,33 @@ function UserDetailModal({ user, onClose }: { user: any, onClose: () => void }) 
           {user.role === 'VENDOR' ? (
             <div>
               <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2 uppercase">
-                <Zap className="w-4 h-4 text-yellow-500"/> Danh sách trạm sạc sở hữu
+                <Zap className="w-4 h-4 text-yellow-500" /> Danh sách trạm sạc sở hữu
               </h3>
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-100 text-xs text-gray-500 uppercase">
-                    <tr><th className="p-3">Tên trạm</th><th className="p-3">Địa chỉ</th><th className="p-3">Doanh thu</th></tr>
+                    <tr><th className="p-3">Tên trạm</th><th className="p-3">Địa chỉ</th><th className="p-3">Số Cổng (Số trụ)</th></tr>
                   </thead>
                   <tbody className="divide-y">
-                    {MOCK_VENDOR_STATIONS.map(st => (
-                      <tr key={st.id}>
-                        <td className="p-3 font-medium">{st.name}</td>
-                        <td className="p-3 text-gray-500">{st.address}</td>
-                        <td className="p-3 font-mono text-green-600">{st.revenue}</td>
-                      </tr>
-                    ))}
+                    {/* 1. Xử lý trạng thái đang tải */}
+                    {loadStations ? (
+                      <tr><td colSpan={3} className="p-4 text-center text-gray-500">Đang tải dữ liệu...</td></tr>
+                    ) : stations.length === 0 ? (
+                      /* 2. Xử lý khi không có dữ liệu */
+                      <tr><td colSpan={3} className="p-4 text-center text-gray-500">Đối tác này chưa có trạm sạc nào.</td></tr>
+                    ) : (
+                      /* 3. Map dữ liệu thật (stations) */
+                      stations.map((st: any) => (
+                        <tr key={st.id}>
+                          <td className="p-3 font-medium">{st.name}</td>
+                          <td className="p-3 text-gray-500">{st.address}</td>
+                          {/* Backend trả về ports và poles, hiển thị ở đây */}
+                          <td className="p-3 font-medium text-blue-600 font-semibold">
+                            {st.ports} cổng ({st.poles} trụ)
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -276,21 +310,36 @@ function UserDetailModal({ user, onClose }: { user: any, onClose: () => void }) 
           ) : (
             <div>
               <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2 uppercase">
-                <Car className="w-4 h-4 text-blue-500"/> Danh sách phương tiện
+                <Car className="w-4 h-4 text-blue-500" /> Danh sách phương tiện
               </h3>
-               <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-100 text-xs text-gray-500 uppercase">
                     <tr><th className="p-3">Mẫu xe</th><th className="p-3">Biển số</th><th className="p-3">Pin</th></tr>
                   </thead>
                   <tbody className="divide-y">
-                    {MOCK_CUSTOMER_VEHICLES.map(v => (
-                      <tr key={v.id}>
-                        <td className="p-3 font-medium">{v.model}</td>
-                        <td className="p-3 font-mono bg-gray-50 rounded">{v.license}</td>
-                        <td className="p-3 text-green-600 font-bold">{v.battery}</td>
-                      </tr>
-                    ))}
+                    {/* 1. Xử lý trạng thái đang tải */}
+                    {loadVehicles ? (
+                      <tr><td colSpan={3} className="p-4 text-center text-gray-500">Đang tải dữ liệu...</td></tr>
+                    ) : vehicles.length === 0 ? (
+                      /* 2. Xử lý khi không có dữ liệu */
+                      <tr><td colSpan={3} className="p-4 text-center text-gray-500">Khách hàng chưa đăng ký xe nào.</td></tr>
+                    ) : (
+                      /* 3. Map dữ liệu thật (vehicles) */
+                      vehicles.map((v: any) => (
+                        <tr key={v.id}>
+                          <td className="p-3 font-medium">{v.model}</td>
+                          {/* Chú ý: Backend trả về licensePlate, không phải license */}
+                          <td className="p-3 font-mono bg-gray-50 rounded text-slate-700">
+                            {v.licensePlate || "Đang cập nhật"}
+                          </td>
+                          {/* Chú ý: Backend trả về batteryCapacity */}
+                          <td className="p-3 text-green-600 font-bold">
+                            {v.batteryCapacity ? `${v.batteryCapacity} kWh` : "N/A"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -341,7 +390,7 @@ export default function UserManagement() {
       {/* Header Page */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Shield className="w-6 h-6 text-blue-600" /> Quản Lý Người Dùng
           </h2>
           <p className="text-sm text-gray-500 mt-1">Quản lý tài khoản khách hàng và đối tác trạm sạc.</p>
@@ -431,11 +480,10 @@ export default function UserManagement() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded text-xs font-semibold border ${
-                        user.role === 'ADMIN' ? 'bg-red-50 text-red-700 border-red-100' :
+                      <span className={`px-2.5 py-1 rounded text-xs font-semibold border ${user.role === 'ADMIN' ? 'bg-red-50 text-red-700 border-red-100' :
                         user.role === 'VENDOR' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                        'bg-green-50 text-green-700 border-green-100'
-                      }`}>
+                          'bg-green-50 text-green-700 border-green-100'
+                        }`}>
                         {user.role}
                       </span>
                     </td>
@@ -476,19 +524,19 @@ export default function UserManagement() {
         {/* Pagination Simple */}
         {totalPages > 0 && (
           <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
-             <button
-               disabled={filters.page === 0}
-               onClick={() => setFilters(prev => ({...prev, page: (prev.page || 0) - 1}))}
-               className="px-3 py-1 bg-white border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
-             >Trước</button>
-             <span className="px-3 py-1 text-sm text-gray-600 flex items-center">
-               Trang {(filters.page || 0) + 1} / {totalPages}
-             </span>
-             <button
-               disabled={(filters.page || 0) + 1 >= totalPages}
-               onClick={() => setFilters(prev => ({...prev, page: (prev.page || 0) + 1}))}
-               className="px-3 py-1 bg-white border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
-             >Sau</button>
+            <button
+              disabled={filters.page === 0}
+              onClick={() => setFilters(prev => ({ ...prev, page: (prev.page || 0) - 1 }))}
+              className="px-3 py-1 bg-white border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            >Trước</button>
+            <span className="px-3 py-1 text-sm text-gray-600 flex items-center">
+              Trang {(filters.page || 0) + 1} / {totalPages}
+            </span>
+            <button
+              disabled={(filters.page || 0) + 1 >= totalPages}
+              onClick={() => setFilters(prev => ({ ...prev, page: (prev.page || 0) + 1 }))}
+              className="px-3 py-1 bg-white border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+            >Sau</button>
           </div>
         )}
       </div>
@@ -497,7 +545,7 @@ export default function UserManagement() {
       <CreateUserModal
         isOpen={isCreateOpen}
         onClose={() => setCreateOpen(false)}
-        onSuccess={() => setFilters({...filters, page: 0})} // Refresh list
+        onSuccess={() => setFilters({ ...filters, page: 0 })} // Refresh list
       />
 
       <UserDetailModal

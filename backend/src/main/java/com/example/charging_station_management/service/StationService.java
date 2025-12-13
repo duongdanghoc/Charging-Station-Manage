@@ -30,5 +30,8 @@ public interface StationService {
 
     // 4. Xóa trạm (Quyền Admin)
     void adminDeleteStation(Integer stationId);
+    // lấy danh sách trạm
+    
+
 
 }

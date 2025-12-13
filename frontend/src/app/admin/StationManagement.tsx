@@ -21,6 +21,7 @@ interface Station {
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
   revenue: number;
   lastCheck: string;
+  poles: number;
 }
 
 // --- CONFIG ---
@@ -61,14 +62,17 @@ export default function StationManagement() {
       });
 
       const rawData = response.data.content || response.data;
-
+      console.log("Dữ liệu gốc từ Server:", rawData);
       // Lọc bỏ các item bị null hoặc undefined để tránh crash giao diện
       const cleanData = Array.isArray(rawData)
-        ? rawData.filter((item: any) => item !== null && item !== undefined)
+        ? rawData.filter((item: any) => item !== null && item !== undefined).map((item) => ({
+            ...item,
+            // Đảm bảo luôn là chữ in hoa, nếu null thì gán mặc định INACTIVE
+            status: item.status2 || item.status || 'INACTIVE'
+        }))
         : [];
-
       setStations(cleanData);
-      // 👆👆👆 HẾT PHẦN SỬA 👆👆👆
+
 
     } catch (error: any) {
       console.error("Lỗi tải trạm sạc:", error);
@@ -219,12 +223,12 @@ export default function StationManagement() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Doanh thu</div>
-                  <div className="font-bold text-gray-900 text-lg">{selectedStation.revenue ? selectedStation.revenue.toLocaleString() : 0} VNĐ</div>
+                  <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Số Trụ Sạc </div>
+                  <div className="font-bold text-gray-900 text-lg">{selectedStation.poles} Trụ</div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Quy mô</div>
-                  <div className="font-bold text-gray-900 text-lg">{selectedStation.ports} Cổng sạc</div>
+                  <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Số Cổng Sạc</div>
+                  <div className="font-bold text-gray-900 text-lg">{selectedStation.ports} Cổng</div>
                 </div>
               </div>
               <div>
