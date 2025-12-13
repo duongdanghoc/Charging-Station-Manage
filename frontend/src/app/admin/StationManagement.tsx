@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import {
-  LayoutDashboard,
-  Users,
   Zap,
   MapPin,
   Activity,
   Power,
   Eye,
-  Search,
   BatteryCharging
 } from "lucide-react";
 
