@@ -1,322 +1,593 @@
-'use client';
+"use client";
 
-import React, { useMemo, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect } from 'react';
+import { Car, Plus, Edit2, Trash2, Battery, Plug, AlertCircle, X, Hash, Tag, BatteryCharging, ShieldCheck } from 'lucide-react';
+import {
+    VehicleService,
+    type Vehicle,
+    type CreateVehicleRequest,
+    type UpdateVehicleRequest,
+    type VehicleType,
+    type ConnectorType,
+    VEHICLE_TYPE_LABELS,
+    CONNECTOR_TYPE_LABELS
+} from '@/services/vehicleService';
 
-export type ChargingPortType =
-    | "CCS2"
-    | "CHAdeMO"
-    | "Type 2"
-    | "Tesla"
-    | "GB/T"
-    | string;
+const CarInfoSection: React.FC = () => {
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [showModal, setShowModal] = useState(false);
+    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+    const [formData, setFormData] = useState<CreateVehicleRequest>({
+        vehicleType: 'CAR',
+        brand: '',
+        model: '',
+        licensePlate: '',
+        batteryCapacity: 0,
+        connectorType: 'TYPE2',
+    });
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [submitting, setSubmitting] = useState(false);
+    // Delete Modal State
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
 
-export interface CarInfo {
-    id: string;
-    brand: string;
-    model: string;
-    chargingPort: ChargingPortType;
-    batteryCapacityKwh: string;
-    rangeKm: string;
-    notes?: string;
-}
+    useEffect(() => {
+        loadVehicles();
+    }, []);
 
-interface CarInfoSectionProps {
-    cars?: CarInfo[];
-    onChange?: (cars: CarInfo[]) => void;
-}
-
-const defaultCars: CarInfo[] = [
-    {
-        id: "car_01",
-        brand: "VinFast",
-        model: "VF8 Plus",
-        chargingPort: "CCS2",
-        batteryCapacityKwh: "87.7",
-        rangeKm: "400",
-        notes: "Xe gia đình sử dụng hằng ngày",
-    },
-    {
-        id: "car_02",
-        brand: "Hyundai",
-        model: "Kona Electric",
-        chargingPort: "Type 2",
-        batteryCapacityKwh: "64",
-        rangeKm: "305",
-        notes: "Sử dụng cho các chuyến đi công tác",
-    },
-];
-
-const emptyForm: Omit<CarInfo, "id"> = {
-    brand: "",
-    model: "",
-    chargingPort: "CCS2",
-    batteryCapacityKwh: "",
-    rangeKm: "",
-    notes: "",
-};
-
-const CarInfoSection: React.FC<CarInfoSectionProps> = ({ cars, onChange }) => {
-    const [carList, setCarList] = useState<CarInfo[]>(cars ?? defaultCars);
-    const [formValues, setFormValues] = useState(emptyForm);
-    const [editingId, setEditingId] = useState<string | null>(null);
-
-    const isEditing = Boolean(editingId);
-
-    const handleFieldChange = (
-        field: keyof Omit<CarInfo, "id">
-    ) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFormValues((prev) => ({ ...prev, [field]: event.target.value }));
-    };
-
-    const resetForm = () => {
-        setFormValues(emptyForm);
-        setEditingId(null);
-    };
-
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!formValues.brand.trim() || !formValues.model.trim()) {
-            return;
+    const loadVehicles = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            console.log('Loading vehicles...');
+            const data = await VehicleService.getVehicles();
+            console.log('Vehicles loaded:', data);
+            setVehicles(data);
+        } catch (err) {
+            console.error('Error loading vehicles:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Không thể tải danh sách phương tiện';
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
         }
-
-        if (isEditing && editingId) {
-            const newCars = carList.map((car) =>
-                car.id === editingId ? { ...car, ...formValues, id: editingId } : car
-            );
-            setCarList(newCars);
-            onChange?.(newCars);
-            resetForm();
-            return;
-        }
-
-        const newCar: CarInfo = {
-            id: `car_${Date.now()}`,
-            ...formValues,
-        };
-
-        const newCars = [...carList, newCar];
-        setCarList(newCars);
-        onChange?.(newCars);
-        resetForm();
     };
 
-    const handleEdit = (car: CarInfo) => {
-        setEditingId(car.id);
-        setFormValues({
-            brand: car.brand,
-            model: car.model,
-            chargingPort: car.chargingPort,
-            batteryCapacityKwh: car.batteryCapacityKwh,
-            rangeKm: car.rangeKm,
-            notes: car.notes ?? "",
+    const handleAdd = () => {
+        setEditingVehicle(null);
+        setFormData({
+            vehicleType: 'CAR',
+            brand: '',
+            model: '',
+            licensePlate: '',
+            batteryCapacity: 0,
+            connectorType: 'TYPE2',
         });
+        setFormErrors({});
+        setShowModal(true);
     };
 
-    const handleDelete = (id: string) => {
-        const newCars = carList.filter((car) => car.id !== id);
-        setCarList(newCars);
-        onChange?.(newCars);
-        if (editingId === id) {
-            resetForm();
+    const handleEdit = (vehicle: Vehicle) => {
+        setEditingVehicle(vehicle);
+        setFormData({
+            vehicleType: vehicle.vehicleType,
+            brand: vehicle.brand,
+            model: vehicle.model,
+            licensePlate: vehicle.licensePlate,
+            batteryCapacity: vehicle.batteryCapacity,
+            connectorType: vehicle.connectorType,
+        });
+        setFormErrors({});
+        setShowModal(true);
+    };
+
+    const validateForm = (): boolean => {
+        const errors: Record<string, string> = {};
+
+        if (!formData.brand.trim()) {
+            errors.brand = 'Vui lòng nhập hãng xe';
+        }
+
+        if (!formData.model.trim()) {
+            errors.model = 'Vui lòng nhập model';
+        }
+
+        if (formData.vehicleType !== 'BICYCLE' && !formData.licensePlate.trim()) {
+            errors.licensePlate = 'Vui lòng nhập biển số xe';
+        }
+
+        if (formData.batteryCapacity <= 0) {
+            errors.batteryCapacity = 'Dung lượng pin phải lớn hơn 0';
+        }
+
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!validateForm()) {
+            console.log('Form validation failed', formErrors);
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            setError(null);
+
+            console.log('Submitting vehicle data:', formData);
+
+            if (editingVehicle) {
+                const result = await VehicleService.updateVehicle(editingVehicle.id, formData as UpdateVehicleRequest);
+                console.log('Update result:', result);
+            } else {
+                const result = await VehicleService.createVehicle(formData);
+                console.log('Create result:', result);
+            }
+
+            await loadVehicles();
+            setShowModal(false);
+        } catch (err) {
+            console.error('Error submitting vehicle:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+
+            if (errorMessage.toLowerCase().includes('biển số')) {
+                setFormErrors(prev => ({ ...prev, licensePlate: errorMessage }));
+            } else {
+                setFormErrors(prev => ({ ...prev, general: errorMessage }));
+            }
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const totalCapacity = useMemo(() => {
-        return carList.reduce((sum, car) => sum + Number(car.batteryCapacityKwh || 0), 0);
-    }, [carList]);
+    const promptDelete = (vehicle: Vehicle) => {
+        if (vehicle.hasActiveSession) {
+            alert('Không thể xóa phương tiện đang trong phiên sạc');
+            return;
+        }
+        setVehicleToDelete(vehicle);
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!vehicleToDelete) return;
+
+        try {
+            setSubmitting(true);
+            setError(null);
+            await VehicleService.deleteVehicle(vehicleToDelete.id);
+            await loadVehicles();
+            setShowDeleteModal(false);
+            setVehicleToDelete(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Không thể xóa phương tiện');
+            setShowDeleteModal(false);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const getVehicleIcon = (type: VehicleType) => {
+        return Car; // Could customize based on type
+    };
+
+    const getVehicleImage = (type: VehicleType) => {
+        switch (type) {
+            case 'CAR': return '/car.png';
+            case 'MOTORBIKE': return '/motobike.png';
+            case 'BICYCLE': return '/bike.png';
+            default: return '/car.png';
+        }
+    };
 
     return (
-        <section className="space-y-6" aria-labelledby="car-info-section">
-            <div className="flex flex-col gap-3">
-                <h2 id="car-info-section" className="text-xl font-semibold text-gray-900">
-                    Thông tin xe điện của bạn
-                </h2>
-                <p className="text-sm text-gray-600 max-w-2xl">
-                    Theo dõi danh sách phương tiện đã thêm, cập nhật thông số kỹ thuật và quản lý cấu hình sạc yêu thích. Giao diện demo lưu dữ liệu tạm thời.
-                </p>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Quản lý phương tiện</h2>
+                    <p className="text-sm text-gray-500 mt-1">Quản lý danh sách các phương tiện của bạn</p>
+                </div>
+                <button
+                    onClick={handleAdd}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                    <Plus className="h-4 w-4" />
+                    Thêm phương tiện
+                </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
-                    <header>
-                        <h3 className="text-base font-semibold text-gray-900">
-                            {isEditing ? "Chỉnh sửa thông tin xe" : "Thêm xe mới"}
-                        </h3>
-                        <p className="text-xs text-gray-500">
-                            Điền các thông số cơ bản của xe điện để tính toán kế hoạch sạc phù hợp.
-                        </p>
-                    </header>
-                    <form className="space-y-4" onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Field label="Hãng xe" htmlFor="car-brand">
-                                <Input
-                                    id="car-brand"
-                                    placeholder="VD: VinFast"
-                                    value={formValues.brand}
-                                    onChange={handleFieldChange("brand")}
-                                    required
-                                />
-                            </Field>
-                            <Field label="Mẫu xe" htmlFor="car-model">
-                                <Input
-                                    id="car-model"
-                                    placeholder="VD: VF8 Plus"
-                                    value={formValues.model}
-                                    onChange={handleFieldChange("model")}
-                                    required
-                                />
-                            </Field>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Field label="Loại cổng sạc" htmlFor="car-port">
-                                <Input
-                                    id="car-port"
-                                    placeholder="VD: CCS2"
-                                    value={formValues.chargingPort}
-                                    onChange={handleFieldChange("chargingPort")}
-                                    required
-                                />
-                            </Field>
-                            <Field label="Dung lượng pin (kWh)" htmlFor="car-battery">
-                                <Input
-                                    id="car-battery"
-                                    type="number"
-                                    min="0"
-                                    step="0.1"
-                                    placeholder="VD: 87.7"
-                                    value={formValues.batteryCapacityKwh}
-                                    onChange={handleFieldChange("batteryCapacityKwh")}
-                                    required
-                                />
-                            </Field>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Field label="Quãng đường lý thuyết (km)" htmlFor="car-range">
-                                <Input
-                                    id="car-range"
-                                    type="number"
-                                    min="0"
-                                    placeholder="VD: 400"
-                                    value={formValues.rangeKm}
-                                    onChange={handleFieldChange("rangeKm")}
-                                />
-                            </Field>
-                            <Field label="Ghi chú" htmlFor="car-notes">
-                                <Input
-                                    id="car-notes"
-                                    placeholder="Ví dụ: Xe gia đình"
-                                    value={formValues.notes}
-                                    onChange={handleFieldChange("notes")}
-                                />
-                            </Field>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                            <Button type="submit" className="flex items-center gap-2">
-                                {isEditing ? (
-                                    <>
-                                        <Pencil className="size-4" /> Cập nhật xe
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="size-4" /> Thêm vào danh sách
-                                    </>
-                                )}
-                            </Button>
-                            {isEditing && (
-                                <button
-                                    type="button"
-                                    onClick={resetForm}
-                                    className="text-xs text-gray-500 underline"
-                                >
-                                    Huỷ chỉnh sửa
-                                </button>
-                            )}
-                        </div>
-                    </form>
-                </div>
-
-                <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                        <div>
-                            <h3 className="text-base font-semibold text-gray-900">Danh sách xe đã thêm</h3>
-                            <p className="text-xs text-gray-500">
-                                Tổng dung lượng pin hiện có: <strong>{totalCapacity.toFixed(1)} kWh</strong>
-                            </p>
-                        </div>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 px-3 py-1 text-xs font-medium">
-                            {carList.length} phương tiện
-                        </span>
+            {/* Error Message */}
+            {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-red-900">Lỗi</h3>
+                        <p className="text-sm text-red-700 mt-1">{error}</p>
                     </div>
-                    {carList.length === 0 ? (
-                        <div className="px-6 py-12 text-center text-sm text-gray-500">
-                            Chưa có xe nào được thêm. Bắt đầu với biểu mẫu bên trái nhé!
-                        </div>
-                    ) : (
-                        <ul className="divide-y divide-gray-100">
-                            {carList.map((car) => (
-                                <li key={car.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold text-gray-900">
-                                            {car.brand} {car.model}
-                                        </p>
-                                        <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-gray-500 max-w-xl">
-                                            <span>Cổng sạc: <strong className="text-gray-700">{car.chargingPort}</strong></span>
-                                            <span>Pin: <strong className="text-gray-700">{car.batteryCapacityKwh} kWh</strong></span>
-                                            <span>Quãng đường: <strong className="text-gray-700">{car.rangeKm || "—"} km</strong></span>
-                                            {car.notes && (
-                                                <span className="col-span-full">Ghi chú: {car.notes}</span>
-                                            )}
+                    <button
+                        onClick={() => setError(null)}
+                        className="text-red-400 hover:text-red-600"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+                <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+                    <p className="mt-4 text-sm text-gray-500">Đang tải...</p>
+                </div>
+            )}
+
+            {/* Vehicle List */}
+            {!loading && vehicles.length === 0 && (
+                <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-12 text-center">
+                    <Car className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-4 text-sm font-semibold text-gray-900">Chưa có phương tiện nào</h3>
+                    <p className="mt-2 text-sm text-gray-500">Thêm phương tiện đầu tiên của bạn</p>
+                    <button
+                        onClick={handleAdd}
+                        className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Thêm phương tiện
+                    </button>
+                </div>
+            )}
+
+            {!loading && vehicles.length > 0 && (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {vehicles.map((vehicle) => {
+                        const StatusIcon = vehicle.hasActiveSession ? BatteryCharging : ShieldCheck;
+                        const statusStyles = vehicle.hasActiveSession
+                            ? "bg-green-100 text-green-600"
+                            : "bg-blue-100 text-blue-600";
+
+                        return (
+                            <div
+                                key={vehicle.id}
+                                className="group relative rounded-xl border border-gray-200 bg-white hover:shadow-lg transition-all duration-300 overflow-hidden"
+                            >
+                                {/* Background Image Layer */}
+                                <div
+                                    className="absolute inset-0 z-0 transition-transform duration-700 group-hover:scale-110"
+                                    style={{
+                                        backgroundImage: `url(${getVehicleImage(vehicle.vehicleType)})`,
+                                        backgroundSize: 'contain',
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        opacity: 0.8
+                                    }}
+                                />
+
+                                {/* Diagonal Overlay */}
+                                <div
+                                    className="absolute inset-0 z-0"
+                                    style={{
+                                        background: 'linear-gradient(110deg, #ffffff 35%, rgba(255,255,255,0.95) 45%, transparent 100%)'
+                                    }}
+                                />
+
+                                <div className="relative z-10 p-6">
+                                    {/* Header */}
+                                    <div className="flex items-start justify-between gap-4 mb-4">
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${statusStyles} flex-shrink-0 shadow-sm`}>
+                                                <StatusIcon className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="font-bold text-gray-900 truncate text-lg">
+                                                    {vehicle.brand} {vehicle.model}
+                                                </h3>
+                                                <p className="text-sm font-medium text-gray-500">{VEHICLE_TYPE_LABELS[vehicle.vehicleType]}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1 flex-shrink-0 bg-white/80 backdrop-blur-sm rounded-lg p-1 shadow-sm">
+                                            <button
+                                                onClick={() => handleEdit(vehicle)}
+                                                className="rounded-md p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                                title="Chỉnh sửa"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => promptDelete(vehicle)}
+                                                disabled={vehicle.hasActiveSession}
+                                                className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title={vehicle.hasActiveSession ? 'Đang sạc' : 'Xóa'}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 self-start sm:self-auto">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleEdit(car)}
-                                            className="flex items-center gap-1"
-                                        >
-                                            <Pencil className="size-4" />
-                                            Sửa
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => handleDelete(car.id)}
-                                            className="flex items-center gap-1"
-                                        >
-                                            <Trash2 className="size-4" />
-                                            Xóa
-                                        </Button>
+
+                                    {/* Details */}
+                                    <div className="space-y-3 relative max-w-[60%]">
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <span className="inline-flex items-center justify-center rounded-md bg-gray-100 border border-gray-200 px-3 py-1 font-mono font-semibold text-gray-900 shadow-sm">
+                                                {vehicle.licensePlate}
+                                            </span>
+                                            {vehicle.hasActiveSession && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 border border-green-200">
+                                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                                                    Đang sạc
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-4 text-sm text-gray-600 font-medium">
+                                            <div className="flex items-center gap-1.5">
+                                                <Battery className="h-4 w-4 text-gray-400" />
+                                                <span>{vehicle.batteryCapacity} kWh</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Plug className="h-4 w-4 text-gray-400" />
+                                                <span>{CONNECTOR_TYPE_LABELS[vehicle.connectorType]}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
-            </div>
-        </section>
+            )}
+
+            {/* Add/Edit Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-3xl rounded-xl bg-white shadow-2xl relative overflow-hidden transition-all">
+                        {/* Background Image Layer */}
+                        <div
+                            className="absolute inset-0 z-0 transition-all duration-500"
+                            style={{
+                                backgroundImage: `url(${getVehicleImage(formData.vehicleType)})`,
+                                backgroundSize: 'contain',
+                                backgroundPosition: '100% center',
+                                backgroundRepeat: 'no-repeat',
+                                opacity: 0.5
+                            }}
+                        />
+
+                        {/* Diagonal Overlay */}
+                        <div
+                            className="absolute inset-0 z-0"
+                            style={{
+                                background: 'linear-gradient(110deg, #ffffff 15%, rgba(255,255,255,0.95) 45%, transparent 100%)'
+                            }}
+                        />
+
+                        {/* Modal Header */}
+                        <div className="relative z-10 flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-white/50 backdrop-blur-sm">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {editingVehicle ? 'Chỉnh sửa phương tiện' : 'Thêm phương tiện mới'}
+                            </h3>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <form onSubmit={handleSubmit} className="relative z-10 p-6">
+                            {formErrors.general && (
+                                <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+                                    {formErrors.general}
+                                </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Left Column */}
+                                <div className="space-y-4">
+                                    {/* Vehicle Type */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            <span className="flex items-center gap-2">
+                                                <Car className="h-4 w-4 text-gray-500" />
+                                                Loại xe <span className="text-red-500">*</span>
+                                            </span>
+                                        </label>
+                                        <select
+                                            value={formData.vehicleType}
+                                            onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value as VehicleType })}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-100 bg-white/80 backdrop-blur-sm"
+                                        >
+                                            {Object.entries(VEHICLE_TYPE_LABELS).map(([value, label]) => (
+                                                <option key={value} value={value}>{label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Brand */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            <span className="flex items-center gap-2">
+                                                <Tag className="h-4 w-4 text-gray-500" />
+                                                Hãng xe <span className="text-red-500">*</span>
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.brand}
+                                            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 bg-white/80 backdrop-blur-sm ${formErrors.brand
+                                                    ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
+                                                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                                                }`}
+                                            placeholder="VD: Tesla, VinFast, Honda..."
+                                        />
+                                        {formErrors.brand && (
+                                            <p className="mt-1 text-xs text-red-600">{formErrors.brand}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Model */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            <span className="flex items-center gap-2">
+                                                <Tag className="h-4 w-4 text-gray-500" />
+                                                Model <span className="text-red-500">*</span>
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.model}
+                                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 bg-white/80 backdrop-blur-sm ${formErrors.model
+                                                    ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
+                                                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                                                }`}
+                                            placeholder="VD: Model 3, VF8, SH..."
+                                        />
+                                        {formErrors.model && (
+                                            <p className="mt-1 text-xs text-red-600">{formErrors.model}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Right Column */}
+                                <div className="space-y-4">
+                                    {/* License Plate */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            <span className="flex items-center gap-2">
+                                                <Hash className="h-4 w-4 text-gray-500" />
+                                                Biển số xe {formData.vehicleType !== 'BICYCLE' && <span className="text-red-500">*</span>}
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.licensePlate}
+                                            onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') })}
+                                            className={`w-full rounded-lg border px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-1 bg-white/80 backdrop-blur-sm ${formErrors.licensePlate
+                                                    ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
+                                                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                                                }`}
+                                            placeholder="VD: 30A-12345"
+                                        />
+                                        {formErrors.licensePlate && (
+                                            <p className="mt-1 text-xs text-red-600">{formErrors.licensePlate}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Battery Capacity */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            <span className="flex items-center gap-2">
+                                                <Battery className="h-4 w-4 text-gray-500" />
+                                                Dung lượng pin (kWh) <span className="text-red-500">*</span>
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            value={formData.batteryCapacity || ''}
+                                            onChange={(e) => setFormData({ ...formData, batteryCapacity: parseFloat(e.target.value) || 0 })}
+                                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 bg-white/80 backdrop-blur-sm ${formErrors.batteryCapacity
+                                                    ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
+                                                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                                                }`}
+                                            placeholder="VD: 50"
+                                        />
+                                        {formErrors.batteryCapacity && (
+                                            <p className="mt-1 text-xs text-red-600">{formErrors.batteryCapacity}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Connector Type */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            <span className="flex items-center gap-2">
+                                                <Plug className="h-4 w-4 text-gray-500" />
+                                                Loại cổng sạc <span className="text-red-500">*</span>
+                                            </span>
+                                        </label>
+                                        <select
+                                            value={formData.connectorType}
+                                            onChange={(e) => setFormData({ ...formData, connectorType: e.target.value as ConnectorType })}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-100 bg-white/80 backdrop-blur-sm"
+                                        >
+                                            {Object.entries(CONNECTOR_TYPE_LABELS).map(([value, label]) => (
+                                                <option key={value} value={value}>{label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-6 mt-2 border-t border-gray-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors bg-white/80 backdrop-blur-sm"
+                                    disabled={submitting}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                    disabled={submitting}
+                                >
+                                    {submitting ? 'Đang xử lý...' : (editingVehicle ? 'Cập nhật' : 'Thêm')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && vehicleToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl bg-white shadow-2xl relative overflow-hidden">
+                        <div className="p-6">
+                            <div className="flex items-center gap-3 mb-4 text-red-600">
+                                <div className="p-2 bg-red-100 rounded-full">
+                                    <Trash2 className="h-6 w-6" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900">Xác nhận xóa</h3>
+                            </div>
+
+                            <p className="text-gray-600 mb-6">
+                                Bạn có chắc chắn muốn xóa phương tiện <span className="font-semibold text-gray-900">{vehicleToDelete.brand} {vehicleToDelete.model}</span> ({vehicleToDelete.licensePlate})?
+                                <br />
+                                Hành động này không thể hoàn tác.
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteModal(false);
+                                        setVehicleToDelete(null);
+                                    }}
+                                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                    disabled={submitting}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleConfirmDelete}
+                                    className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                    disabled={submitting}
+                                >
+                                    {submitting ? 'Đang xóa...' : 'Xóa phương tiện'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
-
-interface FieldProps {
-    label: string;
-    htmlFor: string;
-    children: React.ReactNode;
-}
-
-const Field: React.FC<FieldProps> = ({ label, htmlFor, children }) => (
-    <div className="flex flex-col gap-2">
-        <Label htmlFor={htmlFor} className="text-sm font-medium text-gray-700">
-            {label}
-        </Label>
-        {children}
-    </div>
-);
 
 export default CarInfoSection;

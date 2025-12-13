@@ -89,7 +89,7 @@ public class AdminServiceImpl implements AdminService {
   @Override
   public void deleteUser(int userId) {
     User user = userRepository.findById(userId)
-        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
     user.setStatus(0);
     userRepository.save(user);
   }
@@ -335,4 +335,5 @@ public class AdminServiceImpl implements AdminService {
       return Role.VENDOR;
     throw new RuntimeException("Unknown user type for user: " + user.getEmail());
   }
+
 }

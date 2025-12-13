@@ -99,6 +99,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/stations/admin/**").hasRole("ADMIN")
                         
                         // 5. VENDOR endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
+                        .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")
+                        .requestMatchers("/api/vehicles/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/profile/**").authenticated()
+                        .requestMatchers("/api/profiles/**").authenticated()
                         .requestMatchers("/api/vendor/**").hasRole("VENDOR")
                         // Create/Update/Delete Station cần quyền Vendor
                         .requestMatchers(HttpMethod.POST, "/api/stations").hasRole("VENDOR")
