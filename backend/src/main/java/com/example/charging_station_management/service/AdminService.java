@@ -12,7 +12,6 @@ import com.example.charging_station_management.entity.converters.RescueStation;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import java.util.List;
 
 public interface AdminService {
 
@@ -33,7 +32,8 @@ public interface AdminService {
 
     // --- RESCUE STATION MANAGEMENT ---
 
-    // 1. Lấy danh sách (Có phân trang & tìm kiếm) -> THAY THẾ CHO getAllRescueStations cũ
+    // 1. Lấy danh sách (Có phân trang & tìm kiếm) -> THAY THẾ CHO
+    // getAllRescueStations cũ
     Page<RescueStation> getRescueStations(String keyword, Pageable pageable);
 
     // 2. Thêm mới

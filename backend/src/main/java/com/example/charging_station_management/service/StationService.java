@@ -7,7 +7,7 @@ import com.example.charging_station_management.entity.enums.VehicleType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import java.util.List;
+
 public interface StationService {
     // Các method dành cho Vendor
     StationResponse createStation(CreateStationRequest request);
@@ -16,10 +16,9 @@ public interface StationService {
 
     void deleteStation(Integer stationId);
 
-    Page<StationResponse> getMyStations(Pageable pageable);
+    Page<StationResponse> getMyStations(String search, Integer status, VehicleType type, Pageable pageable);
 
-
-// --- ADMIN METHODS ---
+    // --- ADMIN METHODS ---
 
     // 1. Lấy tất cả trạm (dùng cho Admin Dashboard)
     Page<StationResponse> getAllStations(Pageable pageable);
@@ -33,8 +32,4 @@ public interface StationService {
     // 4. Xóa trạm (Quyền Admin)
     void adminDeleteStation(Integer stationId);
     // lấy danh sách trạm
-    
-
-
-    Page<StationResponse> getMyStations(String search, Integer status, VehicleType type, Pageable pageable);
 }

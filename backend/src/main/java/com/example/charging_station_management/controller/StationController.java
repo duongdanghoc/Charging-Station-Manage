@@ -5,7 +5,6 @@ import com.example.charging_station_management.dto.request.UpdateStationRequest;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
 import com.example.charging_station_management.entity.enums.StationStatus;
-import com.example.charging_station_management.service.CustomerService;
 import com.example.charging_station_management.entity.enums.ConnectorType;
 import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.service.StationService;
@@ -98,7 +97,6 @@ public class StationController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) VehicleType type,
             @PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(stationService.getMyStations(pageable));
 
         return ResponseEntity.ok(stationService.getMyStations(search, status, type, pageable));
     }

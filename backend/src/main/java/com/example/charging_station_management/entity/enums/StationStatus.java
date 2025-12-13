@@ -5,7 +5,7 @@ import lombok.Getter;
 public enum StationStatus {
     INACTIVE(0),
     ACTIVE(1),
-    MAINTENANCE(2);
+    MAINTENANCE(2),
     DELETED(-1);
   
     private final int value;
@@ -34,6 +34,8 @@ public enum StationStatus {
         } catch (Exception e) {
             return INACTIVE;
         }
+    }
+
     public static StationStatus fromValue(int value) {
         for (StationStatus status : StationStatus.values()) {
             if (status.value == value)
