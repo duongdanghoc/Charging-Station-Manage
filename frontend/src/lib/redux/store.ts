@@ -26,9 +26,7 @@ export const store = configureStore({
     [adminApi.reducerPath]: adminApi.reducer,
     [stationApi.reducerPath]: stationApi.reducer,
     [connectorApi.reducerPath]: connectorApi.reducer,
-     [sessionApi.reducerPath]: sessionApi.reducer,
-    [priceApi.reducerPath]: priceApi.reducer,
-            [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
+    [sessionApi.reducerPath]: sessionApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -36,11 +34,8 @@ export const store = configureStore({
       .concat(profileApi.middleware)
       .concat(adminApi.middleware)
       .concat(stationApi.middleware)
-      .concat(connectorApi.middleware),
+      .concat(connectorApi.middleware)
       .concat(sessionApi.middleware),
-       // Thêm Middleware mới
-                  .concat(priceApi.middleware)
-                  .concat(chargingPoleApi.middleware),
 });
 
 // Enable refetchOnFocus and refetchOnReconnect
