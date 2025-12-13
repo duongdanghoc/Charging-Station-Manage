@@ -2,7 +2,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area
+  AreaChart, Area
 } from 'recharts';
 import { Users, Zap, DollarSign, Activity, BatteryCharging } from "lucide-react";
 import { useGetDashboardOverviewQuery } from "@/lib/redux/services/adminApi";

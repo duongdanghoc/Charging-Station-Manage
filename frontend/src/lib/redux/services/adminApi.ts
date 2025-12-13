@@ -75,6 +75,34 @@ export interface RescueStationRequest {
     latitude?: number;
     longitude?: number;
 }
+
+export interface ChargingSessionFilterParams {
+  page?: number;
+  size?: number;
+  customerId?: number;
+  stationId?: number;
+  status?: string;
+  startTimeFrom?: string;
+  startTimeTo?: string;
+  customerName?: string;
+  stationName?: string;
+  licensePlate?: string;
+}
+
+export interface TransactionFilterParams {
+  page?: number;
+  size?: number;
+  customerId?: number;
+  stationId?: number;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  paymentTimeFrom?: string;
+  paymentTimeTo?: string;
+  amountFrom?: number;
+  amountTo?: number;
+  customerName?: string;
+  stationName?: string;
+}
 // ----------------------------------------------------
 
 // --- 2. CẤU HÌNH API ---
@@ -193,6 +221,20 @@ export const adminApi = createApi({
       invalidatesTags: ['Rescue'],
     }),
 
+    getChargingSessions: builder.query({
+      query: (params: ChargingSessionFilterParams) => ({
+        url: '/admin/charging-sessions',
+        params
+      })
+    }),
+    
+    getTransactions: builder.query({
+      query: (params: TransactionFilterParams) => ({
+        url: '/admin/transactions',
+        params
+      })
+    }),
+
   }),
 });
 // --- 3. EXPORT HOOKS ---
@@ -208,4 +250,6 @@ export const {
   useCreateRescueStationMutation,
   useDeleteRescueStationMutation,
   useUpdateRescueStationMutation,
+  useGetChargingSessionsQuery,
+  useGetTransactionsQuery,
 } = adminApi;
