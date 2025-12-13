@@ -225,6 +225,7 @@ export default function RoutingMap() {
     const [routes, setRoutes] = useState<any[]>([]);
     const [selectedRouteIdx, setSelectedRouteIdx] = useState<number>(0);
     const [instructions, setInstructions] = useState<any[]>([]);
+    const [shouldAutoCalculate, setShouldAutoCalculate] = useState(false);
     const routeAlternatives = useMemo(() => {
         return routes.map((route: any, idx: number) => {
             const legs = Array.isArray(route?.legs) ? route.legs : [];
@@ -847,17 +848,58 @@ export default function RoutingMap() {
         }
     }, [focusOnCoordinate]);
 
-    const handleStationNavigate = useCallback((station: Station) => {
+    const handleStationNavigate = useCallback(async (station: Station) => {
         if (typeof station.lat !== 'number' || typeof station.lng !== 'number' || Number.isNaN(station.lat) || Number.isNaN(station.lng)) {
             return;
         }
 
         const { lat, lng, name } = station;
+        
+        // Set điểm kết thúc là trạm
         setEndPoint({ lat, lng });
         setEndLabel(name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        focusOnCoordinate({ lat, lng });
         void updateEndLabelFrom(lng, lat);
-    }, [focusOnCoordinate, setEndPoint, setEndLabel, updateEndLabelFrom]);
+
+        // Lấy vị trí hiện tại để làm điểm bắt đầu
+        try {
+            if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+                // Nếu không có geolocation, chỉ focus vào trạm
+                focusOnCoordinate({ lat, lng });
+                alert('Trình duyệt không hỗ trợ định vị. Vui lòng chọn điểm xuất phát thủ công.');
+                return;
+            }
+
+            const getPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 5000,
+                });
+            });
+
+            const pos = await getPosition();
+            const { latitude, longitude } = pos.coords;
+            
+            // Set điểm bắt đầu là vị trí hiện tại
+            setStartPoint({ lat: latitude, lng: longitude });
+            void updateStartLabelFrom(longitude, latitude);
+            
+            // Đánh dấu cần tự động tính đường
+            setShouldAutoCalculate(true);
+            
+        } catch (err) {
+            // Nếu lỗi geolocation, chỉ focus vào trạm
+            console.warn('Không thể lấy vị trí hiện tại:', err);
+            focusOnCoordinate({ lat, lng });
+            
+            const errorMsg = err instanceof GeolocationPositionError 
+                ? err.code === 1 ? 'Bạn đã từ chối quyền truy cập vị trí. Vui lòng cho phép truy cập trong cài đặt trình duyệt.'
+                : err.code === 2 ? 'Không thể xác định vị trí. Vui lòng kiểm tra GPS/Wi-Fi.'
+                : 'Hết thời gian chờ định vị. Vui lòng thử lại.'
+                : 'Không thể lấy vị trí hiện tại.';
+            alert(errorMsg);
+        }
+    }, [focusOnCoordinate, setEndPoint, setEndLabel, setStartPoint, updateEndLabelFrom, updateStartLabelFrom, setIsRouting]);
 
     const handleStationDelete = useCallback((stationId: string) => {
         setStations(prev => prev.filter(s => s.id !== stationId));
@@ -1717,6 +1759,15 @@ export default function RoutingMap() {
             setIsRouting(false);
         }
     }, [startPoint, endPoint, waypoints, profile, keepZoom, simSpeed, applyRouteSelection]);
+
+    // Auto-calculate route when navigating to a station
+    useEffect(() => {
+        if (shouldAutoCalculate && startPoint && endPoint && !isRouting) {
+            setShouldAutoCalculate(false);
+            // Calculate immediately
+            calculateRoute();
+        }
+    }, [shouldAutoCalculate, startPoint, endPoint, isRouting, calculateRoute]);
 
     const handleSelectRoute = useCallback((index: number) => {
         if (index === selectedRouteIdx) return;
