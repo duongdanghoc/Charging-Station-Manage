@@ -18,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import com.example.charging_station_management.service.AuthService;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,12 +25,14 @@ public class AdminServiceImpl implements AdminService {
 
   private final UserRepository userRepository;
   private final AuthService authService;
+
   @Override
-    public RegisterResponse createUser(RegisterRequest request) {
-        // Tái sử dụng logic đăng ký cốt lõi từ AuthService
-        // Logic này đã bao gồm mã hóa password và kiểm tra trùng email
-        return authService.register(request);
-    }
+  public RegisterResponse createUser(RegisterRequest request) {
+    // Tái sử dụng logic đăng ký cốt lõi từ AuthService
+    // Logic này đã bao gồm mã hóa password và kiểm tra trùng email
+    return authService.register(request);
+  }
+
   @Override
   public Page<UserDto> getUsers(UserFilterRequest request) {
 
@@ -87,18 +88,18 @@ public class AdminServiceImpl implements AdminService {
     return userPage.map(this::mapUserToDto);
   }
 
-    @Override
-    public void deleteUser(int userId) {
-        // 1. Tìm user trong DB
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+  @Override
+  public void deleteUser(int userId) {
+    // 1. Tìm user trong DB
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        // 2. Thay vì xóa, ta đổi trạng thái thành 0 (Inactive)
-        user.setStatus(0);
+    // 2. Thay vì xóa, ta đổi trạng thái thành 0 (Inactive)
+    user.setStatus(0);
 
-        // 3. Lưu lại
-        userRepository.save(user);
-    }
+    // 3. Lưu lại
+    userRepository.save(user);
+  }
 
   // --- Mapper Function (Hàm ánh xạ) ---
   private UserDto mapUserToDto(User user) {

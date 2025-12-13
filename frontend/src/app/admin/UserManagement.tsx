@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import {
-  Search, Plus, Trash2, Eye, Filter,
+  Search, Plus, Trash2, Eye,
   Car, Zap, X, Shield, Mail, Phone, Calendar
 } from "lucide-react";
 import {
@@ -23,10 +23,6 @@ const MOCK_CUSTOMER_VEHICLES = [
   { id: 1, model: "VinFast VF8", license: "30H-123.45", battery: "85%", status: "Active" },
   { id: 2, model: "VinFast VFe34", license: "51K-999.99", battery: "42%", status: "Charging" },
 ];
-
-// --- UTILS ---
-const generateRandomPassword = () => Math.random().toString(36).slice(-8) + "!@#";
-
 
 // Hàm tạo mật khẩu mạnh (đảm bảo Backend không từ chối)
 const generateStrongPassword = () => {
