@@ -1,5 +1,6 @@
 package com.example.charging_station_management.entity.converters;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,9 +31,11 @@ public class Location {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String addressDetail;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "location", cascade = CascadeType.ALL)
     private List<Station> stations;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "location", cascade = CascadeType.ALL)
     private List<RescueStation> rescueStations;
 }

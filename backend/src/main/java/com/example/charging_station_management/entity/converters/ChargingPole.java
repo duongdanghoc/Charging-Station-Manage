@@ -1,5 +1,6 @@
 package com.example.charging_station_management.entity.converters;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class ChargingPole {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "station_id", nullable = false)
     private Station station;
@@ -34,7 +36,7 @@ public class ChargingPole {
 
     private LocalDate installDate;
 
-    @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ChargingConnector> chargingConnectors;
 
     @OneToMany(mappedBy = "chargingPole", cascade = CascadeType.ALL)

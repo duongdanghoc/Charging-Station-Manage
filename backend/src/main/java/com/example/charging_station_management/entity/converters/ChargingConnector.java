@@ -2,6 +2,7 @@ package com.example.charging_station_management.entity.converters;
 
 import com.example.charging_station_management.entity.enums.ConnectorStatus;
 import com.example.charging_station_management.entity.enums.ConnectorType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class ChargingConnector {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "pole_id", nullable = false)
     private ChargingPole pole;
@@ -35,6 +37,7 @@ public class ChargingConnector {
     @Column(nullable = false, length = 100)
     private ConnectorStatus status = ConnectorStatus.AVAILABLE;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "chargingConnector", cascade = CascadeType.ALL)
     private List<ChargingSession> chargingSessions;
 }

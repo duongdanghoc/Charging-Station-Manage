@@ -4,6 +4,7 @@ import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
+import com.example.charging_station_management.entity.enums.ConnectorType;
 import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.service.impl.CustomerServiceImpl;
@@ -29,8 +30,13 @@ public class StationController {
     private final StationService stationService;
 
     @GetMapping
-    public ResponseEntity<Page<StationResponse>> getAllStations(@PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(customerService.getAllStations(pageable));
+    public ResponseEntity<Page<StationResponse>> getAllStations(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) VehicleType vehicleType,
+            @RequestParam(required = false) ConnectorType connectorType,
+            @PageableDefault(size = 100) Pageable pageable) {
+        return ResponseEntity.ok(customerService.filterStations(search, status, vehicleType, connectorType, pageable));
     }
 
     @GetMapping("/search")

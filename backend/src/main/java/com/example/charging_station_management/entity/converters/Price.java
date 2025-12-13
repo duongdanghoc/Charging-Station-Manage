@@ -1,6 +1,7 @@
 package com.example.charging_station_management.entity.converters;
 
 import com.example.charging_station_management.entity.enums.PriceName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ public class Price {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "charging_pole_id")
     private ChargingPole chargingPole;
