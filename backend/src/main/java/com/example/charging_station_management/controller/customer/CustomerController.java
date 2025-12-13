@@ -31,7 +31,7 @@ import java.util.Map;
 @RequestMapping("/api/customer")
 @RequiredArgsConstructor
 @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
-@PreAuthorize("hasRole('Customer')")
+@PreAuthorize("hasRole('CUSTOMER')")
 public class CustomerController {
 
     private final CustomerService cutomerService;
