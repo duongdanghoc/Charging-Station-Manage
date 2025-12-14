@@ -66,7 +66,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
         try {
             setLoading(true);
             const data = await StationService.getStationById(stationId);
-            setStation(data);
+            setStation({
+                ...data,
+                poles: Array.isArray(data.poles) ? data.poles : []
+            });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Không thể tải thông tin trạm');
         } finally {
@@ -248,11 +251,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                             <button
                                 key={id}
                                 onClick={() => setActiveTab(id)}
-                                className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-                                    activeTab === id
+                                className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${activeTab === id
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-slate-600 hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 <Icon className="h-4 w-4" />
                                 {label}
@@ -399,11 +401,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                                                 {[1, 2, 3, 4, 5].map((star) => (
                                                     <Star
                                                         key={star}
-                                                        className={`h-5 w-5 ${
-                                                            star <= Math.round(station.averageRating)
+                                                        className={`h-5 w-5 ${star <= Math.round(station.averageRating)
                                                                 ? 'fill-amber-400 text-amber-500'
                                                                 : 'text-slate-300'
-                                                        }`}
+                                                            }`}
                                                     />
                                                 ))}
                                             </div>
@@ -426,11 +427,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                                                             {[1, 2, 3, 4, 5].map((star) => (
                                                                 <Star
                                                                     key={star}
-                                                                    className={`h-3.5 w-3.5 ${
-                                                                        star <= review.stars
+                                                                    className={`h-3.5 w-3.5 ${star <= review.stars
                                                                             ? 'fill-amber-400 text-amber-500'
                                                                             : 'text-slate-300'
-                                                                    }`}
+                                                                        }`}
                                                                 />
                                                             ))}
                                                         </div>

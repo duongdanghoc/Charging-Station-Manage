@@ -10,6 +10,7 @@ import StationListTable from "./StationListTable";
 import StationFormDialog from "./StationFormDialog";
 import ConfirmModal from "@/components/common/ConfirmModal";
 import StationMapList from "./StationMapList";
+import ConnectorManagement from "../ConnectorManagement";
 
 import {
     useGetMyStationsQuery,
@@ -39,6 +40,8 @@ const StationManagementSection: React.FC = () => {
     const [stationToDelete, setStationToDelete] = useState<number | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [detailStation, setDetailStation] = useState<Station | null>(null);
+    const [isConnectorManagementOpen, setIsConnectorManagementOpen] = useState(false);
+    const [selectedStationForConnectors, setSelectedStationForConnectors] = useState<Station | null>(null);
 
     // --- API Integration ---
     const [createStation, { isLoading: isCreating }] = useCreateStationMutation();
@@ -70,6 +73,11 @@ const StationManagementSection: React.FC = () => {
     const handleEdit = (station: Station) => {
         setSelectedStation(station);
         setIsDialogOpen(true);
+    };
+
+    const handleManageConnectors = (station: Station) => {
+        setSelectedStationForConnectors(station);
+        setIsConnectorManagementOpen(true);
     };
 
     const onClickDelete = (id: number) => {
@@ -221,6 +229,7 @@ const StationManagementSection: React.FC = () => {
                         onEdit={handleEdit}
                         onDelete={onClickDelete}
                         onToggleStatus={handleToggleStatus}
+                        onManageConnectors={handleManageConnectors}
                     />
                 ) : (
                     // MAP VIEW (Component mới)
@@ -261,6 +270,30 @@ const StationManagementSection: React.FC = () => {
                 onOpenChange={setIsDetailOpen}
                 station={detailStation}
             />
+
+            {/* --- CONNECTOR MANAGEMENT DIALOG --- */}
+            {isConnectorManagementOpen && selectedStationForConnectors && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold">Quản lý Connectors</h2>
+                                <p className="text-sm text-gray-600">{selectedStationForConnectors.name}</p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setIsConnectorManagementOpen(false)}
+                            >
+                                ✕
+                            </Button>
+                        </div>
+                        <div className="p-6">
+                            <ConnectorManagement stationId={selectedStationForConnectors.id} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };

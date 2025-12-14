@@ -29,9 +29,6 @@ const CarInfoSection: React.FC = () => {
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
-    // Delete Modal State
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
 
     useEffect(() => {
         loadVehicles();
@@ -143,30 +140,22 @@ const CarInfoSection: React.FC = () => {
         }
     };
 
-    const promptDelete = (vehicle: Vehicle) => {
+    const handleDelete = async (vehicle: Vehicle) => {
         if (vehicle.hasActiveSession) {
             alert('Không thể xóa phương tiện đang trong phiên sạc');
             return;
         }
-        setVehicleToDelete(vehicle);
-        setShowDeleteModal(true);
-    };
 
-    const handleConfirmDelete = async () => {
-        if (!vehicleToDelete) return;
+        if (!confirm(`Bạn có chắc chắn muốn xóa phương tiện ${vehicle.brand} ${vehicle.model} (${vehicle.licensePlate})?`)) {
+            return;
+        }
 
         try {
-            setSubmitting(true);
             setError(null);
-            await VehicleService.deleteVehicle(vehicleToDelete.id);
+            await VehicleService.deleteVehicle(vehicle.id);
             await loadVehicles();
-            setShowDeleteModal(false);
-            setVehicleToDelete(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Không thể xóa phương tiện');
-            setShowDeleteModal(false);
-        } finally {
-            setSubmitting(false);
         }
     };
 
@@ -297,7 +286,7 @@ const CarInfoSection: React.FC = () => {
                                                 <Edit2 className="h-4 w-4" />
                                             </button>
                                             <button
-                                                onClick={() => promptDelete(vehicle)}
+                                                onClick={() => handleDelete(vehicle)}
                                                 disabled={vehicle.hasActiveSession}
                                                 className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title={vehicle.hasActiveSession ? 'Đang sạc' : 'Xóa'}
@@ -542,47 +531,6 @@ const CarInfoSection: React.FC = () => {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-            {/* Delete Confirmation Modal */}
-            {showDeleteModal && vehicleToDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-xl bg-white shadow-2xl relative overflow-hidden">
-                        <div className="p-6">
-                            <div className="flex items-center gap-3 mb-4 text-red-600">
-                                <div className="p-2 bg-red-100 rounded-full">
-                                    <Trash2 className="h-6 w-6" />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900">Xác nhận xóa</h3>
-                            </div>
-
-                            <p className="text-gray-600 mb-6">
-                                Bạn có chắc chắn muốn xóa phương tiện <span className="font-semibold text-gray-900">{vehicleToDelete.brand} {vehicleToDelete.model}</span> ({vehicleToDelete.licensePlate})?
-                                <br />
-                                Hành động này không thể hoàn tác.
-                            </p>
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setShowDeleteModal(false);
-                                        setVehicleToDelete(null);
-                                    }}
-                                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-                                    disabled={submitting}
-                                >
-                                    Hủy
-                                </button>
-                                <button
-                                    onClick={handleConfirmDelete}
-                                    className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                    disabled={submitting}
-                                >
-                                    {submitting ? 'Đang xóa...' : 'Xóa phương tiện'}
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}

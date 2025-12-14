@@ -79,7 +79,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
     return (
         <div className="p-3 border-b text-sm bg-white flex flex-wrap items-center gap-2 md:gap-3">
-            <h1 className="text-lg font-semibold mr-2">Chỉ đường</h1>
+            {/* <h1 className="text-lg font-semibold mr-2">Chỉ đường</h1> */}
             <div className="ml-auto flex flex-wrap items-center gap-2 md:gap-3">
                 <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
                     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600">

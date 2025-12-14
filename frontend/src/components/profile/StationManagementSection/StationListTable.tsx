@@ -1,7 +1,7 @@
 'use client';
 
 import React from "react";
-import { Building2, Eye, MapPin, Pencil, Power, Trash2, WifiOff } from "lucide-react";
+import { Building2, Eye, MapPin, Pencil, Power, Trash2, WifiOff, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Station } from "@/lib/redux/services/stationApi";
 
@@ -11,6 +11,7 @@ interface StationListTableProps {
     onEdit: (station: Station) => void;
     onDelete: (id: number) => void;
     onToggleStatus: (station: Station) => void;
+    onManageConnectors: (station: Station) => void;
 }
 
 const StationListTable: React.FC<StationListTableProps> = ({
@@ -18,8 +19,32 @@ const StationListTable: React.FC<StationListTableProps> = ({
     onViewDetail,
     onEdit,
     onDelete,
-    onToggleStatus
+    onToggleStatus,
+    onManageConnectors
 }) => {
+    // Calculate connector statistics for each station
+    const getConnectorStats = (station: Station) => {
+        // Check if poles exists and is an array
+        if (!station.poles || !Array.isArray(station.poles) || station.poles.length === 0) {
+            return { active: 0, total: 0 };
+        }
+        
+        let active = 0;
+        let total = 0;
+        
+        station.poles.forEach(pole => {
+            if (pole && pole.connectors && Array.isArray(pole.connectors)) {
+                pole.connectors.forEach(connector => {
+                    total++;
+                    if (connector.status === "AVAILABLE") {
+                        active++;
+                    }
+                });
+            }
+        });
+        
+        return { active, total };
+    };
     return (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -38,12 +63,15 @@ const StationListTable: React.FC<StationListTableProps> = ({
                             <th className="px-6 py-3 font-medium">Tên trạm</th>
                             <th className="px-6 py-3 font-medium">Địa chỉ</th>
                             <th className="px-6 py-3 font-medium">Loại xe</th>
+                            <th className="px-6 py-3 font-medium">Connectors</th>
                             <th className="px-6 py-3 font-medium">Trạng thái</th>
                             <th className="px-6 py-3 font-medium text-center">Hành động</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-                        {stations.map((station) => (
+                        {stations.map((station) => {
+                            const connectorStats = getConnectorStats(station);
+                            return (
                             <tr key={station.id} className="hover:bg-gray-50/60">
                                 <td className="px-6 py-3">
                                     <div className="flex items-center gap-2">
@@ -62,6 +90,25 @@ const StationListTable: React.FC<StationListTableProps> = ({
                                     <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-semibold">
                                         {station.type}
                                     </span>
+                                </td>
+                                <td className="px-6 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm">
+                                            <span className="font-semibold text-emerald-600">{connectorStats.active}</span>
+                                            <span className="text-gray-400">/</span>
+                                            <span className="font-medium text-gray-600">{connectorStats.total}</span>
+                                        </span>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => onManageConnectors(station)}
+                                            className="h-7 text-xs px-2"
+                                            title="Quản lý connectors"
+                                        >
+                                            <Plug className="size-3 mr-1" />
+                                            Quản lý
+                                        </Button>
+                                    </div>
                                 </td>
                                 <td className="px-6 py-3">
                                     <span
@@ -112,7 +159,7 @@ const StationListTable: React.FC<StationListTableProps> = ({
                                     </div>
                                 </td>
                             </tr>
-                        ))}
+                        );})}
                     </tbody>
                 </table>
             </div>

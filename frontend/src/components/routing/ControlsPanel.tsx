@@ -1,9 +1,9 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DndContext, closestCenter, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, DragEndEvent, DragOverEvent, useSensors, useSensor, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MapPin, Plus, ArrowUpDown, X, ScanSearch, Navigation, Route, List, Clock, GaugeCircle, TrafficCone, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
+import { GripVertical, MapPin, Plus, ArrowUpDown, X, ScanSearch, Navigation, Route, List, Clock, GaugeCircle, TrafficCone, PanelLeftOpen, PanelRightOpen, ArrowLeft } from 'lucide-react';
 import { formatDistance, formatInstructionVI } from './formatters';
 import config from '@/config/config';
 import { getGeocoder, type Suggestion } from '@/services/geocoding';
@@ -97,6 +97,7 @@ type ControlsPanelProps = {
     onPickEnd: () => void;
     onPickWaypoint: (index: number) => void;
     focusOnCoordinate: (coords: { lat: number; lng: number }) => void;
+    mobile?: boolean;
 };
 
 // Move SortableWaypoint outside of ControlsPanel
@@ -548,10 +549,11 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     activeStepIdx, focusStep, onStartGuidance,
     startPoint, endPoint, waypoints, startLabel, endLabel, waypointLabels, setWaypointLabels,
     setStartPoint, setEndPoint, setWaypoints,
-    onPickStart, onPickEnd, onPickWaypoint, focusOnCoordinate,
+    onPickStart, onPickEnd, onPickWaypoint, focusOnCoordinate, mobile
 }) => {
     // Panel collapse state
     const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+    const [mobileExpanded, setMobileExpanded] = useState<boolean>(false);
     // Local input texts for search boxes
     const [startText, setStartText] = useState<string>("");
     const [endText, setEndText] = useState<string>("");
@@ -582,6 +584,13 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     const endPendingQueryRef = useRef<string>("");
     const waypointPendingQueryRef = useRef<Record<number, string>>({});
     const prevWaypointLabelsRef = useRef<string[]>([]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const normalizedSelectedAnnotations = useMemo(() => {
         if (!Array.isArray(selectedAnnotations) || selectedAnnotations.length === 0) {
@@ -1016,87 +1025,65 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     const canCalculateRoute = !!startPoint && !!endPoint && !isRouting;
     const hasInstructions = Array.isArray(instructions) && instructions.length > 0;
 
+    if (mobile && !mobileExpanded) {
+        return (
+            <div
+                className="absolute top-16 left-4 right-16 z-[340] flex items-center bg-white rounded-lg shadow-md h-12 px-4 gap-3 cursor-pointer"
+                onClick={() => setMobileExpanded(true)}
+            >
+                <ScanSearch size={20} className="text-gray-500" />
+                <span className="text-gray-500 text-sm font-medium truncate">
+                    {startLabel || endLabel ? `${startLabel || 'Vị trí của bạn'} -> ${endLabel || 'Chọn điểm đến'}` : 'Nhập điểm đón, điểm đến...'}
+                </span>
+            </div>
+        );
+    }
+
     return (
-        <div className="absolute top-33 left-3 z-[360]">
-            {isCollapsed ? (
-                <div className="bg-white/95 backdrop-blur rounded-lg shadow border border-gray-200 w-16 flex flex-col items-center py-3 space-y-3">
-                    <button
-                        onClick={() => setIsCollapsed(false)}
-                        className="p-2 rounded bg-blue-500 text-white hover:bg-blue-400 transition-colors"
-                        title="Mở bảng điều khiển"
-                    >
-                        <PanelLeftOpen size={18} />
+        <div className={`${mobile
+            ? "fixed inset-0 z-[500] bg-white flex flex-col"
+            : `fixed bottom-4 left-4 z-[400] flex max-h-[calc(100vh-2rem)] w-[370px] flex-col rounded-lg border border-gray-200 bg-white/95 shadow-xl backdrop-blur ${isCollapsed ? 'h-auto' : ''}`
+            }`}>
+            {mobile && (
+                <div className="flex items-center gap-2 p-3 border-b border-gray-100">
+                    <button onClick={() => setMobileExpanded(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                        <ArrowLeft size={20} className="text-gray-600" />
                     </button>
+                    <span className="font-semibold text-gray-800">Tìm đường</span>
+                </div>
+            )}
+
+            {!mobile && (
+                <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/50 p-3">
+                    <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <Navigation size={16} className="text-blue-600" />
+                        Điều hướng
+                    </h2>
                     <button
-                        onClick={onPickEnd}
-                        className="p-2 rounded hover:bg-gray-100 text-gray-700 transition-colors"
-                        title="Chọn điểm kết thúc"
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="rounded-md p-1 hover:bg-gray-200 text-gray-500 transition-colors"
+                        title={isCollapsed ? "Mở rộng" : "Thu gọn"}
                     >
-                        <MapPin size={18} />
-                    </button>
-                    <button
-                        onClick={handleReverseRoute}
-                        className="p-2 rounded hover:bg-gray-100 text-gray-700 transition-colors"
-                        title="Đảo chiều đi/đến"
-                    >
-                        <ArrowUpDown size={18} />
-                    </button>
-                    <button
-                        onClick={() => calculateRoute()}
-                        disabled={!canCalculateRoute}
-                        className={`p-2 rounded transition-colors ${canCalculateRoute ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}
-                        title="Tìm đường"
-                    >
-                        <Route size={18} />
-                    </button>
-                    <button
-                        onClick={onStartGuidance}
-                        disabled={!hasInstructions}
-                        className={`p-2 rounded transition-colors ${hasInstructions ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}
-                        title="Bắt đầu chỉ đường"
-                    >
-                        <Navigation size={18} />
+                        {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelRightOpen size={18} />}
                     </button>
                 </div>
-            ) : (
-                <div className="flex items-start gap-2">
-                    <div className="bg-white/95 backdrop-blur rounded-lg shadow border border-gray-200 p-4 w-[400px] max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden scrollbar-rounded">
-                        {/* Start/End/Waypoints section */}
-                        <div className="mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="text-sm font-semibold text-gray-800 inline-flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsCollapsed(true)}
-                                        className="bg-white/95 backdrop-blur rounded-lg shadow border border-gray-200 p-2 hover:bg-gray-50 transition-colors"
-                                        title="Thu gọn bảng điều khiển"
-                                    >
-                                        <PanelRightOpen size={18} />
-                                    </button>
-                                    Tìm đường
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md flex items-center gap-1 font-medium transition-colors"
-                                        title="Đảo chiều đi/đến"
-                                        onClick={handleReverseRoute}
-                                    >
-                                        <ArrowUpDown size={12} /> Đảo chiều
-                                    </button>
-                                    <button
-                                        className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md flex items-center gap-1 font-medium transition-colors"
-                                        title="Thêm điểm trung gian"
-                                        onClick={handleAddWaypoint}
-                                    >
-                                        <Plus size={12} /> Thêm điểm
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
+            )}
+
+            {!isCollapsed && (
+                <div className={`flex-1 overflow-y-auto overflow-x-hidden ${mobile ? 'p-4' : 'p-3'} custom-scrollbar`}>
+                    <div className="space-y-4">
+                        {/* Input Fields */}
+                        <div className="space-y-2">
+                            <div
+                                className="space-y-2"
+                                onKeyDown={(e) => e.stopPropagation()}
+                                onKeyUp={(e) => e.stopPropagation()}
+                            >
                                 <DndContext
+                                    sensors={sensors}
                                     collisionDetection={closestCenter}
-                                    onDragStart={handleDragStart}
-                                    onDragOver={handleDragOver}
                                     onDragEnd={handleDragEnd}
+                                    onDragOver={handleDragOver}
                                 >
                                     <SortableContext items={['start', ...waypointIds, 'end']} strategy={verticalListSortingStrategy}>
                                         <SortableStartRow
@@ -1171,6 +1158,24 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                             </div>
                         </div>
 
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-between gap-2">
+                            <button
+                                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md flex items-center gap-1 font-medium transition-colors"
+                                title="Đảo chiều đi/đến"
+                                onClick={handleReverseRoute}
+                            >
+                                <ArrowUpDown size={12} /> Đảo chiều
+                            </button>
+                            <button
+                                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded-md flex items-center gap-1 font-medium transition-colors"
+                                title="Thêm điểm trung gian"
+                                onClick={handleAddWaypoint}
+                            >
+                                <Plus size={12} /> Thêm điểm
+                            </button>
+                        </div>
+
                         {/* Profile and route calculation section */}
                         <div className="flex items-center justify-between gap-2 mb-3">
                             <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
@@ -1219,7 +1224,10 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                                 </button>
                             </div>
                             <button
-                                onClick={() => calculateRoute()}
+                                onClick={() => {
+                                    calculateRoute();
+                                    if (mobile) setMobileExpanded(false);
+                                }}
                                 disabled={isRouting}
                                 className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors flex items-center gap-2"
                             >

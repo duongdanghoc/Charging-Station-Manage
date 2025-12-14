@@ -11,6 +11,9 @@ import { createPinElement } from './pinMarker';
 import { formatDuration, formatDistance, formatInstructionVI, renderInstructionPopupHTML } from './formatters';
 import { pickManeuverIcon } from './maneuvers';
 import { Toolbar } from './Toolbar';
+import { MobileLayerControl } from './MobileLayerControl';
+import { MobileHeader } from './MobileHeader';
+import { useIsMobile } from '@/hooks/useMobile';
 import { ControlsPanel, type AnnotationMetrics } from './ControlsPanel';
 import { GuidanceHUD } from './GuidanceHUD';
 import { SimulationPanel } from './SimulationPanel';
@@ -22,6 +25,7 @@ import { StationDetailModal } from './StationDetailModal';
 import { createStationMarkerElement } from './StationMarker';
 
 type Profile = 'driving' | 'walking' | 'cycling' | 'driving-traffic';
+
 
 interface AdvancedOptions {
     alternatives: boolean;
@@ -181,6 +185,7 @@ const normalizeCongestionCategory = (
 };
 
 export default function RoutingMap() {
+    const isMobile = useIsMobile(); // Mobile detection
     const mapContainer = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -856,7 +861,7 @@ export default function RoutingMap() {
         }
 
         const { lat, lng, name } = station;
-        
+
         // Set điểm kết thúc là trạm
         setEndPoint({ lat, lng });
         setEndLabel(name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
@@ -881,23 +886,23 @@ export default function RoutingMap() {
 
             const pos = await getPosition();
             const { latitude, longitude } = pos.coords;
-            
+
             // Set điểm bắt đầu là vị trí hiện tại
             setStartPoint({ lat: latitude, lng: longitude });
             void updateStartLabelFrom(longitude, latitude);
-            
+
             // Đánh dấu cần tự động tính đường
             setShouldAutoCalculate(true);
-            
+
         } catch (err) {
             // Nếu lỗi geolocation, chỉ focus vào trạm
             console.warn('Không thể lấy vị trí hiện tại:', err);
             focusOnCoordinate({ lat, lng });
-            
-            const errorMsg = err instanceof GeolocationPositionError 
+
+            const errorMsg = err instanceof GeolocationPositionError
                 ? err.code === 1 ? 'Bạn đã từ chối quyền truy cập vị trí. Vui lòng cho phép truy cập trong cài đặt trình duyệt.'
-                : err.code === 2 ? 'Không thể xác định vị trí. Vui lòng kiểm tra GPS/Wi-Fi.'
-                : 'Hết thời gian chờ định vị. Vui lòng thử lại.'
+                    : err.code === 2 ? 'Không thể xác định vị trí. Vui lòng kiểm tra GPS/Wi-Fi.'
+                        : 'Hết thời gian chờ định vị. Vui lòng thử lại.'
                 : 'Không thể lấy vị trí hiện tại.';
             alert(errorMsg);
         }
@@ -2208,7 +2213,7 @@ export default function RoutingMap() {
     }, [courseUp, guidanceMode, activeStepIdx, instructions]);
 
     return (
-        <div className="w-full h-screen flex flex-col">
+        <div className="w-full h-screen flex flex-col relative overflow-hidden">
             <style>{`
                 .mapboxgl-popup.instruction-popup { pointer-events: none; }
                 .mapboxgl-popup.instruction-popup .mapboxgl-popup-content {
@@ -2221,27 +2226,47 @@ export default function RoutingMap() {
                 }
                 .mapboxgl-popup.instruction-popup .mapboxgl-popup-tip { display: none; }
             `}</style>
-            <Toolbar
-                is3D={is3D}
-                angled={angled}
-                keepZoom={keepZoom}
-                showAllPopups={showAllPopups}
-                onToggle3D={toggle3D}
-                onToggleAngle={toggleAngle}
-                onToggleKeepZoom={() => setKeepZoom(v => !v)}
-                onToggleShowAllPopups={() => setShowAllPopups(v => !v)}
-                onRotateLeft={() => rotateBy(-10)}
-                onRotateRight={() => rotateBy(10)}
-                onResetNorth={resetNorth}
-                onPinMyLocation={handlePinMyLocation}
-                toggleTraffic={toggleTraffic}
-                isTrafficVisible={isTrafficVisible}
-                toggleCongestion={toggleCongestion}
-                isCongestionVisible={isCongestionVisible}
-            />
 
-            {/* Station List */}
-            <div className="absolute top-80 right-4 z-10 w-80">
+            {/* Mobile Header & Layer Control vs Desktop Toolbar */}
+            {isMobile ? (
+                <>
+                    <MobileHeader />
+                    <div className="absolute top-16 right-4 z-[350]">
+                        <MobileLayerControl
+                            is3D={is3D}
+                            onToggle3D={toggle3D}
+                            angled={angled}
+                            onToggleAngle={toggleAngle}
+                            isTrafficVisible={isTrafficVisible}
+                            toggleTraffic={() => setIsTrafficVisible(v => !v)}
+                            isCongestionVisible={isCongestionVisible}
+                            toggleCongestion={() => setIsCongestionVisible(v => !v)}
+                        />
+                    </div>
+                </>
+            ) : (
+                <Toolbar
+                    is3D={is3D}
+                    angled={angled}
+                    keepZoom={keepZoom}
+                    showAllPopups={showAllPopups}
+                    onToggle3D={toggle3D}
+                    onToggleAngle={toggleAngle}
+                    onToggleKeepZoom={() => setKeepZoom(v => !v)}
+                    onToggleShowAllPopups={() => setShowAllPopups(v => !v)}
+                    onRotateLeft={() => rotateBy(-10)}
+                    onRotateRight={() => rotateBy(10)}
+                    onResetNorth={resetNorth}
+                    onPinMyLocation={handlePinMyLocation}
+                    toggleTraffic={() => setIsTrafficVisible(v => !v)}
+                    isTrafficVisible={isTrafficVisible}
+                    toggleCongestion={() => setIsCongestionVisible(v => !v)}
+                    isCongestionVisible={isCongestionVisible}
+                />
+            )}
+
+            {/* Station List - Adjust container for mobile */}
+            <div className={isMobile ? "z-[360]" : "absolute top-80 right-4 z-10 w-80"}>
                 <StationFilter
                     onStationClick={handleStationClick}
                     onStationDelete={handleStationDelete}
@@ -2249,9 +2274,10 @@ export default function RoutingMap() {
                     onStationNavigate={handleStationNavigate}
                     onStationDetail={setSelectedStationId}
                     map={mapRef.current}
+                    mobile={isMobile}
                 />
             </div>
-            
+
             {/* Station Detail Modal */}
             {selectedStationId && (
                 <StationDetailModal
@@ -2259,7 +2285,7 @@ export default function RoutingMap() {
                     onClose={() => setSelectedStationId(null)}
                 />
             )}
-            
+
             {error ? (
                 <div className="p-4 text-red-600 text-sm">{error}</div>
             ) : null}
@@ -2293,6 +2319,7 @@ export default function RoutingMap() {
                 routeAlternatives={routeAlternatives}
                 selectedRouteIndex={selectedRouteIdx}
                 onSelectRoute={handleSelectRoute}
+                mobile={isMobile}
             />
             <SimulationPanel
                 simPlaying={simPlaying}
@@ -2333,6 +2360,7 @@ export default function RoutingMap() {
                 simRemainingM={simRemainingM}
                 simEtaSec={simEtaSec}
                 simToNextManeuverM={simToNextManeuverM}
+                mobile={isMobile}
             />
             <GuidanceHUD
                 visible={guidanceMode}
