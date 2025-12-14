@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import { ListIcon, MapIcon, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+// 👇 1. Import dynamic từ Next.js
+import dynamic from "next/dynamic";
 
 import StationDetailSheet from "./StationDetailSheet";
 import StationListTable from "./StationListTable";
 import StationFormDialog from "./StationFormDialog";
 import ConfirmModal from "@/components/common/ConfirmModal";
-import StationMapList from "./StationMapList";
+// ❌ Bỏ dòng import tĩnh này: import StationMapList from "./StationMapList";
 
 import {
     useGetMyStationsQuery,
@@ -24,6 +26,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export type StationItem = Station;
 export type StationStatus = "ACTIVE" | "INACTIVE";
+
+// 👇 2. Khai báo StationMapList bằng Dynamic Import (Tắt SSR)
+const StationMapList = dynamic(
+  () => import("./StationMapList"), 
+  { 
+    ssr: false, // Quan trọng: Ngăn Next.js render map trên server
+    loading: () => (
+        <div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-gray-400">
+            Đang tải bản đồ...
+        </div>
+    )
+  }
+);
 
 const StationManagementSection: React.FC = () => {
     // --- State Filter ---
@@ -223,7 +238,7 @@ const StationManagementSection: React.FC = () => {
                         onToggleStatus={handleToggleStatus}
                     />
                 ) : (
-                    // MAP VIEW (Component mới)
+                    // MAP VIEW (Sử dụng Component Dynamic)
                     <StationMapList
                         stations={stationPage?.content || []}
                         onStationClick={handleViewDetail} // Click marker -> Mở chi tiết

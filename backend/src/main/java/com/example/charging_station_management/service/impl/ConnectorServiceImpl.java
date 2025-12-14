@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ConnectorServiceImpl implements ConnectorService {
 
+    // 👇 ĐỊNH NGHĨA GIỚI HẠN TỐI ĐA (vì không dùng cột trong DB)
+    private static final int MAX_CONNECTORS_LIMIT = 2; 
+
     private final ChargingConnectorRepository connectorRepository;
     private final ChargingPoleRepository poleRepository;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -46,9 +49,11 @@ public class ConnectorServiceImpl implements ConnectorService {
                 });
 
         List<ChargingConnector> existingConnectors = connectorRepository.findByPoleId(pole.getId());
-        if (existingConnectors.size() >= pole.getConnectorCount()) {
+        
+        // 👇 1. SỬA LỖI GIỚI HẠN: Dùng HẰNG SỐ MAX_CONNECTORS_LIMIT (giá trị 2)
+        if (existingConnectors.size() >= MAX_CONNECTORS_LIMIT) {
             log.error("Pole {} has reached maximum connector count", pole.getId());
-            throw new RuntimeException("Pole đã đạt số lượng connector tối đa: " + pole.getConnectorCount());
+            throw new RuntimeException("Pole đã đạt số lượng connector tối đa: " + MAX_CONNECTORS_LIMIT);
         }
 
         if (request.getMaxPower().compareTo(pole.getMaxPower()) > 0) {
@@ -67,6 +72,10 @@ public class ConnectorServiceImpl implements ConnectorService {
         ChargingConnector savedConnector = connectorRepository.save(connector);
         log.info("Connector created successfully with ID: {}", savedConnector.getId());
 
+        // 👇 2. CẬP NHẬT CONNECTOR_COUNT (số lượng đang dùng hiện tại)
+        pole.setConnectorCount(existingConnectors.size() + 1);
+        poleRepository.save(pole); // Lưu lại Pole để cập nhật cột connector_count
+
         return mapToConnectorResponse(savedConnector);
     }
 
@@ -80,6 +89,8 @@ public class ConnectorServiceImpl implements ConnectorService {
                     log.error("Connector {} not found or not belong to vendor {}", connectorId, vendorId);
                     return new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập");
                 });
+
+        // ... (Logic cập nhật giữ nguyên)
 
         if (request.getConnectorType() != null) {
             connector.setConnectorType(request.getConnectorType());
@@ -142,8 +153,15 @@ public class ConnectorServiceImpl implements ConnectorService {
             throw new RuntimeException("Không thể xóa connector đã có lịch sử sử dụng");
         }
 
+        // 3. Cập nhật connector_count của Pole sau khi xóa
+        ChargingPole pole = connector.getPole(); // Lấy Pole trước khi xóa Connector
         connectorRepository.delete(connector);
         log.info("Connector {} deleted successfully", connectorId);
+        
+        // Cập nhật lại cột connector_count của Pole
+        // Giả sử cột connector_count là số lượng đang dùng
+        pole.setConnectorCount(pole.getConnectorCount() - 1);
+        poleRepository.save(pole); 
     }
 
     @Override
@@ -153,6 +171,7 @@ public class ConnectorServiceImpl implements ConnectorService {
         ChargingConnector connector = connectorRepository.findByIdAndVendorId(connectorId, vendorId)
                 .orElseThrow(() -> new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập"));
 
+        // ... (Logic map detail giữ nguyên)
         List<SessionSummary> recentSessions = connector.getChargingSessions() != null
                 ? connector.getChargingSessions().stream()
                 .sorted((s1, s2) -> s2.getStartTime().compareTo(s1.getStartTime()))
@@ -189,10 +208,10 @@ public class ConnectorServiceImpl implements ConnectorService {
 
     @Override
     public List<ConnectorResponse> searchConnectors(
-            Integer vendorId,
-            ConnectorType connectorType,
-            ConnectorStatus status,
-            Integer poleId) {
+                Integer vendorId,
+                ConnectorType connectorType,
+                ConnectorStatus status,
+                Integer poleId) {
 
         log.info("Searching connectors for vendor {} with filters - type: {}, status: {}, poleId: {}",
                 vendorId, connectorType, status, poleId);

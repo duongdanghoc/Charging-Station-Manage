@@ -15,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ChargingPoleResponse {
     private Integer id;
+    private Integer stationId;
     private String manufacturer;
     private BigDecimal maxPower;
     private Integer connectorCount;

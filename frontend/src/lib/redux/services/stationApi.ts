@@ -1,5 +1,14 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
+// --- CÁC INTERFACE DỮ LIỆU ---
+
+// Wrapper cho response từ Backend
+export interface BaseApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
 export interface ChargingConnector {
   id: number;
   connectorType: string; // TYPE1, TYPE2, CCS...
@@ -16,6 +25,13 @@ export interface ChargingPole {
   connectors: ChargingConnector[];
 }
 
+export interface UpdateChargingPoleRequest {
+  manufacturer?: string;
+  maxPower?: number;
+  maxConnectors?: number;
+  installDate?: string;
+}
+
 export interface Station {
   id: number;
   name: string;
@@ -23,9 +39,9 @@ export interface Station {
   city: string;
   latitude: number;
   longitude: number;
-  openTime: string; // "HH:mm:ss"
+  openTime: string;
   closeTime: string;
-  status: number; // 1: Active, 0: Inactive
+  status: number;
   type: "CAR" | "MOTORBIKE" | "BICYCLE";
   vendorName?: string;
   poles?: ChargingPole[];
@@ -42,11 +58,27 @@ export interface CreateStationRequest {
   addressDetail: string;
 }
 
+// Interface cho request tạo trụ sạc
+export interface CreateChargingPoleRequest {
+  stationId: number;
+  manufacturer: string;
+  maxPower: number;
+  maxConnectors: number;
+  installDate?: string;
+}
+
+// 👇 THÊM MỚI: Interface cho request tạo đầu sạc
+export interface CreateConnectorRequest {
+  poleId: number; // Đã sửa thành poleId cho khớp
+  connectorType: string;
+  maxPower: number;
+}
+
 export interface StationFilterParams {
   page: number;
   size: number;
   search?: string;
-  status?: number; // 1 | 0
+  status?: number;
   type?: "CAR" | "MOTORBIKE" | "BICYCLE";
 }
 
@@ -62,24 +94,29 @@ interface PageResponse<T> {
   number: number;
 }
 
+// --- DEFINITION API ---
+
 export const stationApi = createApi({
   reducerPath: "stationApi",
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     prepareHeaders: (headers) => {
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
+      // 👇 SỬA LỖI WINDOW: Chỉ gọi localStorage khi ở Client
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("authToken");
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
       }
       return headers;
     },
   }),
   tagTypes: ["Stations"],
   endpoints: (builder) => ({
-    // Lấy danh sách trạm của Vendor (API /me vừa tạo)
+    
+    // 1. Lấy danh sách trạm
     getMyStations: builder.query<PageResponse<Station>, StationFilterParams>({
       query: (params) => {
-        // Build query string
         const qs = new URLSearchParams();
         qs.append("page", params.page.toString());
         qs.append("size", params.size.toString());
@@ -92,6 +129,7 @@ export const stationApi = createApi({
       providesTags: ["Stations"],
     }),
 
+    // 2. Tạo trạm mới
     createStation: builder.mutation<Station, CreateStationRequest>({
       query: (body) => ({
         url: "/api/stations",
@@ -101,6 +139,7 @@ export const stationApi = createApi({
       invalidatesTags: ["Stations"],
     }),
 
+    // 3. Cập nhật trạm
     updateStation: builder.mutation<Station, { id: number; data: UpdateStationRequest }>({
       query: ({ id, data }) => ({
         url: `/api/stations/${id}`,
@@ -110,6 +149,7 @@ export const stationApi = createApi({
       invalidatesTags: ["Stations"],
     }),
 
+    // 4. Xóa trạm
     deleteStation: builder.mutation<void, number>({
       query: (id) => ({
         url: `/api/stations/${id}`,
@@ -117,12 +157,82 @@ export const stationApi = createApi({
       }),
       invalidatesTags: ["Stations"],
     }),
+
+    // 5. Lấy chi tiết 1 trạm
+    getStationById: builder.query<BaseApiResponse<Station>, number>({
+      query: (id) => `/api/stations/${id}`,
+      providesTags: (result, error, id) => [{ type: "Stations", id }],
+    }),
+
+    // --- TRỤ SẠC (POLES) ---
+
+    // 6. Thêm trụ sạc
+    createChargingPole: builder.mutation<BaseApiResponse<ChargingPole>, CreateChargingPoleRequest>({
+      query: (body) => ({
+        url: "/api/vendor/charging-poles",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Stations"], 
+    }),
+
+    // 7. Xóa trụ sạc
+    deleteChargingPole: builder.mutation<BaseApiResponse<void>, number>({
+      query: (id) => ({
+        url: `/api/vendor/charging-poles/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Stations"],
+    }),
+
+    // 8. Cập nhật trụ sạc
+    updateChargingPole: builder.mutation<BaseApiResponse<ChargingPole>, { id: number; body: UpdateChargingPoleRequest }>({
+      query: ({ id, body }) => ({
+        url: `/api/vendor/charging-poles/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Stations"],
+    }),
+
+    // --- ĐẦU SẠC (CONNECTORS) ---
+
+    // 9. Thêm đầu sạc
+    createConnector: builder.mutation<BaseApiResponse<void>, CreateConnectorRequest>({
+      query: (body) => ({
+        url: "/api/vendor/connectors",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Stations"],
+    }),
+
+    // 10. Xóa đầu sạc
+    deleteConnector: builder.mutation<BaseApiResponse<void>, number>({
+      query: (id) => ({
+        url: `/api/vendor/connectors/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Stations"],
+    }),
+
   }),
 });
 
+// Export hooks
 export const {
   useGetMyStationsQuery,
   useCreateStationMutation,
   useUpdateStationMutation,
   useDeleteStationMutation,
+  useGetStationByIdQuery,
+  
+  // Hooks Trụ sạc
+  useCreateChargingPoleMutation,
+  useDeleteChargingPoleMutation,
+  useUpdateChargingPoleMutation,
+  
+  // Hooks Đầu sạc
+  useCreateConnectorMutation,
+  useDeleteConnectorMutation,
 } = stationApi;

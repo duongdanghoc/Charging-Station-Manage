@@ -7,6 +7,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+// Đảm bảo import ChargingPole là đúng. 
+// Nếu ChargingPole nằm trong cùng package này, bạn không cần import.
+// Nếu ChargingPole nằm ở package khác, bạn cần thêm dòng: 
+// import com.example.charging_station_management.entity.converters.ChargingPole; 
+// (Tùy thuộc vào vị trí thực tế của ChargingPole.java)
+
 @Builder
 @Entity
 @Table(name = "prices")
@@ -19,9 +25,10 @@ public class Price {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    // 👇 ĐÃ SỬA: Đổi tên biến thành 'pole' để khớp với mappedBy = "pole" trong ChargingPole.java
     @ManyToOne
-    @JoinColumn(name = "charging_pole_id")
-    private ChargingPole chargingPole;
+    @JoinColumn(name = "charging_pole_id") 
+    private ChargingPole pole; // <-- Tên biến phải là 'pole'
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)

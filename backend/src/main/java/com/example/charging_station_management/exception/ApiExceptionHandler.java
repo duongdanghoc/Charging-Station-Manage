@@ -24,8 +24,14 @@ public class ApiExceptionHandler {
 
     private final MessageSource messageSource;
 
+    // Sửa lại hàm này để bắt lỗi nếu không tìm thấy key translation
     private String getMessage(String message, Object... args) {
-        return messageSource.getMessage(message, args, LocaleContextHolder.getLocale());
+        try {
+            return messageSource.getMessage(message, args, LocaleContextHolder.getLocale());
+        } catch (Exception e) {
+            // Nếu không tìm thấy trong file properties, trả về chính message gốc
+            return message;
+        }
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -51,6 +57,19 @@ public class ApiExceptionHandler {
         String errorMessage = getMessage("error.validation.failed");
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, errorTitle, errorMessage, request, validationErrors);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<BaseApiResponse<ErrorResponse>> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        
+        // Dùng title chung hoặc tạo key mới trong file properties
+        String errorTitle = getMessage("error.title.validation.failed"); 
+        
+        // Trả về message chi tiết mà Service ném ra (VD: "Time frame overlaps...")
+        String errorMessage = ex.getMessage();
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorTitle, errorMessage, request, null);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

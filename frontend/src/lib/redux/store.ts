@@ -8,6 +8,8 @@ import { profileApi } from "./services/profileApi";
 import { adminApi } from "./services/adminApi";
 import authReducer from "./services/authSlice";
 import { stationApi } from "./services/stationApi";
+import { priceApi } from "./services/priceApi";
+import { chargingPoleApi } from "./services/chargingPoleApi";
 /**
  * Configure and export the Redux store
  */
@@ -18,13 +20,17 @@ export const store = configureStore({
     [profileApi.reducerPath]: profileApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
     [stationApi.reducerPath]: stationApi.reducer,
+    [priceApi.reducerPath]: priceApi.reducer,
+    [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(authApi.middleware)
       .concat(profileApi.middleware)
       .concat(adminApi.middleware)
-      .concat(stationApi.middleware),
+      .concat(stationApi.middleware)
+      .concat(priceApi.middleware)
+      .concat(chargingPoleApi.middleware),
 });
 
 // Enable refetchOnFocus and refetchOnReconnect

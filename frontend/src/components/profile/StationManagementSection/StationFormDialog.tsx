@@ -9,7 +9,18 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Station, CreateStationRequest } from "@/lib/redux/services/stationApi";
 import { getDirtyValues } from "@/utils/getDirtyValues";
-import LocationPickerMap from "./LocationPickerMap";
+import dynamic from "next/dynamic"; // 1. Import dynamic
+
+// 👇 2. QUAN TRỌNG: Khai báo Map bằng dynamic import với ssr: false
+// Điều này ngăn Next.js render bản đồ trên server (nơi không có window)
+const LocationPickerMap = dynamic(
+  () => import("./LocationPickerMap"), 
+  { 
+    ssr: false,
+    // Hiển thị khung loading trong lúc tải map
+    loading: () => <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-gray-400">Đang tải bản đồ...</div>
+  }
+);
 
 interface StationFormDialogProps {
     open: boolean;
@@ -18,8 +29,6 @@ interface StationFormDialogProps {
     initialData?: Station | null;
     isLoading?: boolean;
 }
-
-// Zod schema validation could be added here for robust checking
 
 const StationFormDialog: React.FC<StationFormDialogProps> = ({
     open,
@@ -87,13 +96,13 @@ const StationFormDialog: React.FC<StationFormDialogProps> = ({
             // Lấy ra các trường đã thay đổi
             const changedValues = getDirtyValues(dirtyFields, values);
 
-            // Nếu không có gì thay đổi thì không gọi API, chỉ đóng modal (hoặc báo thông báo)
+            // Nếu không có gì thay đổi thì không gọi API, chỉ đóng modal
             if (Object.keys(changedValues).length === 0) {
                 onOpenChange(false);
                 return;
             }
 
-            // Xử lý format giờ giấc (nếu trường giờ có bị thay đổi)
+            // Xử lý format giờ giấc
             if (changedValues.openTime && changedValues.openTime.length === 5) {
                 changedValues.openTime = `${changedValues.openTime}:00`;
             }
@@ -101,8 +110,6 @@ const StationFormDialog: React.FC<StationFormDialogProps> = ({
                 changedValues.closeTime = `${changedValues.closeTime}:00`;
             }
 
-            // Gửi đi payload chỉ chứa các trường thay đổi
-            // Cần ép kiểu về CreateStationRequest vì changedValues là Partial
             onSubmit(changedValues as CreateStationRequest);
         }
         // B. XỬ LÝ CHO TRƯỜNG HỢP CREATE (Gửi tất cả)
@@ -262,6 +269,7 @@ const StationFormDialog: React.FC<StationFormDialogProps> = ({
                             {/* Cột Phải: Bản đồ */}
                             <div className="flex flex-col h-full min-h-[300px]">
                                 <div className="mb-2 text-sm font-medium text-gray-700">Chọn vị trí trên bản đồ</div>
+                                {/* 👇 Sử dụng Component đã được wrap dynamic import */}
                                 <LocationPickerMap
                                     lat={currentLat}
                                     lng={currentLng}
