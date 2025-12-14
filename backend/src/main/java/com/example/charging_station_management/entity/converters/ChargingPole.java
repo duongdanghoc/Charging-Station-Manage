@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+// Đảm bảo import đúng các entity liên quan
 import com.example.charging_station_management.entity.converters.Station; 
 import com.example.charging_station_management.entity.converters.ChargingConnector;
 import com.example.charging_station_management.entity.converters.Price;
@@ -27,9 +28,10 @@ public class ChargingPole {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    // ✅ Quyết định: Dùng FetchType.LAZY để tối ưu (chuẩn Hibernate)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id", nullable = false)
-    @JsonIgnore // Tránh vòng lặp vô tận khi serialize JSON
+    @JsonIgnore
     @ToString.Exclude
     private Station station;
 
@@ -45,10 +47,14 @@ public class ChargingPole {
 
     private LocalDate installDate;
 
-    // mappedBy phải trùng với tên biến trong class ChargingConnector (private ChargingPole chargingPole;)
-    @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ChargingConnector> connectors = new ArrayList<>();
+    // ✅ Quyết định quan trọng:
+    // 1. Tên biến: Giữ 'chargingConnectors' (để khớp với code hiện tại của bạn).
+    // 2. Fetch: Giữ EAGER (để StationMapper tính toán được số cổng mà không lỗi Lazy).
+    // 3. OrphanRemoval: Thêm vào để quản lý dữ liệu chặt chẽ hơn (từ nhánh Nam).
+    @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private List<ChargingConnector> chargingConnectors = new ArrayList<>();
 
+    // ✅ Giữ lại tính năng Price từ nhánh của Nam
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Price> prices = new ArrayList<>();
 }

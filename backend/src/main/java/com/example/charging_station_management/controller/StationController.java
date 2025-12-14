@@ -2,9 +2,15 @@ package com.example.charging_station_management.controller;
 
 import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
+// 👇 1. Import đúng BaseApiResponse (dto package)
+import com.example.charging_station_management.dto.BaseApiResponse;
+import com.example.charging_station_management.dto.response.ChargingPoleResponse;
+
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
 import com.example.charging_station_management.entity.enums.VehicleType;
+// 👇 2. Import ChargingPoleService
+import com.example.charging_station_management.service.ChargingPoleService;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.service.impl.CustomerServiceImpl;
 
@@ -18,6 +24,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/stations")
@@ -27,6 +35,9 @@ public class StationController {
 
     private final CustomerServiceImpl customerService;
     private final StationService stationService;
+    
+    // 👇 3. Khai báo Service lấy dữ liệu trụ
+    private final ChargingPoleService chargingPoleService;
 
     @GetMapping
     public ResponseEntity<Page<StationResponse>> getAllStations(@PageableDefault(size = 10) Pageable pageable) {
@@ -44,6 +55,17 @@ public class StationController {
     public ResponseEntity<StationResponse> getStationById(@PathVariable Integer id) {
         return ResponseEntity.ok(customerService.getStationById(id));
     }
+
+    // 👇👇👇 4. ENDPOINT LẤY DANH SÁCH TRỤ (ĐÃ SỬA CHUẨN) 👇👇👇
+    @GetMapping("/{id}/poles")
+    public ResponseEntity<BaseApiResponse<List<ChargingPoleResponse>>> getPolesByStationId(@PathVariable Integer id) {
+        // Gọi service lấy danh sách
+        List<ChargingPoleResponse> poles = chargingPoleService.getAllPolesByStationId(id);
+        
+        // Sử dụng hàm static success(data, message) để trả về đúng định dạng
+        return ResponseEntity.ok(BaseApiResponse.success(poles, "Lấy danh sách trụ thành công"));
+    }
+    // 👆👆👆 KẾT THÚC PHẦN SỬA 👆👆👆
 
     @GetMapping("/{id}/reviews")
     public ResponseEntity<Page<ReviewResponse>> getStationReviews(

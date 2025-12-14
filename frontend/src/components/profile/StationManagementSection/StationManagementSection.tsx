@@ -4,15 +4,16 @@ import React, { useState } from "react";
 import { ListIcon, MapIcon, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-// 👇 1. Import dynamic từ Next.js
 import dynamic from "next/dynamic";
 
 import StationDetailSheet from "./StationDetailSheet";
 import StationListTable from "./StationListTable";
 import StationFormDialog from "./StationFormDialog";
 import ConfirmModal from "@/components/common/ConfirmModal";
-// ✅ Giữ lại ConnectorManagement, bỏ import tĩnh StationMapList
-import ConnectorManagement from "../ConnectorManagement";
+// ✅ GIỮ LẠI: Import ConnectorManagement
+import ConnectorManagement from "../ConnectorManagement"; 
+
+// ❌ ĐÃ XÓA: import StationMapList from "./StationMapList"; (Vì đã dùng dynamic import bên dưới)
 
 import {
     useGetMyStationsQuery,
@@ -28,11 +29,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export type StationItem = Station;
 export type StationStatus = "ACTIVE" | "INACTIVE";
 
-// 👇 2. Khai báo StationMapList bằng Dynamic Import (Tắt SSR)
+// 👇 Dynamic Import cho Map (Thay thế cho import tĩnh)
 const StationMapList = dynamic(
   () => import("./StationMapList"), 
   { 
-    ssr: false, // Quan trọng: Ngăn Next.js render map trên server
+    ssr: false, // Ngăn render map trên server tránh lỗi window/document not found
     loading: () => (
         <div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-gray-400">
             Đang tải bản đồ...
@@ -45,7 +46,7 @@ const StationManagementSection: React.FC = () => {
     // --- State Filter ---
     const [viewMode, setViewMode] = useState<"list" | "map">("list");
     const [searchText, setSearchText] = useState("");
-    const [filterStatus, setFilterStatus] = useState<string>("all"); // "all" | "1" | "0"
+    const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterType, setFilterType] = useState<string>("all");
 
     // --- State Management ---
@@ -55,6 +56,8 @@ const StationManagementSection: React.FC = () => {
     const [stationToDelete, setStationToDelete] = useState<number | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [detailStation, setDetailStation] = useState<Station | null>(null);
+    
+    // State cho Connector Management
     const [isConnectorManagementOpen, setIsConnectorManagementOpen] = useState(false);
     const [selectedStationForConnectors, setSelectedStationForConnectors] = useState<Station | null>(null);
 
@@ -66,7 +69,7 @@ const StationManagementSection: React.FC = () => {
     // --- API Call với Filter ---
     const queryParams = {
         page: 0,
-        size: 100, // Load nhiều để hiện lên Map
+        size: 100,
         search: searchText || undefined,
         status: filterStatus !== "all" ? parseInt(filterStatus) : undefined,
         type: filterType !== "all" ? (filterType as any) : undefined,
@@ -100,27 +103,23 @@ const StationManagementSection: React.FC = () => {
         setIsDeleteModalOpen(true);
     };
 
-    // 2. Hàm thực sự gọi API xóa (được gọi khi bấm nút Xác nhận trong Modal)
     const onConfirmDelete = async () => {
         if (!stationToDelete) return;
 
         try {
             await deleteStation(stationToDelete).unwrap();
             toast.success("Đã xóa trạm sạc thành công!");
-
             setIsDeleteModalOpen(false);
             setStationToDelete(null);
         } catch (error) {
             console.error("Delete error:", error);
             toast.error("Xóa thất bại. Vui lòng thử lại sau.");
-            
             setIsDeleteModalOpen(false);
         }
     };
 
     const handleToggleStatus = async (station: Station) => {
         try {
-            // Logic: 1 (Active) <-> 0 (Inactive)
             const newStatus = station.status === 1 ? 0 : 1;
             await updateStation({
                 id: station.id,
@@ -138,11 +137,9 @@ const StationManagementSection: React.FC = () => {
     const handleFormSubmit = async (formData: CreateStationRequest) => {
         try {
             if (selectedStation) {
-                // Logic Update
                 await updateStation({ id: selectedStation.id, data: formData }).unwrap();
                 toast.success("Cập nhật thông tin trạm thành công");
             } else {
-                // Logic Create
                 await createStation(formData).unwrap();
                 toast.success("Thêm trạm mới thành công");
             }
@@ -164,12 +161,9 @@ const StationManagementSection: React.FC = () => {
                 </p>
             </div>
 
-            {/* --- TOOLBAR: SEARCH & FILTER & VIEW MODE --- */}
+            {/* --- TOOLBAR --- */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg border shadow-sm">
-
-                {/* Left: Search & Filters */}
                 <div className="flex flex-1 flex-col sm:flex-row gap-3 w-full items-center">
-                    {/* Search Input */}
                     <div className="relative w-full sm:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                         <Input
@@ -180,7 +174,6 @@ const StationManagementSection: React.FC = () => {
                         />
                     </div>
 
-                    {/* Filter Status */}
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                         <SelectTrigger className="w-full sm:w-[150px]">
                             <SelectValue placeholder="Trạng thái" />
@@ -192,7 +185,6 @@ const StationManagementSection: React.FC = () => {
                         </SelectContent>
                     </Select>
 
-                    {/* Filter Type */}
                     <Select value={filterType} onValueChange={setFilterType}>
                         <SelectTrigger className="w-full sm:w-[140px]">
                             <SelectValue placeholder="Loại xe" />
@@ -206,9 +198,7 @@ const StationManagementSection: React.FC = () => {
                     </Select>
                 </div>
 
-                {/* Right: View Mode & Add Button */}
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    {/* View Toggle */}
                     <div className="flex bg-gray-100 p-1 rounded-md border">
                         <button
                             onClick={() => setViewMode("list")}
@@ -232,12 +222,11 @@ const StationManagementSection: React.FC = () => {
                 </div>
             </div>
 
-            {/* --- MAIN CONTENT AREA --- */}
+            {/* --- MAIN CONTENT --- */}
             <div className="min-h-[400px]">
                 {isLoading ? (
                     <div className="text-center py-20 text-gray-500">Đang tải dữ liệu...</div>
                 ) : viewMode === "list" ? (
-                    // LIST VIEW
                     <StationListTable
                         stations={stationPage?.content || []}
                         onViewDetail={handleViewDetail}
@@ -247,15 +236,14 @@ const StationManagementSection: React.FC = () => {
                         onManageConnectors={handleManageConnectors}
                     />
                 ) : (
-                    // MAP VIEW (Sử dụng Component Dynamic)
                     <StationMapList
                         stations={stationPage?.content || []}
-                        onStationClick={handleViewDetail} // Click marker -> Mở chi tiết
+                        onStationClick={handleViewDetail}
                     />
                 )}
             </div>
 
-            {/* Modal Form: Sử dụng Dialog Component */}
+            {/* --- MODALS --- */}
             <StationFormDialog
                 open={isDialogOpen}
                 onOpenChange={setIsDialogOpen}
@@ -286,7 +274,7 @@ const StationManagementSection: React.FC = () => {
                 station={detailStation}
             />
 
-            {/* --- CONNECTOR MANAGEMENT DIALOG --- */}
+            {/* --- CONNECTOR MANAGEMENT POPUP --- */}
             {isConnectorManagementOpen && selectedStationForConnectors && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">

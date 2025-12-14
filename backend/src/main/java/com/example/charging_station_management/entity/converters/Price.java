@@ -1,17 +1,12 @@
 package com.example.charging_station_management.entity.converters;
 
 import com.example.charging_station_management.entity.enums.PriceName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
-
-// Đảm bảo import ChargingPole là đúng. 
-// Nếu ChargingPole nằm trong cùng package này, bạn không cần import.
-// Nếu ChargingPole nằm ở package khác, bạn cần thêm dòng: 
-// import com.example.charging_station_management.entity.converters.ChargingPole; 
-// (Tùy thuộc vào vị trí thực tế của ChargingPole.java)
 
 @Builder
 @Entity
@@ -25,10 +20,13 @@ public class Price {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // 👇 ĐÃ SỬA: Đổi tên biến thành 'pole' để khớp với mappedBy = "pole" trong ChargingPole.java
-    @ManyToOne
-    @JoinColumn(name = "charging_pole_id") 
-    private ChargingPole pole; // <-- Tên biến phải là 'pole'
+    // ✅ MERGE: 
+    // 1. Giữ @JsonIgnore để tránh lỗi JSON loop.
+    // 2. Tên biến phải là 'pole' để khớp với mappedBy="pole" bên ChargingPole.
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY) // Nên thêm LAZY để tối ưu hiệu năng
+    @JoinColumn(name = "charging_pole_id", nullable = false) 
+    private ChargingPole pole; 
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)

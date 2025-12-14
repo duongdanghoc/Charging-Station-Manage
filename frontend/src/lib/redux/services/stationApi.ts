@@ -18,6 +18,7 @@ export interface ChargingConnector {
 
 export interface ChargingPole {
   id: number;
+  stationId?: number; // Thêm field này cho đầy đủ (tùy backend trả về)
   manufacturer: string;
   maxPower: number;
   connectorCount: number;
@@ -44,7 +45,8 @@ export interface Station {
   status: number;
   type: "CAR" | "MOTORBIKE" | "BICYCLE";
   vendorName?: string;
-  poles?: ChargingPole[];
+  // 👇 QUAN TRỌNG: poles là number (số lượng)
+  poles: number; 
 }
 
 export interface CreateStationRequest {
@@ -67,9 +69,9 @@ export interface CreateChargingPoleRequest {
   installDate?: string;
 }
 
-// 👇 THÊM MỚI: Interface cho request tạo đầu sạc
+// Interface cho request tạo đầu sạc
 export interface CreateConnectorRequest {
-  poleId: number; // Đã sửa thành poleId cho khớp
+  poleId: number;
   connectorType: string;
   maxPower: number;
 }
@@ -111,7 +113,8 @@ export const stationApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Stations"],
+  // 👇 THÊM "Poles" VÀO ĐÂY
+  tagTypes: ["Stations", "Poles"], 
   endpoints: (builder) => ({
     
     // 1. Lấy danh sách trạm
@@ -173,7 +176,8 @@ export const stationApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Stations"], 
+      // 👇 Invalidate cả Stations (để cập nhật số lượng) và Poles (để cập nhật list chi tiết)
+      invalidatesTags: ["Stations", "Poles"], 
     }),
 
     // 7. Xóa trụ sạc
@@ -182,7 +186,7 @@ export const stationApi = createApi({
         url: `/api/vendor/charging-poles/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Stations"],
+      invalidatesTags: ["Stations", "Poles"],
     }),
 
     // 8. Cập nhật trụ sạc
@@ -192,7 +196,7 @@ export const stationApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Stations"],
+      invalidatesTags: ["Poles"],
     }),
 
     // --- ĐẦU SẠC (CONNECTORS) ---
@@ -204,7 +208,7 @@ export const stationApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Stations"],
+      invalidatesTags: ["Poles"], // Cập nhật lại list trụ để hiện connector mới
     }),
 
     // 10. Xóa đầu sạc
@@ -213,7 +217,14 @@ export const stationApi = createApi({
         url: `/api/vendor/connectors/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Stations"],
+      invalidatesTags: ["Poles"],
+    }),
+
+    // 👇 11. API Lấy danh sách trụ theo trạm (QUAN TRỌNG)
+    getPolesByStationId: builder.query<ChargingPole[], number>({
+      query: (stationId) => `/api/stations/${stationId}/poles`,
+      // Tag "Poles" để khi thêm/xóa trụ thì list này tự refresh
+      providesTags: (result, error, id) => [{ type: "Poles", id }],
     }),
 
   }),
@@ -235,4 +246,7 @@ export const {
   // Hooks Đầu sạc
   useCreateConnectorMutation,
   useDeleteConnectorMutation,
+
+  // 👇 Đừng quên Export cái này
+  useGetPolesByStationIdQuery, 
 } = stationApi;

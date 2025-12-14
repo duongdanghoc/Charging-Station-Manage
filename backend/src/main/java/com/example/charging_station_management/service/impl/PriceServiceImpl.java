@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Objects; // Import thêm để so sánh ID an toàn
 import java.util.stream.Collectors;
 
 @Service
@@ -32,11 +33,9 @@ public class PriceServiceImpl implements PriceService {
     @Override
     @Transactional
     public PriceResponse createPrice(CreatePriceRequest request) {
-        // SỬ DỤNG HÀM getVendorLogin() MỚI
         Vendor currentVendor = userHelper.getVendorLogin();
 
         // 1. Check quyền: Trụ sạc có thuộc về Vendor đang login không
-        // Sử dụng currentVendor.getId() thay vì ép kiểu thủ công
         ChargingPole pole = chargingPoleRepository.findByIdAndVendorId(request.getChargingPoleId(), currentVendor.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Charging Pole not found or access denied"));
 
@@ -72,8 +71,8 @@ public class PriceServiceImpl implements PriceService {
         Price price = priceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Price config not found"));
 
-        // Check quyền sở hữu: Price -> Pole -> Station -> Vendor
-        if (price.getPole().getStation().getVendor().getId() != currentVendor.getId()) {
+        // Check quyền sở hữu: Dùng !Objects.equals để an toàn cho cả int và Integer
+        if (!Objects.equals(price.getPole().getStation().getVendor().getId(), currentVendor.getId())) {
             throw new ResourceNotFoundException("Access denied");
         }
 
@@ -102,14 +101,16 @@ public class PriceServiceImpl implements PriceService {
         Price price = priceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Price config not found"));
 
-        if (price.getPole().getStation().getVendor().getId() != currentVendor.getId()) {
+        if (!Objects.equals(price.getPole().getStation().getVendor().getId(), currentVendor.getId())) {
             throw new ResourceNotFoundException("Access denied");
         }
 
         priceRepository.delete(price);
     }
 
+    // 👇👇👇 QUAN TRỌNG: Thêm @Transactional để tránh LazyInitializationException 👇👇👇
     @Override
+    @Transactional(readOnly = true)
     public List<PriceResponse> getPricesByPole(Integer poleId) {
         Vendor currentVendor = userHelper.getVendorLogin();
 
@@ -117,20 +118,23 @@ public class PriceServiceImpl implements PriceService {
         chargingPoleRepository.findByIdAndVendorId(poleId, currentVendor.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pole not found or access denied"));
 
+        // Giả sử repo có hàm findByPoleId (nếu lỗi thì đổi thành findByChargingPoleId tùy tên field trong Price)
         return priceRepository.findByPoleId(poleId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    // 👇👇👇 QUAN TRỌNG: Thêm @Transactional ở đây nữa 👇👇👇
     @Override
+    @Transactional(readOnly = true)
     public PriceResponse getPriceById(Integer id) {
         Vendor currentVendor = userHelper.getVendorLogin();
 
         Price price = priceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Price not found"));
 
-        // Bảo mật: Chỉ vendor sở hữu mới xem được chi tiết
-        if (price.getPole().getStation().getVendor().getId() != currentVendor.getId()) {
+        // Bảo mật
+        if (!Objects.equals(price.getPole().getStation().getVendor().getId(), currentVendor.getId())) {
             throw new ResourceNotFoundException("Access denied");
         }
 
@@ -165,6 +169,7 @@ public class PriceServiceImpl implements PriceService {
 
         return PriceResponse.builder()
                 .id(price.getId())
+                // 👇 Cần @Transactional để các lệnh getPole() này hoạt động
                 .chargingPoleId(price.getPole().getId())
                 .chargingPoleName(price.getPole().getManufacturer()) 
                 .name(price.getName())

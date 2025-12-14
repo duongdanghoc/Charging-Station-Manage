@@ -2,16 +2,16 @@
 
 import React, { useState } from "react";
 import { PoleManagementDialog } from "./PoleManagementDialog";
-import { ConnectorManagerDialog } from "./ConnectorManagerDialog"; // 👇 Import mới
+import { ConnectorManagerDialog } from "./ConnectorManagerDialog";
 import { 
     useGetStationByIdQuery, 
-    useDeleteChargingPoleMutation 
+    useDeleteChargingPoleMutation,
+    useGetPolesByStationIdQuery 
 } from "@/lib/redux/services/stationApi";
 import { toast } from "sonner";
-
 import {
     Zap, MapPin, Clock, Server, BatteryCharging, Info, Plus, 
-    CheckCircle2, XCircle, Pencil, Trash2, Plug // 👇 Thêm icon Plug
+    CheckCircle2, XCircle, Pencil, Trash2, Plug 
 } from "lucide-react";
 import {
     Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -31,16 +31,22 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
     onOpenChange,
     station: initialStation
 }) => {
-    // State quản lý dialogs
     const [isPoleDialogOpen, setIsPoleDialogOpen] = useState(false);
     const [selectedPoleToEdit, setSelectedPoleToEdit] = useState<ChargingPole | null>(null);
     
-    // 👇 State quản lý Dialog Connector
-    const [connectorPole, setConnectorPole] = useState<ChargingPole | null>(null);
+    // State lưu ID của pole đang thao tác connector
+    const [managingPoleId, setManagingPoleId] = useState<number | null>(null);
 
     const stationId = initialStation?.id || 0;
 
     const { data: freshStationData } = useGetStationByIdQuery(stationId, {
+        skip: !stationId || !open,
+    });
+
+    const { 
+        data: polesResponse, 
+        isLoading: isLoadingPoles 
+    } = useGetPolesByStationIdQuery(stationId, {
         skip: !stationId || !open,
     });
     
@@ -48,7 +54,11 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
 
     const station = freshStationData?.data || initialStation;
     if (!station) return null;
-    const poles = station.poles || [];
+
+    const poles = polesResponse?.data || []; 
+
+    // Tìm pole mới nhất từ API dựa trên ID đã lưu
+    const activeConnectorPole = poles.find(p => p.id === managingPoleId) || null;
 
     // --- HÀM XỬ LÝ ---
     const handleAddNew = () => {
@@ -71,9 +81,8 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
         }
     };
 
-    // 👇 Hàm mở dialog quản lý đầu sạc
     const handleManageConnectors = (pole: ChargingPole) => {
-        setConnectorPole(pole);
+        setManagingPoleId(pole.id);
     };
 
     return (
@@ -131,7 +140,12 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
                             </Button>
                         </div>
 
-                        {poles.length === 0 ? (
+                        {isLoadingPoles ? (
+                            <div className="flex justify-center py-10 bg-white rounded-xl border border-dashed">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                <span className="ml-2 text-gray-500">Đang tải trụ sạc...</span>
+                            </div>
+                        ) : poles.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-gray-400 bg-white rounded-xl border border-dashed">
                                 <Server className="size-10 mb-2 opacity-20" />
                                 <p>Chưa có trụ sạc nào được lắp đặt.</p>
@@ -144,7 +158,7 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
                                         pole={pole} 
                                         onEdit={() => handleEdit(pole)}
                                         onDelete={() => handleDelete(pole.id)}
-                                        onManageConnectors={() => handleManageConnectors(pole)} // 👇 Truyền hàm này xuống
+                                        onManageConnectors={() => handleManageConnectors(pole)}
                                     />
                                 ))}
                             </div>
@@ -160,25 +174,27 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
                     poleToEdit={selectedPoleToEdit}
                 />
 
-                {/* 👇 Dialog quản lý Connector */}
                 <ConnectorManagerDialog 
-                    open={!!connectorPole}
-                    onOpenChange={(open) => !open && setConnectorPole(null)}
-                    pole={connectorPole}
+                    open={!!activeConnectorPole} 
+                    onOpenChange={(open) => !open && setManagingPoleId(null)}
+                    pole={activeConnectorPole} 
                 />
             </SheetContent>
         </Sheet>
     );
 };
 
-// --- SUB COMPONENTS ---
-
+// 👇 SỬA LOGIC HIỂN THỊ TẠI ĐÂY
 const PoleItem: React.FC<{ 
     pole: ChargingPole; 
     onEdit: () => void; 
     onDelete: () => void;
-    onManageConnectors: () => void; // 👇 Thêm prop mới
+    onManageConnectors: () => void; 
 }> = ({ pole, onEdit, onDelete, onManageConnectors }) => {
+    
+    // 1. Lọc bỏ các connector có trạng thái OUTOFSERVICE (Đã bị xóa mềm)
+    const activeConnectors = (pole.connectors || []).filter(c => c.status !== 'OUTOFSERVICE');
+
     return (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm transition-all hover:shadow-md group">
             <div className="bg-gray-50/80 px-4 py-3 flex justify-between items-center border-b border-gray-100">
@@ -196,7 +212,6 @@ const PoleItem: React.FC<{
                     <PriceManagementDialog poleId={pole.id} poleName={pole.manufacturer} />
                     
                     <div className="flex items-center gap-1 border-l pl-2 ml-1">
-                        {/* 👇 Nút Quản lý Đầu sạc (Phích cắm) */}
                         <Button 
                             variant="ghost" 
                             size="icon" 
@@ -219,14 +234,18 @@ const PoleItem: React.FC<{
 
             <div className="p-4">
                 <div className="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide flex justify-between">
-                    <span>Đầu sạc ({pole.connectors.length})</span>
+                    {/* 2. Hiển thị số lượng sau khi lọc */}
+                    <span>Đầu sạc ({activeConnectors.length})</span>
                     <span className="text-xs text-gray-400">Max {pole.maxPower} kW</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {pole.connectors.map((connector) => (
+                    {/* 3. Dùng danh sách activeConnectors để render */}
+                    {activeConnectors.map((connector) => (
                         <ConnectorItem key={connector.id} connector={connector} />
                     ))}
-                    {pole.connectors.length === 0 && (
+                    
+                    {/* 4. Check activeConnectors rỗng */}
+                    {activeConnectors.length === 0 && (
                         <div className="col-span-2 text-center py-2 text-sm text-gray-400 italic bg-gray-50 rounded border border-dashed">
                             Chưa gắn đầu sạc
                         </div>
@@ -241,6 +260,7 @@ const ConnectorItem: React.FC<{ connector: ChargingConnector }> = ({ connector }
     const statusConfig: any = {
         AVAILABLE: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", icon: CheckCircle2, label: "Sẵn sàng" },
         INUSE: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", icon: BatteryCharging, label: "Đang sạc" },
+        // OUTOFSERVICE có thể vẫn giữ config để hiển thị ở nơi khác nếu cần
         OUTOFSERVICE: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", icon: XCircle, label: "Bảo trì" }
     };
     const config = statusConfig[connector.status] || statusConfig.OUTOFSERVICE;

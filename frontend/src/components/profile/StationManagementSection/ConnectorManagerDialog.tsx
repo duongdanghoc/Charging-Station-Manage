@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Plug } from "lucide-react";
-// Đảm bảo bạn đã có các hooks này trong stationApi.ts
 import { 
     useCreateConnectorMutation, 
     useDeleteConnectorMutation,
@@ -44,6 +43,10 @@ export function ConnectorManagerDialog({ open, onOpenChange, pole }: ConnectorMa
 
   if (!pole) return null;
 
+  // 👇 SỬA LỖI TẠI ĐÂY: Lọc bỏ những connector đã bị Xóa mềm (OUTOFSERVICE)
+  // Chỉ hiển thị những cái đang hoạt động để người dùng quản lý
+  const activeConnectors = (pole.connectors || []).filter(c => c.status !== 'OUTOFSERVICE');
+
   const handleAdd = async () => {
     if (formData.maxPower <= 0) {
       toast.error("Công suất phải lớn hơn 0");
@@ -66,8 +69,8 @@ export function ConnectorManagerDialog({ open, onOpenChange, pole }: ConnectorMa
     try {
       await deleteConnector(id).unwrap();
       toast.success("Đã gỡ bỏ đầu sạc");
-    } catch (error) {
-      toast.error("Lỗi xóa đầu sạc");
+    } catch (error: any) { // Thêm :any để lấy message lỗi từ backend
+      toast.error(error?.data?.message || "Lỗi xóa đầu sạc");
     }
   };
 
@@ -83,15 +86,18 @@ export function ConnectorManagerDialog({ open, onOpenChange, pole }: ConnectorMa
 
         {/* --- DANH SÁCH ĐẦU SẠC HIỆN CÓ --- */}
         <div className="space-y-3 my-4">
-            <h4 className="text-sm font-medium text-gray-700">Danh sách đầu sạc hiện tại:</h4>
+            <h4 className="text-sm font-medium text-gray-700">
+                Danh sách đầu sạc hiện tại ({activeConnectors.length}/2):
+            </h4>
             
             <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
-                {pole.connectors.length === 0 && (
+                {/* 👇 Sử dụng activeConnectors thay vì pole.connectors */}
+                {activeConnectors.length === 0 && (
                     <div className="text-sm text-gray-400 italic text-center py-4 border border-dashed rounded bg-slate-50">
                         Chưa có đầu sạc nào được gắn.
                     </div>
                 )}
-                {pole.connectors.map(c => (
+                {activeConnectors.map(c => (
                     <div key={c.id} className="flex justify-between items-center p-3 border rounded-lg bg-white shadow-sm hover:bg-slate-50 transition-colors">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-full">
@@ -108,6 +114,7 @@ export function ConnectorManagerDialog({ open, onOpenChange, pole }: ConnectorMa
                             className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
                             onClick={() => handleDelete(c.id)}
                             disabled={isDeleting}
+                            title="Gỡ bỏ"
                         >
                             <Trash2 className="size-4"/>
                         </Button>
@@ -146,7 +153,14 @@ export function ConnectorManagerDialog({ open, onOpenChange, pole }: ConnectorMa
                     />
                 </div>
                 <div className="col-span-1">
-                    <Button size="sm" className="w-full h-9 bg-blue-600 hover:bg-blue-700" onClick={handleAdd} disabled={isCreating}>
+                    <Button 
+                        size="sm" 
+                        className="w-full h-9 bg-blue-600 hover:bg-blue-700" 
+                        onClick={handleAdd} 
+                        // Disable nút thêm nếu đã full slot (dựa trên danh sách active)
+                        disabled={isCreating || activeConnectors.length >= 2}
+                        title={activeConnectors.length >= 2 ? "Đã đạt giới hạn số lượng đầu sạc" : "Thêm mới"}
+                    >
                         {isCreating ? <Loader2 className="animate-spin size-4"/> : <Plus className="size-4"/>}
                     </Button>
                 </div>

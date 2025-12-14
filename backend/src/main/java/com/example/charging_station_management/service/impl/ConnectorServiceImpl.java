@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ConnectorServiceImpl implements ConnectorService {
 
-    // 👇 ĐỊNH NGHĨA GIỚI HẠN TỐI ĐA (vì không dùng cột trong DB)
     private static final int MAX_CONNECTORS_LIMIT = 2; 
 
     private final ChargingConnectorRepository connectorRepository;
@@ -50,15 +49,17 @@ public class ConnectorServiceImpl implements ConnectorService {
 
         List<ChargingConnector> existingConnectors = connectorRepository.findByPoleId(pole.getId());
         
-        // 👇 1. SỬA LỖI GIỚI HẠN: Dùng HẰNG SỐ MAX_CONNECTORS_LIMIT (giá trị 2)
-        if (existingConnectors.size() >= MAX_CONNECTORS_LIMIT) {
+        // 👇 SỬA QUAN TRỌNG: Chỉ đếm những connector chưa bị xóa mềm (Status != OUTOFSERVICE)
+        long activeCount = existingConnectors.stream()
+                .filter(c -> c.getStatus() != ConnectorStatus.OUTOFSERVICE)
+                .count();
+        
+        if (activeCount >= MAX_CONNECTORS_LIMIT) {
             log.error("Pole {} has reached maximum connector count", pole.getId());
             throw new RuntimeException("Pole đã đạt số lượng connector tối đa: " + MAX_CONNECTORS_LIMIT);
         }
 
         if (request.getMaxPower().compareTo(pole.getMaxPower()) > 0) {
-            log.error("Connector max power {} exceeds pole max power {}",
-                    request.getMaxPower(), pole.getMaxPower());
             throw new RuntimeException("Công suất connector không được vượt quá công suất của pole: "
                     + pole.getMaxPower() + " kW");
         }
@@ -72,9 +73,10 @@ public class ConnectorServiceImpl implements ConnectorService {
         ChargingConnector savedConnector = connectorRepository.save(connector);
         log.info("Connector created successfully with ID: {}", savedConnector.getId());
 
-        // 👇 2. CẬP NHẬT CONNECTOR_COUNT (số lượng đang dùng hiện tại)
-        pole.setConnectorCount(existingConnectors.size() + 1);
-        poleRepository.save(pole); // Lưu lại Pole để cập nhật cột connector_count
+        // Cập nhật lại số lượng connector đang hoạt động vào Pole
+        // (Cast long về int)
+        pole.setConnectorCount((int) activeCount + 1);
+        poleRepository.save(pole);
 
         return mapToConnectorResponse(savedConnector);
     }
@@ -85,12 +87,7 @@ public class ConnectorServiceImpl implements ConnectorService {
         log.info("Updating connector {} for vendor {}", connectorId, vendorId);
 
         ChargingConnector connector = connectorRepository.findByIdAndVendorId(connectorId, vendorId)
-                .orElseThrow(() -> {
-                    log.error("Connector {} not found or not belong to vendor {}", connectorId, vendorId);
-                    return new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập");
-                });
-
-        // ... (Logic cập nhật giữ nguyên)
+                .orElseThrow(() -> new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập"));
 
         if (request.getConnectorType() != null) {
             connector.setConnectorType(request.getConnectorType());
@@ -106,22 +103,18 @@ public class ConnectorServiceImpl implements ConnectorService {
 
         if (request.getStatus() != null) {
             if (connectorRepository.isConnectorInUse(connectorId)) {
-                throw new RuntimeException("Không thể thay đổi trạng thái khi connector đang được sử dụng");
+                throw new RuntimeException("Không thể thay đổi trạng thái khi connector đang có phiên sạc (Pending/Charging)");
             }
             connector.setStatus(request.getStatus());
         }
 
         ChargingConnector updatedConnector = connectorRepository.save(connector);
-        log.info("Connector {} updated successfully", connectorId);
-
         return mapToConnectorResponse(updatedConnector);
     }
 
     @Override
     @Transactional
     public ConnectorResponse updateConnectorStatus(Integer vendorId, Integer connectorId, ConnectorStatus status) {
-        log.info("Updating connector {} status to {} for vendor {}", connectorId, status, vendorId);
-
         ChargingConnector connector = connectorRepository.findByIdAndVendorId(connectorId, vendorId)
                 .orElseThrow(() -> new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập"));
 
@@ -131,8 +124,6 @@ public class ConnectorServiceImpl implements ConnectorService {
 
         connector.setStatus(status);
         ChargingConnector updatedConnector = connectorRepository.save(connector);
-
-        log.info("Connector {} status updated to {}", connectorId, status);
         return mapToConnectorResponse(updatedConnector);
     }
 
@@ -144,34 +135,41 @@ public class ConnectorServiceImpl implements ConnectorService {
         ChargingConnector connector = connectorRepository.findByIdAndVendorId(connectorId, vendorId)
                 .orElseThrow(() -> new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập"));
 
+        // 1. Chặn nếu đang sạc
+        if (connector.getStatus() == ConnectorStatus.INUSE) {
+            throw new RuntimeException("Không thể xóa đầu sạc đang ở trạng thái 'Đang sạc' (INUSE). Vui lòng kết thúc phiên sạc trước.");
+        }
+
         if (connectorRepository.isConnectorInUse(connectorId)) {
-            throw new RuntimeException("Không thể xóa connector đang được sử dụng");
+            throw new RuntimeException("Hệ thống phát hiện đầu sạc đang có phiên hoạt động. Không thể xóa.");
         }
 
-        if (connector.getChargingSessions() != null && !connector.getChargingSessions().isEmpty()) {
-            log.warn("Connector {} has charging sessions history", connectorId);
-            throw new RuntimeException("Không thể xóa connector đã có lịch sử sử dụng");
-        }
+        Integer poleId = connector.getPole().getId();
+        boolean hasHistory = connector.getChargingSessions() != null && !connector.getChargingSessions().isEmpty();
 
-        // 3. Cập nhật connector_count của Pole sau khi xóa
-        ChargingPole pole = connector.getPole(); // Lấy Pole trước khi xóa Connector
-        connectorRepository.delete(connector);
-        log.info("Connector {} deleted successfully", connectorId);
-        
-        // Cập nhật lại cột connector_count của Pole
-        // Giả sử cột connector_count là số lượng đang dùng
-        pole.setConnectorCount(pole.getConnectorCount() - 1);
-        poleRepository.save(pole); 
+        if (hasHistory) {
+            // Soft Delete: Chuyển trạng thái sang OUTOFSERVICE
+            log.info("Connector {} has history. Switching to OUTOFSERVICE.", connectorId);
+            connector.setStatus(ConnectorStatus.OUTOFSERVICE);
+            connectorRepository.save(connector);
+            
+            // Lưu ý: Không cần giảm connector_count ở đây, vì hàm createConnector ở trên 
+            // sẽ tự động tính toán lại dựa trên (Total - OUTOFSERVICE) khi thêm mới.
+        } else {
+            // Hard Delete: Xóa vĩnh viễn bằng SQL
+            connectorRepository.deleteHard(connectorId);
+            log.info("Connector {} deleted successfully (Hard Delete)", connectorId);
+            
+            // Giảm số lượng connector trên Pole
+            poleRepository.decrementConnectorCount(poleId);
+        }
     }
 
     @Override
     public ConnectorDetailResponse getConnectorDetail(Integer vendorId, Integer connectorId) {
-        log.info("Getting connector {} detail for vendor {}", connectorId, vendorId);
-
         ChargingConnector connector = connectorRepository.findByIdAndVendorId(connectorId, vendorId)
                 .orElseThrow(() -> new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập"));
 
-        // ... (Logic map detail giữ nguyên)
         List<SessionSummary> recentSessions = connector.getChargingSessions() != null
                 ? connector.getChargingSessions().stream()
                 .sorted((s1, s2) -> s2.getStartTime().compareTo(s1.getStartTime()))
@@ -197,51 +195,25 @@ public class ConnectorServiceImpl implements ConnectorService {
 
     @Override
     public List<ConnectorResponse> getAllConnectorsByVendor(Integer vendorId) {
-        log.info("Getting all connectors for vendor: {}", vendorId);
-
         List<ChargingConnector> connectors = connectorRepository.findByVendorId(vendorId);
-
-        return connectors.stream()
-                .map(this::mapToConnectorResponse)
-                .collect(Collectors.toList());
+        return connectors.stream().map(this::mapToConnectorResponse).collect(Collectors.toList());
     }
 
     @Override
-    public List<ConnectorResponse> searchConnectors(
-                Integer vendorId,
-                ConnectorType connectorType,
-                ConnectorStatus status,
-                Integer poleId) {
-
-        log.info("Searching connectors for vendor {} with filters - type: {}, status: {}, poleId: {}",
-                vendorId, connectorType, status, poleId);
-
-        List<ChargingConnector> connectors = connectorRepository.searchConnectors(
-                vendorId, connectorType, status, poleId);
-
-        return connectors.stream()
-                .map(this::mapToConnectorResponse)
-                .collect(Collectors.toList());
+    public List<ConnectorResponse> searchConnectors(Integer vendorId, ConnectorType connectorType, ConnectorStatus status, Integer poleId) {
+        List<ChargingConnector> connectors = connectorRepository.searchConnectors(vendorId, connectorType, status, poleId);
+        return connectors.stream().map(this::mapToConnectorResponse).collect(Collectors.toList());
     }
 
     @Override
     public void validateConnectorInfo(CreateConnectorRequest request) {
-        if (request.getPoleId() == null) {
-            throw new RuntimeException("Pole ID không được để trống");
-        }
-
-        if (request.getConnectorType() == null) {
-            throw new RuntimeException("Loại đầu sạc không được để trống");
-        }
-
-        if (request.getMaxPower() == null || request.getMaxPower().doubleValue() <= 0) {
-            throw new RuntimeException("Công suất tối đa phải lớn hơn 0");
-        }
+        if (request.getPoleId() == null) throw new RuntimeException("Pole ID không được để trống");
+        if (request.getConnectorType() == null) throw new RuntimeException("Loại đầu sạc không được để trống");
+        if (request.getMaxPower() == null || request.getMaxPower().doubleValue() <= 0) throw new RuntimeException("Công suất tối đa phải lớn hơn 0");
     }
 
     private ConnectorResponse mapToConnectorResponse(ChargingConnector connector) {
         boolean isInUse = connectorRepository.isConnectorInUse(connector.getId());
-
         return new ConnectorResponse(
                 connector.getId(),
                 connector.getPole().getId(),
