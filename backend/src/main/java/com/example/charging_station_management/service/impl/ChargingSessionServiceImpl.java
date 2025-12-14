@@ -3,23 +3,25 @@ package com.example.charging_station_management.service.impl;
 import com.example.charging_station_management.dto.mapper.ChargingSessionMapper;
 import com.example.charging_station_management.dto.request.ChargingSessionFilterRequest;
 import com.example.charging_station_management.dto.response.ChargingSessionDetailResponse;
-import com.example.charging_station_management.entity.converters.ChargingSession;
+import com.example.charging_station_management.entity.converters.*;
 import com.example.charging_station_management.repository.ChargingSessionRepository;
 import com.example.charging_station_management.service.ChargingSessionService;
 import com.example.charging_station_management.entity.enums.SessionStatus;
+import com.example.charging_station_management.repository.specification.ChargingSessionSpecification;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Log4j2
 public class ChargingSessionServiceImpl implements ChargingSessionService {
+
     private final ChargingSessionRepository chargingSessionRepository;
     private final ChargingSessionMapper chargingSessionMapper;
     // Added dependencies
@@ -35,38 +37,102 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
             ChargingSessionFilterRequest filterRequest,
             Pageable pageable) {
 
-        log.info("Fetching charging sessions with filters: {}", filterRequest);
+        Specification<ChargingSession> spec = Specification.where(null);
 
-        Page<ChargingSession> sessions = chargingSessionRepository.searchChargingSessions(
-                filterRequest.getCustomerId(),
-                filterRequest.getStationId(),
-                filterRequest.getStatus(),
-                filterRequest.getStartTimeFrom(),
-                filterRequest.getStartTimeTo(),
-                filterRequest.getEndTimeFrom(),
-                filterRequest.getEndTimeTo(),
-                filterRequest.getCustomerName(),
-                filterRequest.getStationName(),
-                filterRequest.getLicensePlate(),
-                pageable
-        );
+        if (filterRequest != null) {
+            spec = spec
+                    .and(ChargingSessionSpecification.withCustomerId(filterRequest.getCustomerId()))
+                    .and(ChargingSessionSpecification.withStationId(filterRequest.getStationId()))
+                    .and(ChargingSessionSpecification.withStatus(filterRequest.getStatus()))
+                    .and(ChargingSessionSpecification.withStartTimeBetween(
+                            filterRequest.getStartTimeFrom(),
+                            filterRequest.getStartTimeTo()))
+                    .and(ChargingSessionSpecification.withEndTimeBetween(
+                            filterRequest.getEndTimeFrom(),
+                            filterRequest.getEndTimeTo()))
+                    .and(ChargingSessionSpecification.withCustomerNameLike(filterRequest.getCustomerName()))
+                    .and(ChargingSessionSpecification.withStationNameLike(filterRequest.getStationName()))
+                    .and(ChargingSessionSpecification.withLicensePlateLike(filterRequest.getLicensePlate()));
+        }
 
-        log.info("Found {} charging sessions", sessions.getTotalElements());
+        Page<ChargingSession> sessions = chargingSessionRepository.findAll(spec, pageable);
 
-        return sessions.map(chargingSessionMapper::toDetailResponse);
+        return sessions.map(this::convertToDetailResponse);
     }
 
     @Override
     public ChargingSessionDetailResponse getChargingSessionById(Integer sessionId) {
-        log.info("Fetching charging session with id: {}", sessionId);
-
         ChargingSession session = chargingSessionRepository.findById(sessionId)
-                .orElseThrow(() -> {
-                    log.error("Charging session not found with id: {}", sessionId);
-                    return new RuntimeException("Charging session not found: " + sessionId);
-                });
+                .orElseThrow(() -> new RuntimeException("Charging session not found with id: " + sessionId));
 
-        return chargingSessionMapper.toDetailResponse(session);
+        return convertToDetailResponse(session);
+    }
+
+    private ChargingSessionDetailResponse convertToDetailResponse(ChargingSession session) {
+        // Extract customer info - Customer extends User
+        Customer customer = session.getElectricVehicle() != null ? session.getElectricVehicle().getCustomer() : null;
+
+        // Extract other entities
+        ElectricVehicle vehicle = session.getElectricVehicle();
+        ChargingConnector connector = session.getChargingConnector();
+        ChargingPole pole = connector != null ? connector.getPole() : null;
+        Station station = pole != null ? pole.getStation() : null;
+        Location location = station != null ? station.getLocation() : null;
+        Vendor vendor = station != null ? station.getVendor() : null;
+        Transaction transaction = session.getTransaction();
+
+        return ChargingSessionDetailResponse.builder()
+                // Session info
+                .sessionId(session.getId())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .energyKwh(session.getEnergyKwh())
+                .cost(session.getCost())
+                .status(session.getStatus() != null ? session.getStatus() : null)
+
+                // Customer info (Customer IS-A User)
+                .customerId(customer != null ? customer.getId() : null)
+                .customerName(customer != null ? customer.getName() : null)
+                .customerEmail(customer != null ? customer.getEmail() : null)
+                .customerPhone(customer != null ? customer.getPhone() : null)
+
+                // Vehicle info
+                .vehicleId(vehicle != null ? vehicle.getId() : null)
+                .licensePlate(vehicle != null ? vehicle.getLicensePlate() : null)
+                .vehicleBrand(vehicle != null ? vehicle.getBrand() : null)
+                .vehicleModel(vehicle != null ? vehicle.getModel() : null)
+                .vehicleType(vehicle != null ? vehicle.getVehicleType() : null)
+                .vehicleConnectorType(vehicle != null ? vehicle.getConnectorType() : null)
+                .batteryCapacity(vehicle != null ? vehicle.getBatteryCapacity() : null)
+
+                // Station info
+                .stationId(station != null ? station.getId() : null)
+                .stationName(station != null ? station.getName() : null)
+                .stationProvince(location != null ? location.getProvince() : null)
+                .stationAddress(location != null ? location.getAddressDetail() : null)
+                .vendorName(vendor != null ? vendor.getName() : null)
+
+                // Charging pole info
+                .poleId(pole != null ? pole.getId() : null)
+                .poleManufacturer(pole != null ? pole.getManufacturer() : null)
+                .poleMaxPower(pole != null ? pole.getMaxPower() : null)
+
+                // Connector info
+                .connectorId(connector != null ? connector.getId() : null)
+                .connectorType(connector != null ? connector.getConnectorType() : null)
+                .connectorMaxPower(connector != null ? connector.getMaxPower() : null)
+                .connectorStatus(connector != null ? connector.getStatus() : null)
+
+                // Transaction info
+                .transactionId(transaction != null ? transaction.getId() : null)
+                .paymentMethod(transaction != null && transaction.getPaymentMethod() != null
+                        ? transaction.getPaymentMethod().toString()
+                        : null)
+                .paymentStatus(transaction != null && transaction.getPaymentStatus() != null
+                        ? transaction.getPaymentStatus().toString()
+                        : null)
+                .paymentTime(transaction != null ? transaction.getPaymentTime() : null)
+                .build();
     }
 
     // --- Local Implementation ---
@@ -78,16 +144,19 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
 
         // 1. Check User
         // 1. Check User
-        if (userId == null) throw new RuntimeException("User ID is required");
-        
+        if (userId == null)
+            throw new RuntimeException("User ID is required");
+
         // Check if user already has an active session
         ChargingSession activeSession = getCurrentSession(userId);
         if (activeSession != null) {
-            throw new RuntimeException("Bạn đang có một phiên sạc đang diễn ra. Vui lòng kết thúc nó trước khi bắt đầu phiên mới.");
+            throw new RuntimeException(
+                    "Bạn đang có một phiên sạc đang diễn ra. Vui lòng kết thúc nó trước khi bắt đầu phiên mới.");
         }
 
         // 2. Check Connector
-        com.example.charging_station_management.entity.converters.ChargingConnector connector = connectorRepository.findById(connectorId)
+        com.example.charging_station_management.entity.converters.ChargingConnector connector = connectorRepository
+                .findById(connectorId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đầu sạc với ID: " + connectorId));
 
         if (connector.getStatus() != com.example.charging_station_management.entity.enums.ConnectorStatus.AVAILABLE) {
@@ -95,7 +164,8 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         }
 
         // 3. Check Vehicle
-        com.example.charging_station_management.entity.converters.ElectricVehicle vehicle = vehicleRepository.findByIdAndCustomerId(vehicleId, userId)
+        com.example.charging_station_management.entity.converters.ElectricVehicle vehicle = vehicleRepository
+                .findByIdAndCustomerId(vehicleId, userId)
                 .orElseThrow(() -> new RuntimeException("Xe không tồn tại hoặc không thuộc về bạn."));
 
         // 4. Create Session
@@ -136,15 +206,17 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
 
         java.time.Duration duration = java.time.Duration.between(session.getStartTime(), now);
         long minutes = duration.toMinutes();
-        if (minutes < 1) minutes = 1;
+        if (minutes < 1)
+            minutes = 1;
 
         // Dynamic Power Calculation (match getCurrentSession logic)
         java.math.BigDecimal powerKw = java.math.BigDecimal.valueOf(11); // Default 11kW
         if (session.getChargingConnector() != null && session.getChargingConnector().getMaxPower() != null) {
             powerKw = session.getChargingConnector().getMaxPower();
         }
-        
-        java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes).divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
+
+        java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes).divide(java.math.BigDecimal.valueOf(60), 4,
+                java.math.RoundingMode.HALF_UP);
         java.math.BigDecimal energy = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
         java.math.BigDecimal cost = energy.multiply(PRICE_PER_KWH);
 
@@ -153,7 +225,8 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         session.setStatus(SessionStatus.COMPLETED);
 
         // 3. Free Connector
-        com.example.charging_station_management.entity.converters.ChargingConnector connector = session.getChargingConnector();
+        com.example.charging_station_management.entity.converters.ChargingConnector connector = session
+                .getChargingConnector();
         connector.setStatus(com.example.charging_station_management.entity.enums.ConnectorStatus.AVAILABLE);
         connectorRepository.save(connector);
 
@@ -162,19 +235,23 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
 
     @Override
     public ChargingSession getCurrentSession(Integer userId) {
-        // Updated implementation: Get the latest ACTIVE session to support multiple sessions
+        // Updated implementation: Get the latest ACTIVE session to support multiple
+        // sessions
         // Returns the most recently started session that is still CHARGING
-        java.util.List<ChargingSession> activeSessions = chargingSessionRepository.findByElectricVehicle_Customer_IdAndStatusOrderByStartTimeDesc(userId, SessionStatus.CHARGING);
-        
+        java.util.List<ChargingSession> activeSessions = chargingSessionRepository
+                .findByElectricVehicle_Customer_IdAndStatusOrderByStartTimeDesc(userId, SessionStatus.CHARGING);
+
         if (!activeSessions.isEmpty()) {
             ChargingSession currentSession = activeSessions.get(0);
-            
+
             // Logic priority:
             // 1. If DB has values (simulated by external tool or real hardware), use them.
             // 2. If DB is 0 (default), calculate provisional based on time.
-            
-            boolean hasDbValues = (currentSession.getEnergyKwh() != null && currentSession.getEnergyKwh().compareTo(java.math.BigDecimal.ZERO) > 0)
-                               || (currentSession.getCost() != null && currentSession.getCost().compareTo(java.math.BigDecimal.ZERO) > 0);
+
+            boolean hasDbValues = (currentSession.getEnergyKwh() != null
+                    && currentSession.getEnergyKwh().compareTo(java.math.BigDecimal.ZERO) > 0)
+                    || (currentSession.getCost() != null
+                            && currentSession.getCost().compareTo(java.math.BigDecimal.ZERO) > 0);
 
             if (!hasDbValues) {
                 // Calculate provisional values for display
@@ -182,27 +259,30 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
                 if (currentSession.getStartTime() != null) {
                     java.time.Duration duration = java.time.Duration.between(currentSession.getStartTime(), now);
                     long minutes = duration.toMinutes();
-                    
-                    if (minutes < 1) minutes = 1;
+
+                    if (minutes < 1)
+                        minutes = 1;
 
                     // Dynamic Power Calculation
                     java.math.BigDecimal powerKw = java.math.BigDecimal.valueOf(11); // Default 11kW
-                    if (currentSession.getChargingConnector() != null && currentSession.getChargingConnector().getMaxPower() != null) {
+                    if (currentSession.getChargingConnector() != null
+                            && currentSession.getChargingConnector().getMaxPower() != null) {
                         powerKw = currentSession.getChargingConnector().getMaxPower();
                     }
-                    
+
                     // Energy = Power (kW) * Time (hours)
                     // Time (hours) = minutes / 60
-                    java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes).divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
+                    java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes)
+                            .divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
                     java.math.BigDecimal energy = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
-                    
+
                     java.math.BigDecimal cost = energy.multiply(PRICE_PER_KWH);
-                    
+
                     currentSession.setEnergyKwh(energy);
                     currentSession.setCost(cost);
                 }
             }
-            
+
             return currentSession;
         }
         return null;
@@ -215,29 +295,33 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
 
     @Override
     public java.util.List<ChargingSession> getActiveSessions(Integer userId) {
-        java.util.List<ChargingSession> activeSessions = chargingSessionRepository.findByElectricVehicle_Customer_IdAndStatusOrderByStartTimeDesc(userId, SessionStatus.CHARGING);
-        
+        java.util.List<ChargingSession> activeSessions = chargingSessionRepository
+                .findByElectricVehicle_Customer_IdAndStatusOrderByStartTimeDesc(userId, SessionStatus.CHARGING);
+
         for (ChargingSession session : activeSessions) {
-            boolean hasDbValues = (session.getEnergyKwh() != null && session.getEnergyKwh().compareTo(java.math.BigDecimal.ZERO) > 0)
-                               || (session.getCost() != null && session.getCost().compareTo(java.math.BigDecimal.ZERO) > 0);
+            boolean hasDbValues = (session.getEnergyKwh() != null
+                    && session.getEnergyKwh().compareTo(java.math.BigDecimal.ZERO) > 0)
+                    || (session.getCost() != null && session.getCost().compareTo(java.math.BigDecimal.ZERO) > 0);
 
             if (!hasDbValues && session.getStartTime() != null) {
                 java.time.LocalDateTime now = java.time.LocalDateTime.now();
                 java.time.Duration duration = java.time.Duration.between(session.getStartTime(), now);
                 long minutes = duration.toMinutes();
-                
-                if (minutes < 1) minutes = 1;
+
+                if (minutes < 1)
+                    minutes = 1;
 
                 // Dynamic Power Calculation
                 java.math.BigDecimal powerKw = java.math.BigDecimal.valueOf(11); // Default 11kW
                 if (session.getChargingConnector() != null && session.getChargingConnector().getMaxPower() != null) {
                     powerKw = session.getChargingConnector().getMaxPower();
                 }
-                
-                java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes).divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
+
+                java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes)
+                        .divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
                 java.math.BigDecimal energy = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
                 java.math.BigDecimal cost = energy.multiply(PRICE_PER_KWH);
-                
+
                 session.setEnergyKwh(energy);
                 session.setCost(cost);
             }

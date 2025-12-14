@@ -1,6 +1,5 @@
 package com.example.charging_station_management.entity.converters;
 
-import com.example.charging_station_management.entity.converters.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

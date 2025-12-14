@@ -18,13 +18,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
 @PreAuthorize("hasRole('ADMIN')")
 public class TransactionController {
 
@@ -48,8 +48,6 @@ public class TransactionController {
             @PageableDefault(size = 10, page = 0, sort = "paymentTime", direction = Sort.Direction.DESC) Pageable pageable) {
 
         try {
-            log.info("Admin requesting transactions - customerId: {}, stationId: {}, paymentStatus: {}, page: {}, size: {}",
-                    customerId, stationId, paymentStatus, pageable.getPageNumber(), pageable.getPageSize());
 
             TransactionFilterRequest filterRequest = TransactionFilterRequest.builder()
                     .customerId(customerId)
@@ -66,40 +64,78 @@ public class TransactionController {
                     .stationName(stationName)
                     .bankName(bankName)
                     .build();
+            Page<TransactionDetailResponse> transactions = transactionService.getAllTransactions(filterRequest,
+                    pageable);
 
-            Page<TransactionDetailResponse> transactions = transactionService.getAllTransactions(filterRequest, pageable);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Successfully retrieved transactions");
+            response.put("data", createPageResponse(transactions));
+            response.put("timestamp", LocalDateTime.now());
 
-            log.info("Successfully retrieved {} transactions (total: {})",
-                    transactions.getNumberOfElements(), transactions.getTotalElements());
-
-            return ResponseEntity.ok(transactions);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error retrieving transactions", e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to retrieve transactions: " + e.getMessage()));
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Failed to retrieve transactions");
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 
     @GetMapping("/transactions/{transactionId}")
     public ResponseEntity<?> getTransactionById(@PathVariable Integer transactionId) {
         try {
-            log.info("Admin requesting transaction detail - transactionId: {}", transactionId);
 
             TransactionDetailResponse transaction = transactionService.getTransactionById(transactionId);
 
-            log.info("Successfully retrieved transaction: {}", transactionId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Successfully retrieved transaction");
+            response.put("data", transaction);
+            response.put("timestamp", LocalDateTime.now());
 
-            return ResponseEntity.ok(transaction);
+            return ResponseEntity.ok(response);
 
         } catch (RuntimeException e) {
-            log.error("Error retrieving transaction: {}", transactionId, e);
-            return ResponseEntity.status(404)
-                    .body(Map.of("error", e.getMessage()));
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("transactionId", transactionId);
+            errorResponse.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.status(404).body(errorResponse);
+
         } catch (Exception e) {
-            log.error("Unexpected error retrieving transaction: {}", transactionId, e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to retrieve transaction: " + e.getMessage()));
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Failed to retrieve transaction");
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
+    }
+
+    private Map<String, Object> createPageResponse(Page<TransactionDetailResponse> page) {
+        Map<String, Object> pageResponse = new HashMap<>();
+
+        pageResponse.put("content", page.getContent());
+        pageResponse.put("pageNumber", page.getNumber());
+        pageResponse.put("pageSize", page.getSize());
+        pageResponse.put("totalElements", page.getTotalElements());
+        pageResponse.put("totalPages", page.getTotalPages());
+        pageResponse.put("last", page.isLast());
+        pageResponse.put("first", page.isFirst());
+        pageResponse.put("empty", page.isEmpty());
+        pageResponse.put("numberOfElements", page.getNumberOfElements());
+
+        return pageResponse;
     }
 }

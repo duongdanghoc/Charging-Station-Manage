@@ -10,7 +10,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
-import java.math.BigDecimal; // Đảm bảo import BigDecimal cho Helper method nếu cần
 
 @Mapper(componentModel = "spring")
 public interface StationMapper {
@@ -65,13 +64,10 @@ public interface StationMapper {
     default String mapStatusToString(Integer status) {
         if (status == null)
             return "Unknown";
-        switch (status) {
-            case 1:
-                return "Active";
-            case 0:
-                return "Inactive";
-            default:
-                return "Unknown";
-        }
+        return switch (status) {
+            case 1 -> "Active";
+            case 0 -> "Inactive";
+            default -> "Unknown";
+        };
     }
 }
