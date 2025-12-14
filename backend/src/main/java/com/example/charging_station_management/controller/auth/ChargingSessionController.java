@@ -61,6 +61,12 @@ public class ChargingSessionController {
         return ResponseEntity.ok(session);
     }
 
+    @GetMapping("/active")
+    public ResponseEntity<java.util.List<ChargingSession>> getActiveSessions(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        java.util.List<ChargingSession> sessions = sessionService.getActiveSessions(userDetails.getId());
+        return ResponseEntity.ok(sessions);
+    }
+
     @GetMapping("/history")
     public ResponseEntity<Page<ChargingSession>> getSessionHistory(
             @AuthenticationPrincipal CustomUserDetails userDetails,

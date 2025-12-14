@@ -13,6 +13,7 @@ import StationManagementSection from "@/components/profile/StationManagementSect
 import DriverManagementSection from "@/components/profile/DriverManagementSection";
 import HistorySection from "@/components/profile/HistorySection";
 import AnalyticsSection from "@/components/profile/AnalyticsSection";
+import QuickChargeSection from "@/components/profile/QuickChargeSection";
 import type { UserRole } from "@/components/profile/types";
 
 // Define specific types for props
@@ -140,9 +141,21 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
           </div>
         ),
       },
+
+
     ];
 
     if (role === "CUSTOMER") {
+      baseTabs.push({
+        id: "quick-charge",
+        name: "Sạc nhanh",
+        content: (
+          <div className="space-y-8">
+            <QuickChargeSection />
+          </div>
+        )
+      });
+
       baseTabs.push({
         id: "customer-services",
         name: "Phương tiện & Thanh toán",

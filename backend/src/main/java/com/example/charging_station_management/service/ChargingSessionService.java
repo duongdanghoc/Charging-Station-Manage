@@ -20,4 +20,6 @@ public interface ChargingSessionService {
     ChargingSession getCurrentSession(Integer userId);
 
     Page<ChargingSession> getSessionHistory(Integer userId, Pageable pageable);
+
+    java.util.List<ChargingSession> getActiveSessions(Integer userId);
 }

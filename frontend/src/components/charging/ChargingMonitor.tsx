@@ -1,15 +1,27 @@
 'use client';
 import React, { useEffect, useState } from "react";
 import { Zap, Clock, Battery, AlertTriangle } from "lucide-react";
-import { useGetCurrentSessionQuery, useStopSessionMutation } from "@/lib/redux/services/sessionApi";
+import { useGetCurrentSessionQuery, useStopSessionMutation, useGetSessionHistoryQuery ,useGetActiveSessionsQuery} from "@/lib/redux/services/sessionApi";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function ChargingMonitor() {
-    const { data: session, refetch } = useGetCurrentSessionQuery(undefined, {
+    const { data: session, refetch, isLoading, isError } = useGetCurrentSessionQuery(undefined, {
         pollingInterval: 5000, 
     });
+    
+    // Debug for history
+    const { data: historyData } = useGetSessionHistoryQuery({ page: 0, size: 5 });
+    console.log("ChargingMonitor History Debug:", historyData);
+    if (historyData?.content?.length > 0) {
+        console.log("Latest History Item Status:", historyData.content[0].status);
+        console.log("Latest History Item Full:", historyData.content[0]);
+    }
+
+    // Debug for current session
+    console.log("ChargingMonitor Current Session Debug:", { session, isLoading, isError });
+
     const [stopSession, { isLoading: isStopping }] = useStopSessionMutation();
     const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -19,15 +31,20 @@ export default function ChargingMonitor() {
         let interval: NodeJS.Timeout;
         if (isCharging && session?.startTime) {
             const start = new Date(session.startTime).getTime();
+            // Initial set
+            const now = new Date().getTime();
+            setElapsedTime(Math.floor((now - start) / 1000));
+            
             interval = setInterval(() => {
-                const now = new Date().getTime();
-                setElapsedTime(Math.floor((now - start) / 1000));
+                const currentNow = new Date().getTime();
+                setElapsedTime(Math.floor((currentNow - start) / 1000));
             }, 1000);
         }
         return () => clearInterval(interval);
     }, [isCharging, session?.startTime]);
 
     const formatTime = (seconds: number) => {
+        if (seconds < 0) seconds = 0;
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = seconds % 60;
@@ -45,10 +62,12 @@ export default function ChargingMonitor() {
         }
     };
 
-    if (!isCharging) return null;
+    if (isLoading) return null; // Or a small spinner if preferred
+    if (isError) return null; // Or show error toast
+    if (!isCharging || !session) return null;
 
     return (
-        <div className="fixed bottom-4 right-4 z-50 w-full max-w-sm bg-white rounded-lg shadow-xl border-l-4 border-rose-500 p-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
+        <div className="w-full bg-white rounded-lg shadow-sm border border-rose-200 p-4 animate-in slide-in-from-bottom-2 fade-in duration-300">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2 mb-2">
                     <div className="relative">
@@ -57,9 +76,15 @@ export default function ChargingMonitor() {
                             <Zap size={16} className="fill-current" />
                         </div>
                     </div>
-                    <h3 className="font-bold text-gray-900">Đang sạc...</h3>
+                    <div>
+                        <h3 className="font-bold text-gray-900">Đang sạc...</h3>
+                        {session.electricVehicle && (
+                            <p className="text-xs text-rose-600 font-medium truncate max-w-[150px]">
+                                {session.electricVehicle.brand} {session.electricVehicle.model} - {session.electricVehicle.licensePlate}
+                            </p>
+                        )}
+                    </div>
                 </div>
-                {/* Mock Energy Progress for visual effect */}
                 <div className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
                     #ID: {session.id}
                 </div>
@@ -101,3 +126,5 @@ export default function ChargingMonitor() {
         </div>
     );
 }
+
+// Removed ActiveSessionCard component as it is no longer used

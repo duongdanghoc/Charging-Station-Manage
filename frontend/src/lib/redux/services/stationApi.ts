@@ -231,7 +231,7 @@ export const stationApi = createApi({
 
     // Get customer's vehicles
     getCustomerVehicles: builder.query<any[], void>({
-        query: () => '/api/customer/vehicles',
+        query: () => '/api/vehicles',
     }),
   }),
 });

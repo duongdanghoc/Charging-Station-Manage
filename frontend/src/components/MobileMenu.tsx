@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import QuickStartCharging from "./charging/QuickStartCharging";
 import MAP_LINKS from '@/config/mapLinks';
 import {
   useGetSessionQuery,
@@ -141,9 +140,15 @@ export default function MobileMenu() {
               >
                 Hồ sơ
               </Link>
-              <div onClick={() => setIsOpen(false)}>
-                <QuickStartCharging />
-              </div>
+              <Link
+                href="/quick-charge"
+                className="text-lg font-medium text-rose-600 hover:text-rose-700"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="flex items-center gap-2">
+                    Sạc nhanh
+                </span>
+              </Link>
             </nav>
 
               {/* Auth Links */}

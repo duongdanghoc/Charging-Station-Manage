@@ -22,10 +22,12 @@ public class Transaction {
 
     @OneToOne
     @JoinColumn(name = "charging_session_id", nullable = false, unique = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private ChargingSession chargingSession;
 
     @ManyToOne
     @JoinColumn(name = "customer_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Customer customer;
 
     @Column(nullable = false, precision = 15, scale = 2)

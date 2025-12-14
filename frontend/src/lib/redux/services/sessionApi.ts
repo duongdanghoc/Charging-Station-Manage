@@ -10,6 +10,12 @@ export interface Session {
     cost: number;
     connectorId?: number;
     vehicleId?: number;
+    electricVehicle?: {
+        id: number;
+        brand: string;
+        model: string;
+        licensePlate: string;
+    };
 }
 
 export const sessionApi = createApi({
@@ -48,6 +54,12 @@ export const sessionApi = createApi({
             query: () => '/current',
             providesTags: ['Session'],
         }),
+        // Get all active sessions
+        getActiveSessions: builder.query<Session[], void>({
+            query: () => '/active',
+            providesTags: ['Session'],
+            keepUnusedDataFor: 0, // Force refresh
+        }),
         // Get session history
         getSessionHistory: builder.query<any, { page: number; size: number }>({
             query: ({ page, size }) => `/history?page=${page}&size=${size}`,
@@ -60,5 +72,6 @@ export const {
     useStartSessionMutation,
     useStopSessionMutation,
     useGetCurrentSessionQuery,
+    useGetActiveSessionsQuery,
     useGetSessionHistoryQuery,
 } = sessionApi;

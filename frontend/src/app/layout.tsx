@@ -96,7 +96,7 @@ export default function RootLayout({
                   <div className="flex items-center">
                     {/* Desktop Auth Navigation */}
                     <div className="hidden md:flex items-center gap-4">
-                      <QuickStartCharging />
+
                       <DesktopLoginsSignups />
                     </div>
 
@@ -115,7 +115,7 @@ export default function RootLayout({
           {/* Footer */}
           {/* <Footer /> */}
           {/* <Footer /> */}
-          <ChargingMonitor />
+
           <Toaster />
           </ClientAuthGuard>
         </ReduxProvider>

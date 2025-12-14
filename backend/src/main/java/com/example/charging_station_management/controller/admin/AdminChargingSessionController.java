@@ -24,7 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
 @PreAuthorize("hasRole('ADMIN')")
-public class ChargingSessionController {
+public class AdminChargingSessionController {
 
     private final ChargingSessionService changingSessionService;
 
