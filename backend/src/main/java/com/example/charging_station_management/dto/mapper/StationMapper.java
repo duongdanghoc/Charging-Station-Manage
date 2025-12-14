@@ -33,18 +33,21 @@ public interface StationMapper {
     @Mapping(target = "revenue", expression = "java(java.math.BigDecimal.ZERO)")
     StationResponse toResponse(Station station);
 
+
     // --- MAPPING CHARGING POLE ---
-    // 👇 ĐÃ THÊM: Map ID của Station vào DTO response
+    // 👇 Map ID của Station vào DTO response (QUAN TRỌNG)
     @Mapping(source = "station.id", target = "stationId")
     // Lưu ý: source là "chargingConnectors" (tên trong Entity), target là "connectors" (tên trong DTO)
     @Mapping(source = "chargingConnectors", target = "connectors")
     ChargingPoleResponse toPoleResponse(ChargingPole pole);
+
 
     // --- MAPPING CONNECTOR ---
     ChargingConnectorResponse toConnectorResponse(ChargingConnector connector);
 
     // --- LIST MAPPING ---
     List<ChargingPoleResponse> toPoleResponseList(List<ChargingPole> poles);
+
 
     // --- HELPER METHODS (Java Expressions) ---
 

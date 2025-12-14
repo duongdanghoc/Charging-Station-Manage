@@ -2,14 +2,13 @@ package com.example.charging_station_management.controller;
 
 import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
-// 👇 1. Import đúng BaseApiResponse (dto package)
 import com.example.charging_station_management.dto.BaseApiResponse;
 import com.example.charging_station_management.dto.response.ChargingPoleResponse;
-
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
+import com.example.charging_station_management.entity.enums.StationStatus;
+import com.example.charging_station_management.entity.enums.ConnectorType;
 import com.example.charging_station_management.entity.enums.VehicleType;
-// 👇 2. Import ChargingPoleService
 import com.example.charging_station_management.service.ChargingPoleService;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.service.impl.CustomerServiceImpl;
@@ -30,18 +29,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/stations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:8080" })
+@CrossOrigin(origins = "*")
 public class StationController {
 
     private final CustomerServiceImpl customerService;
     private final StationService stationService;
-    
-    // 👇 3. Khai báo Service lấy dữ liệu trụ
     private final ChargingPoleService chargingPoleService;
 
+    /* =================================================================
+       1. PUBLIC / CUSTOMER API
+    ================================================================= */
+
     @GetMapping
-    public ResponseEntity<Page<StationResponse>> getAllStations(@PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(customerService.getAllStations(pageable));
+    public ResponseEntity<Page<StationResponse>> getAllStations(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) VehicleType vehicleType,
+            @RequestParam(required = false) ConnectorType connectorType,
+            @PageableDefault(size = 100) Pageable pageable) {
+        return ResponseEntity.ok(customerService.filterStations(search, status, vehicleType, connectorType, pageable));
     }
 
     @GetMapping("/search")
@@ -56,16 +62,12 @@ public class StationController {
         return ResponseEntity.ok(customerService.getStationById(id));
     }
 
-    // 👇👇👇 4. ENDPOINT LẤY DANH SÁCH TRỤ (ĐÃ SỬA CHUẨN) 👇👇👇
+    // Endpoint lấy danh sách trụ (Code của bạn - Current)
     @GetMapping("/{id}/poles")
     public ResponseEntity<BaseApiResponse<List<ChargingPoleResponse>>> getPolesByStationId(@PathVariable Integer id) {
-        // Gọi service lấy danh sách
         List<ChargingPoleResponse> poles = chargingPoleService.getAllPolesByStationId(id);
-        
-        // Sử dụng hàm static success(data, message) để trả về đúng định dạng
         return ResponseEntity.ok(BaseApiResponse.success(poles, "Lấy danh sách trụ thành công"));
     }
-    // 👆👆👆 KẾT THÚC PHẦN SỬA 👆👆👆
 
     @GetMapping("/{id}/reviews")
     public ResponseEntity<Page<ReviewResponse>> getStationReviews(
@@ -73,6 +75,10 @@ public class StationController {
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(customerService.getStationReviews(id, pageable));
     }
+
+    /* =================================================================
+       2. VENDOR API
+    ================================================================= */
 
     @PostMapping
     @PreAuthorize("hasRole('VENDOR')")
@@ -104,5 +110,28 @@ public class StationController {
             @PageableDefault(size = 10) Pageable pageable) {
 
         return ResponseEntity.ok(stationService.getMyStations(search, status, type, pageable));
+    }
+
+    /* =================================================================
+       3. ADMIN API (Lấy từ Main - Incoming)
+    ================================================================= */
+
+    @GetMapping("/admin/all")
+    public ResponseEntity<Page<StationResponse>> getAllStationsForAdmin(
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(stationService.getAllStations(pageable));
+    }
+
+    @PatchMapping("/admin/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable Integer id, @RequestParam String status) {
+        Integer statusInt = StationStatus.fromString(status).getValue();
+        stationService.updateStationStatus(id, statusInt);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Void> adminDeleteStation(@PathVariable Integer id) {
+        stationService.adminDeleteStation(id);
+        return ResponseEntity.noContent().build();
     }
 }

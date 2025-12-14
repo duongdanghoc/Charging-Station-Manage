@@ -28,8 +28,7 @@ public class StationResponse {
     private Double averageRating;
     private Integer totalRatings;
     
-    // 👇 Phần đã giải quyết conflict (Giữ lại đủ 4 trường này là được)
-    // Tôi giữ theo thứ tự của HEAD (nhánh bạn đang làm)
+    // Các trường thống kê (Giữ lại code sạch)
     private String status2;
     private Integer ports;
     private BigDecimal revenue;

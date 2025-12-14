@@ -23,7 +23,7 @@ public class ChargingPole {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // 👇 MERGE: Kết hợp LAZY (Tối ưu) + JsonIgnore (Tránh lỗi)
+    // 👇 MERGE: Chọn cấu hình tối ưu từ nhánh 'nam'
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id", nullable = false)
     @JsonIgnore
@@ -42,11 +42,11 @@ public class ChargingPole {
 
     private LocalDate installDate;
 
-    // 👇 MERGE: Giữ EAGER để Mapper chạy được, thêm orphanRemoval để sạch DB
+    // 👇 MERGE: Chọn cấu hình đầy đủ từ nhánh 'nam' (EAGER + orphanRemoval + Init List)
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<ChargingConnector> chargingConnectors = new ArrayList<>();
 
-    // 👇 Giữ lại tính năng Price
+    // Giữ lại tính năng Price
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Price> prices = new ArrayList<>();
 }
