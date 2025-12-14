@@ -82,7 +82,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {/* <h1 className="text-lg font-semibold mr-2">Chỉ đường</h1> */}
             <div className="ml-auto flex flex-wrap items-center gap-2 md:gap-3">
                 <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600">
+                    <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-gray-600">
                         Bản đồ
                     </span>
                     <button
@@ -91,7 +91,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         title="Bật hoặc tắt hiển thị 3D (địa hình + tòa nhà)"
                     >
                         <Box size={14} />
-                        <span>3D</span>
+                        <span className="hidden lg:inline">3D</span>
                     </button>
                     <button
                         onClick={onToggleAngle}
@@ -99,7 +99,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         title="Chuyển đổi giữa góc nhìn nghiêng và nhìn từ trên xuống"
                     >
                         <ScanEye size={14} />
-                        <span>{angled ? 'Nghiêng' : 'Trên xuống'}</span>
+                        <span className="hidden lg:inline">{angled ? 'Nghiêng' : 'Trên xuống'}</span>
                     </button>
                     {toggleTraffic && (
                         <button
@@ -108,7 +108,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                             title={isTrafficVisible ? 'Ẩn traffic trên bản đồ' : 'Hiển thị traffic trên bản đồ'}
                         >
                             <TrafficCone size={14} />
-                            <span>Traffic</span>
+                            <span className="hidden lg:inline">Traffic</span>
                         </button>
                     )}
                     {toggleCongestion && (
@@ -118,13 +118,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                             title={isCongestionVisible ? 'Ẩn thông tin kẹt xe trên tuyến' : 'Hiển thị thông tin kẹt xe trên tuyến'}
                         >
                             <Activity size={14} />
-                            <span>Kẹt xe</span>
+                            <span className="hidden lg:inline">Kẹt xe</span>
                         </button>
                     )}
                 </div>
 
                 <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600">
+                    <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-gray-600">
                         Điều hướng
                     </span>
                     <button
@@ -138,7 +138,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         title="Xoay trái 10° (Q — giữ chuột hoặc phím để xoay liên tục)"
                     >
                         <RotateCcw size={14} />
-                        <span>Q</span>
+                        <span className="hidden lg:inline">Q</span>
                     </button>
                     <button
                         onMouseDown={(e) => { e.preventDefault(); startHold(onRotateRight, rotateRightTimer); }}
@@ -151,7 +151,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         title="Xoay phải 10° (E — giữ chuột hoặc phím để xoay liên tục)"
                     >
                         <RotateCw size={14} />
-                        <span>E</span>
+                        <span className="hidden lg:inline">E</span>
                     </button>
                     <button
                         onClick={onResetNorth}
@@ -159,7 +159,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         title="Đưa bản đồ về hướng Bắc (R)"
                     >
                         <Compass size={14} />
-                        <span>R</span>
+                        <span className="hidden lg:inline">R</span>
                     </button>
                 </div>
 
@@ -169,7 +169,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     title="Bật chế độ khóa mức zoom khi hệ thống căn khung"
                 >
                     <Maximize size={16} />
-                    <span>{keepZoomLabel}</span>
+                    <span className="hidden lg:inline">{keepZoomLabel}</span>
                 </button>
 
                 <button
@@ -178,7 +178,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     title="Bật hiển thị tất cả thông báo/hướng dẫn trên tuyến"
                 >
                     <MessageSquare size={16} />
-                    <span>{allPopupLabel}</span>
+                    <span className="hidden lg:inline">{allPopupLabel}</span>
                 </button>
 
                 <button
@@ -187,7 +187,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     title="Đặt pin và phóng to tại vị trí hiện tại của bạn"
                 >
                     <MapPin size={16} />
-                    <span>Vị trí của tôi</span>
+                    <span className="hidden lg:inline">Vị trí của tôi</span>
                 </button>
             </div>
         </div>

@@ -30,7 +30,7 @@ export const MobileLayerControl: React.FC<MobileLayerControlProps> = ({
                     <Layers size={20} />
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-2" align="end">
+            <PopoverContent className="w-56 p-2" align="start" side="left">
                 <div className="space-y-1">
                     <h3 className="mb-2 px-2 text-xs font-semibold uppercase text-gray-500">Chế độ bản đồ</h3>
 

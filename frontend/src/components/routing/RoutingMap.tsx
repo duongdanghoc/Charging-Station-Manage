@@ -504,8 +504,10 @@ export default function RoutingMap() {
                 cooperativeGestures: false,
             });
 
-            mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-            mapRef.current.addControl(new mapboxgl.FullscreenControl(), "top-right");
+            if (!isMobile) {
+                // mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+                mapRef.current.addControl(new mapboxgl.FullscreenControl(), "top-right");
+            }
             mapRef.current.addControl(new mapboxgl.ScaleControl({ unit: "metric" }));
 
             // Add traffic layer when map loads
@@ -1593,6 +1595,7 @@ export default function RoutingMap() {
             if (station.lat && station.lng) {
                 const element = createStationMarkerElement(station, () => {
                     focusOnCoordinate({ lat: station.lat, lng: station.lng });
+                    if (station.id) setSelectedStationId(station.id);
                 });
                 const marker = new mapboxgl.Marker({ element })
                     .setLngLat([station.lng, station.lat])
@@ -2230,7 +2233,23 @@ export default function RoutingMap() {
             {/* Mobile Header & Layer Control vs Desktop Toolbar */}
             {isMobile ? (
                 <>
-                    <MobileHeader />
+                    <MobileHeader
+                        is3D={is3D}
+                        onToggle3D={toggle3D}
+                        angled={angled}
+                        onToggleAngle={toggleAngle}
+                        keepZoom={keepZoom}
+                        onToggleKeepZoom={() => setKeepZoom(v => !v)}
+                        showAllPopups={showAllPopups}
+                        onToggleShowAllPopups={() => setShowAllPopups(v => !v)}
+                        isTrafficVisible={isTrafficVisible}
+                        toggleTraffic={() => setIsTrafficVisible(v => !v)}
+                        isCongestionVisible={isCongestionVisible}
+                        toggleCongestion={() => setIsCongestionVisible(v => !v)}
+                        rotateBy={rotateBy}
+                        resetNorth={resetNorth}
+                        onPinMyLocation={handlePinMyLocation}
+                    />
                     <div className="absolute top-16 right-4 z-[350]">
                         <MobileLayerControl
                             is3D={is3D}
@@ -2263,7 +2282,8 @@ export default function RoutingMap() {
                     toggleCongestion={() => setIsCongestionVisible(v => !v)}
                     isCongestionVisible={isCongestionVisible}
                 />
-            )}
+            )
+            }
 
             {/* Station List - Adjust container for mobile */}
             <div className={isMobile ? "z-[360]" : "absolute top-80 right-4 z-10 w-80"}>
@@ -2275,20 +2295,25 @@ export default function RoutingMap() {
                     onStationDetail={setSelectedStationId}
                     map={mapRef.current}
                     mobile={isMobile}
+                    forceCollapse={simPlaying}
                 />
             </div>
 
             {/* Station Detail Modal */}
-            {selectedStationId && (
-                <StationDetailModal
-                    stationId={selectedStationId}
-                    onClose={() => setSelectedStationId(null)}
-                />
-            )}
+            {
+                selectedStationId && (
+                    <StationDetailModal
+                        stationId={selectedStationId}
+                        onClose={() => setSelectedStationId(null)}
+                    />
+                )
+            }
 
-            {error ? (
-                <div className="p-4 text-red-600 text-sm">{error}</div>
-            ) : null}
+            {
+                error ? (
+                    <div className="p-4 text-red-600 text-sm">{error}</div>
+                ) : null
+            }
             <div ref={mapContainer} style={{ height: "100%", width: "100%" }} />
             <ControlsPanel
                 profile={profile}
@@ -2320,6 +2345,7 @@ export default function RoutingMap() {
                 selectedRouteIndex={selectedRouteIdx}
                 onSelectRoute={handleSelectRoute}
                 mobile={isMobile}
+                forceCollapse={simPlaying}
             />
             <SimulationPanel
                 simPlaying={simPlaying}
@@ -2371,6 +2397,6 @@ export default function RoutingMap() {
                 onNext={() => focusStep(Math.min(instructions.length - 1, (activeStepIdx || 0) + 1))}
                 onStop={() => { setGuidanceMode(false); setActiveStepIdx(null); (mapRef.current?.getSource(stepSourceId) as mapboxgl.GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [] } as any); }}
             />
-        </div>
+        </div >
     );
 }

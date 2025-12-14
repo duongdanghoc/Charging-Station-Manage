@@ -96,8 +96,8 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
         }
 
         return (
-            <div className="fixed inset-0 z-[500] flex items-end justify-center bg-black/20 backdrop-blur-sm sm:items-center p-4">
-                <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden mb-4 sm:mb-0 animate-in slide-in-from-bottom-5">
+            <div className="fixed inset-0 z-[500] flex items-end justify-center pointer-events-none sm:items-center p-4">
+                <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden mb-4 sm:mb-0 animate-in slide-in-from-bottom-5 pointer-events-auto">
                     <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 bg-gray-50/50">
                         <span className="font-semibold text-gray-800 flex items-center gap-2">
                             <Play size={16} className="text-blue-600" />
