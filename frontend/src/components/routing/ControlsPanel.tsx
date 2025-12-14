@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, closestCenter, DragEndEvent, DragOverEvent, useSensors, useSensor, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MapPin, Plus, ArrowUpDown, X, ScanSearch, Navigation, Route, List, Clock, GaugeCircle, TrafficCone, PanelLeftOpen, PanelRightOpen, ArrowLeft } from 'lucide-react';
+import { GripVertical, MapPin, Plus, ArrowUpDown, X, ScanSearch, Navigation, Route, List, Clock, GaugeCircle, CornerUpRight, PanelLeftOpen, PanelRightOpen, ArrowLeft } from 'lucide-react';
 import { formatDistance, formatInstructionVI } from './formatters';
 import config from '@/config/config';
 import { getGeocoder, type Suggestion } from '@/services/geocoding';
@@ -98,6 +98,7 @@ type ControlsPanelProps = {
     onPickWaypoint: (index: number) => void;
     focusOnCoordinate: (coords: { lat: number; lng: number }) => void;
     mobile?: boolean;
+    forceCollapse?: boolean;
 };
 
 // Move SortableWaypoint outside of ControlsPanel
@@ -549,11 +550,29 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     activeStepIdx, focusStep, onStartGuidance,
     startPoint, endPoint, waypoints, startLabel, endLabel, waypointLabels, setWaypointLabels,
     setStartPoint, setEndPoint, setWaypoints,
-    onPickStart, onPickEnd, onPickWaypoint, focusOnCoordinate, mobile
+    onPickStart, onPickEnd, onPickWaypoint, focusOnCoordinate, mobile, forceCollapse
 }) => {
     // Panel collapse state
     const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
     const [mobileExpanded, setMobileExpanded] = useState<boolean>(false);
+
+    // Effect to handle forced collapse (e.g. from simulation start)
+    useEffect(() => {
+        if (forceCollapse) {
+            setIsCollapsed(true);
+            // Also collapse mobile view if expanded
+            setMobileExpanded(false);
+        }
+    }, [forceCollapse]);
+
+
+
+    // Collapsed quick search
+    const [quickSearchText, setQuickSearchText] = useState<string>("");
+    const [quickSearchSugs, setQuickSearchSugs] = useState<Suggestion[]>([]);
+    const [quickSearchLoading, setQuickSearchLoading] = useState<boolean>(false);
+    const quickSearchTimerRef = useRef<number | null>(null);
+    const quickSearchPendingQueryRef = useRef<string>("");
     // Local input texts for search boxes
     const [startText, setStartText] = useState<string>("");
     const [endText, setEndText] = useState<string>("");
@@ -1027,14 +1046,91 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
 
     if (mobile && !mobileExpanded) {
         return (
-            <div
-                className="absolute top-16 left-4 right-16 z-[340] flex items-center bg-white rounded-lg shadow-md h-12 px-4 gap-3 cursor-pointer"
-                onClick={() => setMobileExpanded(true)}
-            >
-                <ScanSearch size={20} className="text-gray-500" />
-                <span className="text-gray-500 text-sm font-medium truncate">
-                    {startLabel || endLabel ? `${startLabel || 'Vị trí của bạn'} -> ${endLabel || 'Chọn điểm đến'}` : 'Nhập điểm đón, điểm đến...'}
-                </span>
+            <div className="absolute top-2 left-16 right-16 z-[380] flex items-center bg-white rounded-lg shadow-md h-10 px-2 gap-2 pointer-events-auto">
+                <button
+                    onClick={() => setMobileExpanded(true)}
+                    className="shrink-0 p-1 text-gray-500"
+                    title="Mở rộng"
+                >
+                    <PanelLeftOpen size={18} />
+                </button>
+                <div className="relative flex-1">
+                    <input
+                        className="w-full text-sm focus:outline-none bg-transparent"
+                        placeholder={startLabel || endLabel ? `${startLabel || 'Vị trí của bạn'} → ${endLabel || 'Chọn điểm đến'}` : 'Nhập điểm đón, điểm đến...'}
+                        value={quickSearchText}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setQuickSearchText(val);
+                            const trimmed = val.trim();
+                            quickSearchPendingQueryRef.current = trimmed;
+                            if (quickSearchTimerRef.current) window.clearTimeout(quickSearchTimerRef.current);
+                            quickSearchTimerRef.current = window.setTimeout(async () => {
+                                const query = quickSearchPendingQueryRef.current;
+                                if (!query || query.length < 2) {
+                                    setQuickSearchSugs([]);
+                                    return;
+                                }
+                                const sugs = await geocodeSuggest(query);
+                                if (quickSearchPendingQueryRef.current === query) setQuickSearchSugs(sugs);
+                            }, SUGGEST_DEBOUNCE_MS);
+                        }}
+                        onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const geo = getGeocoder();
+                                if (!geo) return;
+                                const result = await geo.geocode(quickSearchText);
+                                if (result) {
+                                    focusOnCoordinate({ lat: result.center[1], lng: result.center[0] });
+                                    setQuickSearchSugs([]);
+                                }
+                            }
+                        }}
+                    />
+                    {quickSearchSugs.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-[500] max-h-56 overflow-auto">
+                            {quickSearchSugs.map((s) => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-50"
+                                    onClick={() => {
+                                        setQuickSearchText(s.place_name);
+                                        focusOnCoordinate({ lat: s.center[1], lng: s.center[0] });
+                                        setQuickSearchSugs([]);
+                                    }}
+                                >
+                                    {s.place_name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <button
+                    className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-md flex items-center justify-center transition-colors disabled:opacity-50"
+                    onClick={async () => {
+                        if (!quickSearchText.trim()) return;
+                        const geo = getGeocoder();
+                        if (!geo) return;
+                        const result = await geo.geocode(quickSearchText);
+                        if (result) {
+                            setEndPoint({ lat: result.center[1], lng: result.center[0] });
+                            setEndText(quickSearchText);
+                            setQuickSearchText("");
+                            setQuickSearchSugs([]);
+                            // Auto calculate route
+                            setTimeout(() => {
+                                calculateRoute();
+                                setMobileExpanded(true);
+                            }, 100);
+                        }
+                    }}
+                    disabled={!quickSearchText.trim()}
+                    title="Tìm đường đến địa điểm này"
+                >
+                    <CornerUpRight size={18} />
+                </button>
             </div>
         );
     }
@@ -1042,7 +1138,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     return (
         <div className={`${mobile
             ? "fixed inset-0 z-[500] bg-white flex flex-col"
-            : `fixed bottom-4 left-4 z-[400] flex max-h-[calc(100vh-2rem)] w-[370px] flex-col rounded-lg border border-gray-200 bg-white/95 shadow-xl backdrop-blur ${isCollapsed ? 'h-auto' : ''}`
+            : `absolute top-16 left-2 z-[400] flex max-h-[calc(100vh-6rem)] w-[370px] flex-col rounded-lg border border-gray-200 bg-white/95 shadow-xl backdrop-blur ${isCollapsed ? 'h-auto' : ''}`
             }`}>
             {mobile && (
                 <div className="flex items-center gap-2 p-3 border-b border-gray-100">
@@ -1053,19 +1149,109 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 </div>
             )}
 
-            {!mobile && (
-                <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/50 p-3">
+            {!mobile && isCollapsed && (
+                <div className="p-3 gap-2 space-y-2">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsCollapsed(false)}
+                            className="shrink-0 rounded-md p-2 hover:bg-gray-100 text-gray-500 transition-colors"
+                            title="Mở rộng"
+                        >
+                            <PanelLeftOpen size={18} />
+                        </button>
+                        <div className="relative flex-1">
+                            <input
+                                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Nhập địa điểm hoặc Lat,Lng"
+                                value={quickSearchText}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setQuickSearchText(val);
+                                    const trimmed = val.trim();
+                                    quickSearchPendingQueryRef.current = trimmed;
+                                    if (quickSearchTimerRef.current) window.clearTimeout(quickSearchTimerRef.current);
+                                    quickSearchTimerRef.current = window.setTimeout(async () => {
+                                        const query = quickSearchPendingQueryRef.current;
+                                        if (!query || query.length < 2) {
+                                            setQuickSearchSugs([]);
+                                            return;
+                                        }
+                                        const sugs = await geocodeSuggest(query);
+                                        if (quickSearchPendingQueryRef.current === query) setQuickSearchSugs(sugs);
+                                    }, SUGGEST_DEBOUNCE_MS);
+                                }}
+                                onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        const geo = getGeocoder();
+                                        if (!geo) return;
+                                        const result = await geo.geocode(quickSearchText);
+                                        if (result) {
+                                            focusOnCoordinate({ lat: result.center[1], lng: result.center[0] });
+                                            setQuickSearchSugs([]);
+                                        }
+                                    }
+                                }}
+                            />
+                            {quickSearchSugs.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-[500] max-h-56 overflow-auto">
+                                    {quickSearchSugs.map((s) => (
+                                        <button
+                                            key={s.id}
+                                            type="button"
+                                            className="block w-full text-left px-3 py-2 text-xs hover:bg-gray-50"
+                                            onClick={() => {
+                                                setQuickSearchText(s.place_name);
+                                                focusOnCoordinate({ lat: s.center[1], lng: s.center[0] });
+                                                setQuickSearchSugs([]);
+                                            }}
+                                        >
+                                            {s.place_name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md flex items-center justify-center transition-colors disabled:opacity-50"
+                            onClick={async () => {
+                                if (!quickSearchText.trim()) return;
+                                const geo = getGeocoder();
+                                if (!geo) return;
+                                const result = await geo.geocode(quickSearchText);
+                                if (result) {
+                                    setEndPoint({ lat: result.center[1], lng: result.center[0] });
+                                    setEndText(quickSearchText);
+                                    setQuickSearchText("");
+                                    setQuickSearchSugs([]);
+                                    // Auto calculate route
+                                    setTimeout(() => {
+                                        calculateRoute();
+                                        setIsCollapsed(false);
+                                    }, 100);
+                                }
+                            }}
+                            disabled={!quickSearchText.trim()}
+                            title="Tìm đường đến địa điểm này"
+                        >
+                            <CornerUpRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {!mobile && !isCollapsed && (
+                <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50/50 p-4">
+                    <button
+                        onClick={() => setIsCollapsed(true)}
+                        className="rounded-md p-1 hover:bg-gray-200 text-gray-500 transition-colors"
+                        title="Thu gọn"
+                    >
+                        <PanelRightOpen size={18} />
+                    </button>
                     <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                        <Navigation size={16} className="text-blue-600" />
                         Điều hướng
                     </h2>
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="rounded-md p-1 hover:bg-gray-200 text-gray-500 transition-colors"
-                        title={isCollapsed ? "Mở rộng" : "Thu gọn"}
-                    >
-                        {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelRightOpen size={18} />}
-                    </button>
                 </div>
             )}
 
@@ -1180,7 +1366,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                         <div className="flex items-center justify-between gap-2 mb-3">
                             <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
                                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600">
-                                    Phương tiện
+                                    Loại xe
                                 </span>
                                 <button
                                     onClick={() => setProfile('driving')}
