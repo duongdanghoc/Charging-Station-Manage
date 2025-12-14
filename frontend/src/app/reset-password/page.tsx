@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import { useResetPasswordMutation } from "@/lib/redux/services/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+// Tách component con để wrap trong Suspense
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [resetPassword, { isLoading, isSuccess }] = useResetPasswordMutation();
@@ -285,5 +286,21 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Component chính - wrap ResetPasswordForm trong Suspense
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

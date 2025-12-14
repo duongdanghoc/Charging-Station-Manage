@@ -80,7 +80,7 @@ const StationDetailSheet: React.FC<StationDetailSheetProps> = ({
   const station = freshStationData?.data || initialStation;
   if (!station) return null;
 
-  const poles = polesResponse?.data || [];
+  const poles = Array.isArray(polesResponse) ? polesResponse : (polesResponse?.data || []);
 
   // Tìm pole mới nhất từ API dựa trên ID đã lưu
   const activeConnectorPole =
