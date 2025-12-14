@@ -61,7 +61,7 @@ const ChargingHistoryTable: React.FC<Props> = ({ userId }) => {
                                     {format(new Date(item.startTime), "dd/MM/yyyy HH:mm", { locale: vi })}
                                 </TableCell>
                                 <TableCell>{item.energyKwh} kWh</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.totalAmount)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.amount)}</TableCell>
                                 <TableCell className="text-center">{renderStatus(item.sessionStatus)}</TableCell>
                             </TableRow>
                         ))}

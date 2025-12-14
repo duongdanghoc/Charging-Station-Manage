@@ -27,7 +27,9 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
     private final com.example.charging_station_management.repository.ElectricVehicleRepository vehicleRepository;
 
     // Constants
-    private static final java.math.BigDecimal PRICE_PER_KWH = new java.math.BigDecimal("3000");
+
+
+    // Removed hardcoded PRICE_PER_KWH
 
     @Override
     public Page<ChargingSessionDetailResponse> getAllChargingSessions(
@@ -39,8 +41,10 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         if (filterRequest != null) {
             spec = spec
                     .and(ChargingSessionSpecification.withCustomerId(filterRequest.getCustomerId()))
+                    .and(ChargingSessionSpecification.withVendorId(filterRequest.getVendorId()))
                     .and(ChargingSessionSpecification.withStationId(filterRequest.getStationId()))
                     .and(ChargingSessionSpecification.withStatus(filterRequest.getStatus()))
+                    .and(ChargingSessionSpecification.withStatusIn(filterRequest.getStatuses()))
                     .and(ChargingSessionSpecification.withStartTimeBetween(
                             filterRequest.getStartTimeFrom(),
                             filterRequest.getStartTimeTo()))
@@ -140,7 +144,6 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         log.info("User {} requesting start session on connector {} with vehicle {}", userId, connectorId, vehicleId);
 
         // 1. Check User
-        // 1. Check User
         if (userId == null)
             throw new RuntimeException("User ID is required");
 
@@ -215,7 +218,10 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes).divide(java.math.BigDecimal.valueOf(60), 4,
                 java.math.RoundingMode.HALF_UP);
         java.math.BigDecimal energy = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
-        java.math.BigDecimal cost = energy.multiply(PRICE_PER_KWH);
+        
+        // Dynamic Price Lookup
+        java.math.BigDecimal pricePerKwh = getApplicablePrice(session.getChargingConnector());
+        java.math.BigDecimal cost = energy.multiply(pricePerKwh);
 
         session.setEnergyKwh(energy);
         session.setCost(cost);
@@ -273,7 +279,9 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
                             .divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
                     java.math.BigDecimal energy = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
 
-                    java.math.BigDecimal cost = energy.multiply(PRICE_PER_KWH);
+                    // Dynamic Price Lookup
+                    java.math.BigDecimal pricePerKwh = getApplicablePrice(currentSession.getChargingConnector());
+                    java.math.BigDecimal cost = energy.multiply(pricePerKwh);
 
                     currentSession.setEnergyKwh(energy);
                     currentSession.setCost(cost);
@@ -317,12 +325,56 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
                 java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes)
                         .divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
                 java.math.BigDecimal energy = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
-                java.math.BigDecimal cost = energy.multiply(PRICE_PER_KWH);
+                
+                // Dynamic Price Lookup
+                java.math.BigDecimal pricePerKwh = getApplicablePrice(session.getChargingConnector());
+                java.math.BigDecimal cost = energy.multiply(pricePerKwh);
 
                 session.setEnergyKwh(energy);
                 session.setCost(cost);
             }
         }
         return activeSessions;
+    }
+
+    /**
+     * Finds the applicable price for the given connector based on current time.
+     * Searches in the associated ChargingPole's price list.
+     */
+    private java.math.BigDecimal getApplicablePrice(ChargingConnector connector) {
+        if (connector == null || connector.getPole() == null) {
+            return java.math.BigDecimal.ZERO; // Default if no info
+        }
+
+        java.util.List<Price> prices = connector.getPole().getPrices();
+        if (prices == null || prices.isEmpty()) {
+            return java.math.BigDecimal.ZERO; // or default system price
+        }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalTime currentTime = now.toLocalTime();
+        java.time.LocalDate currentDate = now.toLocalDate();
+
+        for (Price price : prices) {
+            // Check Date Range (EffectiveFrom <= Today <= EffectiveTo)
+            boolean isDateValid = !currentDate.isBefore(price.getEffectiveFrom())
+                    && (price.getEffectiveTo() == null || !currentDate.isAfter(price.getEffectiveTo()));
+
+            if (isDateValid) {
+                // Check Time Range (StartTime <= Now <= EndTime)
+                // Assuming start <= end for same day logic. If overlap midnight, logic needs complexity,
+                // but usually Time of Use is within day bounds or split.
+                boolean isTimeValid = !currentTime.isBefore(price.getStartTime())
+                        && !currentTime.isAfter(price.getEndTime());
+
+                if (isTimeValid) {
+                    return price.getPrice();
+                }
+            }
+        }
+
+        // Fallback: If no time-specific price found, maybe pick first or return 0
+        // Ideally logged or default.
+        return prices.get(0).getPrice(); // Return first price as fallback
     }
 }

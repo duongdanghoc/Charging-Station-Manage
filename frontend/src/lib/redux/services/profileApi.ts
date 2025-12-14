@@ -96,7 +96,7 @@ export interface ChargingHistoryItem {
   startTime: string;
   endTime: string | null;
   energyKwh: number;
-  totalAmount: number | null;
+  amount: number | null;
   sessionStatus: "PENDING" | "CHARGING" | "COMPLETED" | "CANCELLED" | "FAILED";
   paymentStatus: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
   paymentMethod: string | null;
@@ -132,6 +132,30 @@ export interface ChartData {
   date: string;
   revenue: number;
   sessions: number;
+}
+
+// Add this interface
+export interface ChargingSessionDetailResponse {
+    sessionId: number;
+    startTime: string;
+    endTime?: string;
+    energyKwh: number;
+    cost: number;
+    status: "PENDING" | "CHARGING" | "COMPLETED" | "CANCELLED" | "FAILED";
+    customerId: number;
+    customerName: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    vehicleId: number;
+    licensePlate: string;
+    vehicleBrand?: string;
+    vehicleModel?: string;
+    stationId: number;
+    stationName: string;
+    stationAddress?: string;
+    connectorId: number;
+    connectorType?: string;
+    maxPower?: number;
 }
 
 interface BaseResponse<T> {
@@ -316,6 +340,45 @@ export const profileApi = createApi({
       transformResponse: (response: BaseResponse<ChartData[]>) => response.data,
       providesTags: ["Profile"],
     }),
+
+    // --- Vendor Session Management ---
+    getVendorActiveSessions: builder.query<ChargingSessionDetailResponse[], void>({ // Using ChargingSessionDetailResponse as return type
+      query: () => `/api/vendor/sessions/active?size=100`, // Fetch all active (limit 100)
+      transformResponse: (response: BaseResponse<ChargingHistoryResponse>) => {
+         // The Controller returns Page response in "data", so we map it.
+         // Wait, the controller returns BaseApiResponse<Map<String, Object>> (Page response)
+         // Actually the controller returns BaseApiResponse(createPageResponse(sessions))
+         // createPageResponse returns Map.
+         // Let's refine the type.
+         // For now, let's assume the response structure matches "ChargingHistoryResponse" roughly 
+         // but "content" is the list.
+         // However, my controller snippet for active sessions returns:
+         // BaseApiResponse.success(createPageResponse(sessions))
+         // content field has the list.
+         return (response.data as any).content;
+      },
+      providesTags: ["Profile"], // Invalidate when profile updates or can add specific tag
+    }),
+
+    getVendorSessionHistory: builder.query<BaseResponse<any>, { stationId?: number; from?: string; to?: string; page?: number; size?: number }>({
+      query: ({ stationId, from, to, page = 0, size = 10 }) => {
+        let qs = `size=${size}&page=${page}`;
+        if (stationId) qs += `&stationId=${stationId}`;
+        if (from) qs += `&startTimeFrom=${from}`;
+        if (to) qs += `&startTimeTo=${to}`;
+        return `/api/vendor/sessions/history?${qs}`;
+      },
+      // API returns BaseApiResponse<Page<ChargingSessionDetailResponse>> which transforms to { data: { content: [...] } }
+      // We want to return the Page object directly or handle it in component
+      // transformResponse: (response: BaseResponse<any>) => response.data,
+      providesTags: ["Profile"],
+    }),
+
+    getVendorSessionDetail: builder.query<ChargingSessionDetailResponse, number>({
+        query: (sessionId) => `/api/vendor/sessions/${sessionId}`,
+        transformResponse: (response: BaseResponse<ChargingSessionDetailResponse>) => response.data,
+        providesTags: (result, error, id) => [{ type: "Profile", id: `Session-${id}` }],
+    }),
   }),
 });
 
@@ -337,4 +400,7 @@ export const {
   useGetVendorRevenueStatsQuery,
   useGetVendorChartDataQuery,
   useGetVendorChartDataByRangeQuery,
+  useGetVendorActiveSessionsQuery,
+  useGetVendorSessionHistoryQuery,
+  useGetVendorSessionDetailQuery,
 } = profileApi;
