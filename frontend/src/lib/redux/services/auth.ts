@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import type { RootState } from "../store";
 
 // ============================================
 // Types for Backend API
@@ -10,7 +11,7 @@ interface User {
   name: string;
   email: string;
   phone: string;
-  role: "CUSTOMER" | "VENDOR";
+  role: "CUSTOMER" | "VENDOR" | "ADMIN";
   token?: string;
   user_metadata?: {
     avatar_url?: string;
@@ -34,8 +35,14 @@ interface SignupCredentials {
   role: "CUSTOMER" | "VENDOR";
 }
 
-interface ResetPasswordCredentials {
+interface ForgotPasswordRequest {
   email: string;
+}
+
+interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 interface UpdateCustomerProfileRequest {
@@ -66,14 +73,15 @@ interface RegisterResponse {
 
 interface LoginResponse {
   token: string;
-  type?: string;     // "Bearer"
+  type?: string;
   email: string;
   name: string;
-  role: "CUSTOMER" | "VENDOR";
+  role: "CUSTOMER" | "VENDOR" | "ADMIN";
 }
 
 interface ValidationErrorResponse {
   message: string;
+  error?: string;
   errors?: Record<string, string>;
 }
 
@@ -86,6 +94,10 @@ interface LogoutResponse {
   message: string;
 }
 
+interface ForgotPasswordResponse {
+  message: string;
+}
+
 interface ResetPasswordResponse {
   message: string;
 }
@@ -94,7 +106,8 @@ interface UserInfoResponse {
   id: number;
   email: string;
   name: string;
-  role: "CUSTOMER" | "VENDOR";
+  phone: string;
+  role: "CUSTOMER" | "VENDOR" | "ADMIN";
 }
 
 interface UpdateProfileResponse {
@@ -117,7 +130,7 @@ function isErrorWithData(
     isFetchBaseQueryError(error) &&
     typeof error.data === "object" &&
     error.data !== null &&
-    "message" in error.data
+    ("message" in error.data || "error" in error.data)
   );
 }
 
@@ -127,31 +140,34 @@ function isErrorWithData(
 
 export const authApi = createApi({
   reducerPath: "authApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
-    prepareHeaders: (headers) => {
-      // Add token from localStorage if exists
-      const token = localStorage.getItem("authToken");
+  baseQuery: fetchBaseQuery({ 
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080",
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as RootState).auth.token;
       if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
+        headers.set('Authorization', `Bearer ${token}`);
       }
-      headers.set("Content-Type", "application/json");
+      headers.set('Content-Type', 'application/json');
       return headers;
     },
   }),
   tagTypes: ["Auth", "User"],
   endpoints: (builder) => ({
-    /** 🔐 Login - TO BE IMPLEMENTED IN BACKEND */
     login: builder.mutation<LoginResponse, LoginCredentials>({
       query: (body) => ({
         url: "/api/auth/login",
         method: "POST",
         body,
       }),
+      transformResponse: (response: LoginResponse) => {
+        return response;
+      },
+      transformErrorResponse: (response: FetchBaseQueryError) => {
+        return response;
+      },
       invalidatesTags: ["Auth", "User"],
     }),
 
-    /** 🧾 Signup - CONNECTED TO YOUR BACKEND */
     signup: builder.mutation<RegisterResponse, SignupCredentials>({
       query: (body) => ({
         url: "/api/auth/register",
@@ -161,7 +177,6 @@ export const authApi = createApi({
       transformErrorResponse: (
         response: FetchBaseQueryError | { status: number; data: unknown }
       ) => {
-        // Type-safe error transformation
         if (
           "status" in response &&
           response.status === 400 &&
@@ -178,16 +193,46 @@ export const authApi = createApi({
       invalidatesTags: ["Auth", "User"],
     }),
 
-    /** 📩 Reset password - TO BE IMPLEMENTED IN BACKEND */
-    resetPassword: builder.mutation<
-      ResetPasswordResponse,
-      ResetPasswordCredentials
-    >({
+    /** 📧 Forgot Password - Gửi email reset */
+    forgotPassword: builder.mutation<ForgotPasswordResponse, ForgotPasswordRequest>({
       query: (body) => ({
-        url: "/api/auth/reset-password",
-        method: "POST",
+        url: '/api/auth/forgot-password',
+        method: 'POST',
         body,
       }),
+      transformErrorResponse: (response: any) => {
+        // Backend trả về { error: "message" } hoặc { message: "..." }
+        if (response.data) {
+          return {
+            status: response.status,
+            data: {
+              message: response.data.error || response.data.message || 'Có lỗi xảy ra'
+            }
+          };
+        }
+        return response;
+      },
+    }),
+    
+    /** 🔐 Reset Password - Đặt lại mật khẩu với token */
+    resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordRequest>({
+      query: (body) => ({
+        url: '/api/auth/reset-password',
+        method: 'POST',
+        body,
+      }),
+      transformErrorResponse: (response: any) => {
+        // Backend trả về { error: "message" }
+        if (response.data) {
+          return {
+            status: response.status,
+            data: {
+              message: response.data.error || response.data.message || 'Có lỗi xảy ra'
+            }
+          };
+        }
+        return response;
+      },
     }),
 
     /** 🚪 Logout */
@@ -202,8 +247,9 @@ export const authApi = createApi({
         } catch {
           // Continue even if API call fails
         } finally {
-          // Always clear localStorage and reset cache
+          // Clear all tokens
           localStorage.removeItem("authToken");
+          localStorage.removeItem("accessToken");
           localStorage.removeItem("user");
           
           // Reset the entire auth API cache
@@ -213,18 +259,17 @@ export const authApi = createApi({
       invalidatesTags: ["Auth", "User"],
     }),
 
-    /** 🧠 Get current session using JWT token */
-    /** 🧠 Get current session using JWT token (calls /auth/me on backend)
-     *  If backend call fails, falls back to localStorage-stored user/token.
-     */
+    /** 🧑 Get current session using JWT token */
     getSession: builder.query<AuthResponse, void>({
       async queryFn(_arg, _queryApi, _extraOptions, fetchWithBQ) {
-        // Try server session first (returns 200 + user body when token is valid)
+        // Try server session first
         const result = await fetchWithBQ({ url: "/api/auth/me", method: "GET" });
+        
         if (result.error) {
-          // If server returns an error (401/403 or network error), fall back to localStorage
+          // Fallback to localStorage
           const storedUser = localStorage.getItem("user");
           const storedToken = localStorage.getItem("authToken");
+          
           if (storedUser && storedToken) {
             try {
               const parsedUser = JSON.parse(storedUser) as User;
@@ -238,7 +283,7 @@ export const authApi = createApi({
           return { error: result.error as FetchBaseQueryError };
         }
 
-        // On success, map server response to AuthResponse
+        // Map server response
         const resp = result.data as UserInfoResponse | null;
         if (resp && resp.id) {
           return {
@@ -247,17 +292,18 @@ export const authApi = createApi({
                 id: resp.id,
                 name: resp.name,
                 email: resp.email,
+                phone: resp.phone,
                 role: resp.role,
-                phone: "",
               },
               error: null,
             },
           };
         }
 
-        // If server response is unexpected, fallback to localStorage
+        // Fallback to localStorage
         const storedUser = localStorage.getItem("user");
         const storedToken = localStorage.getItem("authToken");
+        
         if (storedUser && storedToken) {
           try {
             const parsedUser = JSON.parse(storedUser) as User;
@@ -268,6 +314,7 @@ export const authApi = createApi({
             console.error("Failed to parse stored user:", e);
           }
         }
+        
         return { data: { user: null, error: null } };
       },
       providesTags: ["Auth"],
@@ -301,7 +348,6 @@ export const authApi = createApi({
       async onQueryStarted(arg, { queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // Update localStorage with new user data
           if (data.user) {
             localStorage.setItem("user", JSON.stringify(data.user));
           }
@@ -322,7 +368,6 @@ export const authApi = createApi({
       async onQueryStarted(arg, { queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          // Update localStorage with new user data
           if (data.user) {
             localStorage.setItem("user", JSON.stringify(data.user));
           }
@@ -340,6 +385,7 @@ export const {
   useSignupMutation,
   useLogoutMutation,
   useGetSessionQuery,
+  useForgotPasswordMutation,
   useResetPasswordMutation,
   useGetCurrentUserQuery,
   useUpdateCustomerProfileMutation,
@@ -347,26 +393,25 @@ export const {
 } = authApi;
 
 // ============================================
-// Export types for use in components
+// Export types
 // ============================================
 
 export type {
   User,
   LoginCredentials,
   SignupCredentials,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   RegisterResponse,
   LoginResponse,
   ValidationErrorResponse,
   AuthResponse,
   LogoutResponse,
+  ForgotPasswordResponse,
   ResetPasswordResponse,
   UpdateCustomerProfileRequest,
   UpdateVendorProfileRequest,
   UpdateProfileResponse,
 };
-
-// ============================================
-// Export type guards for components
-// ============================================
 
 export { isFetchBaseQueryError, isErrorWithData };

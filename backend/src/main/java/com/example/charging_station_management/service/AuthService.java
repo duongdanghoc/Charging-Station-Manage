@@ -11,4 +11,6 @@ public interface AuthService {
     RegisterResponse register(RegisterRequest request);
     JwtResponse authenticateUser(LoginRequest loginRequest);
     ChangePasswordResponse changePassword(Integer userId, ChangePasswordRequest request);
+    void forgotPassword(String email);
+    void resetPassword(String token, String newPassword);
 }
