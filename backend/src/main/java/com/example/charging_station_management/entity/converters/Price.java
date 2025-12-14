@@ -20,10 +20,12 @@ public class Price {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    // 👇 GIỮ CẤU HÌNH CỦA NAM2: Tên biến là 'pole' để khớp với mappedBy="pole" bên ChargingPole
     @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "charging_pole_id")
-    private ChargingPole chargingPole;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "charging_pole_id", nullable = false)
+    @ToString.Exclude // Tránh lỗi vòng lặp log
+    private ChargingPole pole; // Đã đổi tên từ 'chargingPole' thành 'pole'
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)

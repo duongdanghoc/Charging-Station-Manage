@@ -380,6 +380,42 @@ export const authApi = createApi({
   }),
 });
 
+// ------------------------------------------------------------------
+// Lightweight baseQueryWithReauth for use by other RTK Query services
+// Exports a wrapper around fetchBaseQuery that attaches the auth
+// token from localStorage and provides a simple 401 handling path.
+// ------------------------------------------------------------------
+const _baseQuery = fetchBaseQuery({
+  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+  prepareHeaders: (headers) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+    } catch (e) {
+      // ignore when localStorage not available
+    }
+    headers.set("Content-Type", "application/json");
+    return headers;
+  },
+});
+
+export const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
+  const result = await _baseQuery(args, api, extraOptions);
+  // If unauthorized, clear token so consumers can handle unauthenticated flows.
+  if (result?.error && (result.error as any).status === 401) {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return result;
+};
+
 export const {
   useLoginMutation,
   useSignupMutation,

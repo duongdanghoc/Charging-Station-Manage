@@ -27,6 +27,8 @@ public class StationResponse {
     private String vendorName;
     private Double averageRating;
     private Integer totalRatings;
+    
+    // Các trường thống kê
     private String status2;
     private Integer ports;
     private BigDecimal revenue;

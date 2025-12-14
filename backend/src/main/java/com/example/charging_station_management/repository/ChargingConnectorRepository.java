@@ -4,6 +4,7 @@ import com.example.charging_station_management.entity.converters.ChargingConnect
 import com.example.charging_station_management.entity.enums.ConnectorStatus;
 import com.example.charging_station_management.entity.enums.ConnectorType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying; // 👈 Quan trọng: Import cái này
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -41,7 +42,7 @@ public interface ChargingConnectorRepository extends JpaRepository<ChargingConne
     // Tìm connector available của một station
     @Query("SELECT c FROM ChargingConnector c " +
             "WHERE c.pole.station.id = :stationId " +
-            "AND c.status = 'AVAILABALE'")
+            "AND c.status = 'AVAILABLE'") // 👈 Đã sửa lỗi chính tả: AVAILABALE -> AVAILABLE
     List<ChargingConnector> findAvailableByStationId(@Param("stationId") Integer stationId);
 
     // Tìm connector theo nhiều tiêu chí
@@ -68,4 +69,9 @@ public interface ChargingConnectorRepository extends JpaRepository<ChargingConne
             "WHERE c.pole.station.vendor.id = :vendorId " +
             "GROUP BY c.status")
     List<Object[]> countConnectorsByStatus(@Param("vendorId") Integer vendorId);
+
+    // 👇👇👇 HÀM MỚI: XÓA CỨNG TRỰC TIẾP BẰNG SQL 👇👇👇
+    @Modifying
+    @Query("DELETE FROM ChargingConnector c WHERE c.id = :id")
+    void deleteHard(@Param("id") Integer id);
 }

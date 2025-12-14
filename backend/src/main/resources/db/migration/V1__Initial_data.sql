@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS locations;
 DROP TABLE IF EXISTS customers;
 DROP TABLE IF EXISTS vendors;
 DROP TABLE IF EXISTS admins;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS users CASCADE;
 
 /* ==========================================================================
    2. CREATE TABLES
