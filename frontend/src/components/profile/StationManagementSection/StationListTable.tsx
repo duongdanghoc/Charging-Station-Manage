@@ -32,9 +32,9 @@ const StationListTable: React.FC<StationListTableProps> = ({
         let active = 0;
         let total = 0;
         
-        station.poles.forEach(pole => {
+        station.poles.forEach((pole : any ) => {
             if (pole && pole.connectors && Array.isArray(pole.connectors)) {
-                pole.connectors.forEach(connector => {
+                pole.connectors.forEach((connector: any)  => {
                     total++;
                     if (connector.status === "AVAILABLE") {
                         active++;

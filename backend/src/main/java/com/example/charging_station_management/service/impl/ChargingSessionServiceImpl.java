@@ -1,6 +1,5 @@
 package com.example.charging_station_management.service.impl;
 
-import com.example.charging_station_management.dto.mapper.ChargingSessionMapper;
 import com.example.charging_station_management.dto.request.ChargingSessionFilterRequest;
 import com.example.charging_station_management.dto.response.ChargingSessionDetailResponse;
 import com.example.charging_station_management.entity.converters.*;
@@ -23,14 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChargingSessionServiceImpl implements ChargingSessionService {
 
     private final ChargingSessionRepository chargingSessionRepository;
-    private final ChargingSessionMapper chargingSessionMapper;
     // Added dependencies
     private final com.example.charging_station_management.repository.ChargingConnectorRepository connectorRepository;
     private final com.example.charging_station_management.repository.ElectricVehicleRepository vehicleRepository;
 
     // Constants
     private static final java.math.BigDecimal PRICE_PER_KWH = new java.math.BigDecimal("3000");
-    private static final double KWH_PER_MINUTE = 0.5;
 
     @Override
     public Page<ChargingSessionDetailResponse> getAllChargingSessions(

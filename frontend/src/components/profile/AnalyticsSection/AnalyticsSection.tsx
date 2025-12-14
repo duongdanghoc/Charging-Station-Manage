@@ -225,7 +225,7 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ role }) => {
                                 <ChartTooltip content={
                                     <ChartTooltipContent labelFormatter={(value) =>
                                         <span className="font-semibold text-gray-700">{value}</span>} />} />
-                                <ChartLegend content={<ChartLegendContent />} />
+                                <ChartLegend />
 
                                 <Area
                                     yAxisId="left"
