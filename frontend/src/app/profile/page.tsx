@@ -52,6 +52,7 @@ const ProfilePage: React.FC = () => {
     useGetSessionQuery();
   const router = useRouter();
   const userId = sessionData?.user?.id;
+  const userRole = sessionData?.user?.role;
 
   const { getLabels, getLabel } = useOptionLabels();
 
@@ -64,9 +65,12 @@ const ProfilePage: React.FC = () => {
     error: overviewError,
     isLoading: isLoadingOverview,
     isFetching: isFetchingOverview,
-  } = useGetProfileOverviewQuery(userId?.toString() ?? "", {
-    skip: !userId,
-  });
+  } = useGetProfileOverviewQuery(
+    { userId: userId?.toString() ?? "", role: userRole },
+    {
+      skip: !userId,
+    }
+  );
 
   const [updateProfile] = useUpdateProfileMutation();
   const [uploadAvatar] = useUploadAvatarMutation();

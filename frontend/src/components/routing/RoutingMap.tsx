@@ -11,6 +11,9 @@ import { createPinElement } from './pinMarker';
 import { formatDuration, formatDistance, formatInstructionVI, renderInstructionPopupHTML } from './formatters';
 import { pickManeuverIcon } from './maneuvers';
 import { Toolbar } from './Toolbar';
+import { MobileLayerControl } from './MobileLayerControl';
+import { MobileHeader } from './MobileHeader';
+import { useIsMobile } from '@/hooks/useMobile';
 import { ControlsPanel, type AnnotationMetrics } from './ControlsPanel';
 import { GuidanceHUD } from './GuidanceHUD';
 import { SimulationPanel } from './SimulationPanel';
@@ -18,9 +21,11 @@ import { createVehicleMarkerElement, updateVehicleMarkerElementColor } from './V
 import type { Station } from './StationPinTool';
 import { StationFilter } from './StationFilter';
 import { StationService } from './StationService';
+import { StationDetailModal } from './StationDetailModal';
 import { createStationMarkerElement } from './StationMarker';
 
 type Profile = 'driving' | 'walking' | 'cycling' | 'driving-traffic';
+
 
 interface AdvancedOptions {
     alternatives: boolean;
@@ -180,6 +185,7 @@ const normalizeCongestionCategory = (
 };
 
 export default function RoutingMap() {
+    const isMobile = useIsMobile(); // Mobile detection
     const mapContainer = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -225,6 +231,7 @@ export default function RoutingMap() {
     const [routes, setRoutes] = useState<any[]>([]);
     const [selectedRouteIdx, setSelectedRouteIdx] = useState<number>(0);
     const [instructions, setInstructions] = useState<any[]>([]);
+    const [shouldAutoCalculate, setShouldAutoCalculate] = useState(false);
     const routeAlternatives = useMemo(() => {
         return routes.map((route: any, idx: number) => {
             const legs = Array.isArray(route?.legs) ? route.legs : [];
@@ -243,6 +250,7 @@ export default function RoutingMap() {
 
     // Station state
     const [stations, setStations] = useState<Station[]>([]);
+    const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
     const stationMarkersRef = useRef<mapboxgl.Marker[]>([]);
     useEffect(() => {
         routesRef.current = routes;
@@ -496,8 +504,10 @@ export default function RoutingMap() {
                 cooperativeGestures: false,
             });
 
-            mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-            mapRef.current.addControl(new mapboxgl.FullscreenControl(), "top-right");
+            if (!isMobile) {
+                // mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+                mapRef.current.addControl(new mapboxgl.FullscreenControl(), "top-right");
+            }
             mapRef.current.addControl(new mapboxgl.ScaleControl({ unit: "metric" }));
 
             // Add traffic layer when map loads
@@ -847,17 +857,58 @@ export default function RoutingMap() {
         }
     }, [focusOnCoordinate]);
 
-    const handleStationNavigate = useCallback((station: Station) => {
+    const handleStationNavigate = useCallback(async (station: Station) => {
         if (typeof station.lat !== 'number' || typeof station.lng !== 'number' || Number.isNaN(station.lat) || Number.isNaN(station.lng)) {
             return;
         }
 
         const { lat, lng, name } = station;
+
+        // Set điểm kết thúc là trạm
         setEndPoint({ lat, lng });
         setEndLabel(name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        focusOnCoordinate({ lat, lng });
         void updateEndLabelFrom(lng, lat);
-    }, [focusOnCoordinate, setEndPoint, setEndLabel, updateEndLabelFrom]);
+
+        // Lấy vị trí hiện tại để làm điểm bắt đầu
+        try {
+            if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+                // Nếu không có geolocation, chỉ focus vào trạm
+                focusOnCoordinate({ lat, lng });
+                alert('Trình duyệt không hỗ trợ định vị. Vui lòng chọn điểm xuất phát thủ công.');
+                return;
+            }
+
+            const getPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 8000,
+                    maximumAge: 5000,
+                });
+            });
+
+            const pos = await getPosition();
+            const { latitude, longitude } = pos.coords;
+
+            // Set điểm bắt đầu là vị trí hiện tại
+            setStartPoint({ lat: latitude, lng: longitude });
+            void updateStartLabelFrom(longitude, latitude);
+
+            // Đánh dấu cần tự động tính đường
+            setShouldAutoCalculate(true);
+
+        } catch (err) {
+            // Nếu lỗi geolocation, chỉ focus vào trạm
+            console.warn('Không thể lấy vị trí hiện tại:', err);
+            focusOnCoordinate({ lat, lng });
+
+            const errorMsg = err instanceof GeolocationPositionError
+                ? err.code === 1 ? 'Bạn đã từ chối quyền truy cập vị trí. Vui lòng cho phép truy cập trong cài đặt trình duyệt.'
+                    : err.code === 2 ? 'Không thể xác định vị trí. Vui lòng kiểm tra GPS/Wi-Fi.'
+                        : 'Hết thời gian chờ định vị. Vui lòng thử lại.'
+                : 'Không thể lấy vị trí hiện tại.';
+            alert(errorMsg);
+        }
+    }, [focusOnCoordinate, setEndPoint, setEndLabel, setStartPoint, updateEndLabelFrom, updateStartLabelFrom, setIsRouting]);
 
     const handleStationDelete = useCallback((stationId: string) => {
         setStations(prev => prev.filter(s => s.id !== stationId));
@@ -1544,6 +1595,7 @@ export default function RoutingMap() {
             if (station.lat && station.lng) {
                 const element = createStationMarkerElement(station, () => {
                     focusOnCoordinate({ lat: station.lat, lng: station.lng });
+                    if (station.id) setSelectedStationId(station.id);
                 });
                 const marker = new mapboxgl.Marker({ element })
                     .setLngLat([station.lng, station.lat])
@@ -1717,6 +1769,15 @@ export default function RoutingMap() {
             setIsRouting(false);
         }
     }, [startPoint, endPoint, waypoints, profile, keepZoom, simSpeed, applyRouteSelection]);
+
+    // Auto-calculate route when navigating to a station
+    useEffect(() => {
+        if (shouldAutoCalculate && startPoint && endPoint && !isRouting) {
+            setShouldAutoCalculate(false);
+            // Calculate immediately
+            calculateRoute();
+        }
+    }, [shouldAutoCalculate, startPoint, endPoint, isRouting, calculateRoute]);
 
     const handleSelectRoute = useCallback((index: number) => {
         if (index === selectedRouteIdx) return;
@@ -2155,7 +2216,7 @@ export default function RoutingMap() {
     }, [courseUp, guidanceMode, activeStepIdx, instructions]);
 
     return (
-        <div className="w-full h-screen flex flex-col">
+        <div className="w-full h-screen flex flex-col relative overflow-hidden">
             <style>{`
                 .mapboxgl-popup.instruction-popup { pointer-events: none; }
                 .mapboxgl-popup.instruction-popup .mapboxgl-popup-content {
@@ -2168,38 +2229,91 @@ export default function RoutingMap() {
                 }
                 .mapboxgl-popup.instruction-popup .mapboxgl-popup-tip { display: none; }
             `}</style>
-            <Toolbar
-                is3D={is3D}
-                angled={angled}
-                keepZoom={keepZoom}
-                showAllPopups={showAllPopups}
-                onToggle3D={toggle3D}
-                onToggleAngle={toggleAngle}
-                onToggleKeepZoom={() => setKeepZoom(v => !v)}
-                onToggleShowAllPopups={() => setShowAllPopups(v => !v)}
-                onRotateLeft={() => rotateBy(-10)}
-                onRotateRight={() => rotateBy(10)}
-                onResetNorth={resetNorth}
-                onPinMyLocation={handlePinMyLocation}
-                toggleTraffic={toggleTraffic}
-                isTrafficVisible={isTrafficVisible}
-                toggleCongestion={toggleCongestion}
-                isCongestionVisible={isCongestionVisible}
-            />
 
-            {/* Station List */}
-            <div className="absolute top-80 right-4 z-10 w-80">
+            {/* Mobile Header & Layer Control vs Desktop Toolbar */}
+            {isMobile ? (
+                <>
+                    <MobileHeader
+                        is3D={is3D}
+                        onToggle3D={toggle3D}
+                        angled={angled}
+                        onToggleAngle={toggleAngle}
+                        keepZoom={keepZoom}
+                        onToggleKeepZoom={() => setKeepZoom(v => !v)}
+                        showAllPopups={showAllPopups}
+                        onToggleShowAllPopups={() => setShowAllPopups(v => !v)}
+                        isTrafficVisible={isTrafficVisible}
+                        toggleTraffic={() => setIsTrafficVisible(v => !v)}
+                        isCongestionVisible={isCongestionVisible}
+                        toggleCongestion={() => setIsCongestionVisible(v => !v)}
+                        rotateBy={rotateBy}
+                        resetNorth={resetNorth}
+                        onPinMyLocation={handlePinMyLocation}
+                    />
+                    <div className="absolute top-16 right-4 z-[350]">
+                        <MobileLayerControl
+                            is3D={is3D}
+                            onToggle3D={toggle3D}
+                            angled={angled}
+                            onToggleAngle={toggleAngle}
+                            isTrafficVisible={isTrafficVisible}
+                            toggleTraffic={() => setIsTrafficVisible(v => !v)}
+                            isCongestionVisible={isCongestionVisible}
+                            toggleCongestion={() => setIsCongestionVisible(v => !v)}
+                        />
+                    </div>
+                </>
+            ) : (
+                <Toolbar
+                    is3D={is3D}
+                    angled={angled}
+                    keepZoom={keepZoom}
+                    showAllPopups={showAllPopups}
+                    onToggle3D={toggle3D}
+                    onToggleAngle={toggleAngle}
+                    onToggleKeepZoom={() => setKeepZoom(v => !v)}
+                    onToggleShowAllPopups={() => setShowAllPopups(v => !v)}
+                    onRotateLeft={() => rotateBy(-10)}
+                    onRotateRight={() => rotateBy(10)}
+                    onResetNorth={resetNorth}
+                    onPinMyLocation={handlePinMyLocation}
+                    toggleTraffic={() => setIsTrafficVisible(v => !v)}
+                    isTrafficVisible={isTrafficVisible}
+                    toggleCongestion={() => setIsCongestionVisible(v => !v)}
+                    isCongestionVisible={isCongestionVisible}
+                />
+            )
+            }
+
+            {/* Station List - Adjust container for mobile */}
+            <div className={isMobile ? "z-[360]" : "absolute top-80 right-4 z-10 w-80"}>
                 <StationFilter
                     onStationClick={handleStationClick}
                     onStationDelete={handleStationDelete}
                     onStationAdded={handleStationAdded}
                     onStationNavigate={handleStationNavigate}
+                    onStationDetail={setSelectedStationId}
                     map={mapRef.current}
+                    mobile={isMobile}
+                    forceCollapse={simPlaying}
                 />
             </div>
-            {error ? (
-                <div className="p-4 text-red-600 text-sm">{error}</div>
-            ) : null}
+
+            {/* Station Detail Modal */}
+            {
+                selectedStationId && (
+                    <StationDetailModal
+                        stationId={selectedStationId}
+                        onClose={() => setSelectedStationId(null)}
+                    />
+                )
+            }
+
+            {
+                error ? (
+                    <div className="p-4 text-red-600 text-sm">{error}</div>
+                ) : null
+            }
             <div ref={mapContainer} style={{ height: "100%", width: "100%" }} />
             <ControlsPanel
                 profile={profile}
@@ -2230,6 +2344,8 @@ export default function RoutingMap() {
                 routeAlternatives={routeAlternatives}
                 selectedRouteIndex={selectedRouteIdx}
                 onSelectRoute={handleSelectRoute}
+                mobile={isMobile}
+                forceCollapse={simPlaying}
             />
             <SimulationPanel
                 simPlaying={simPlaying}
@@ -2270,6 +2386,7 @@ export default function RoutingMap() {
                 simRemainingM={simRemainingM}
                 simEtaSec={simEtaSec}
                 simToNextManeuverM={simToNextManeuverM}
+                mobile={isMobile}
             />
             <GuidanceHUD
                 visible={guidanceMode}
@@ -2280,6 +2397,6 @@ export default function RoutingMap() {
                 onNext={() => focusStep(Math.min(instructions.length - 1, (activeStepIdx || 0) + 1))}
                 onStop={() => { setGuidanceMode(false); setActiveStepIdx(null); (mapRef.current?.getSource(stepSourceId) as mapboxgl.GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [] } as any); }}
             />
-        </div>
+        </div >
     );
 }

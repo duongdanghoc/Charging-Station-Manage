@@ -189,9 +189,12 @@ export const profileApi = createApi({
         id ? [{ type: "Project", id }] : [],
     }),
 
-    getProfileOverview: builder.query<ProfileOverview, string>({
-      query: (userId) => `/api/customer/profile/${userId}/overview`,
-      providesTags: (result, error, userId) =>
+    getProfileOverview: builder.query<ProfileOverview, { userId: string; role?: string }>({
+      query: ({ userId, role }) => {
+        const endpoint = role === "VENDOR" ? "vendor" : "customer";
+        return `/api/${endpoint}/profile/${userId}/overview`;
+      },
+      providesTags: (result, error, { userId }) =>
         userId
           ? [
             { type: "Profile", id: userId },

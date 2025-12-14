@@ -7,8 +7,8 @@ import com.example.charging_station_management.entity.converters.Location;
 import com.example.charging_station_management.entity.converters.Station;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
-import com.example.charging_station_management.entity.enums.SessionStatus;
 import com.example.charging_station_management.entity.enums.StationStatus;
+import com.example.charging_station_management.entity.enums.SessionStatus;
 import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.exception.ResourceNotFoundException;
 import com.example.charging_station_management.repository.ChargingSessionRepository;
@@ -17,8 +17,10 @@ import com.example.charging_station_management.repository.StationRepository;
 import com.example.charging_station_management.repository.specification.StationSpecification;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.utils.helper.UserHelper;
+import com.example.charging_station_management.dto.mapper.StationMapper;
 import lombok.RequiredArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -27,7 +29,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.charging_station_management.dto.mapper.StationMapper;
 
 @Service
 @Transactional(readOnly = true)
@@ -36,11 +37,17 @@ public class StationServiceImpl implements StationService {
 
     private final StationRepository stationRepository;
     private final LocationRepository locationRepository;
-    private final ChargingSessionRepository chargingSessionRepository;
     private final UserHelper userHelper;
+    private final ChargingSessionRepository chargingSessionRepository;
     private final StationMapper stationMapper;
 
-    // Helper method để lấy Vendor hiện tại từ SecurityContext
+    // =========================================================================
+    // HELPER METHODS
+    // =========================================================================
+
+    /**
+     * Lấy Vendor hiện tại từ SecurityContext
+     */
     private Vendor getCurrentVendor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
@@ -52,12 +59,16 @@ public class StationServiceImpl implements StationService {
         throw new IllegalArgumentException("Người dùng hiện tại không phải là Vendor");
     }
 
+    // =========================================================================
+    // VENDOR METHODS
+    // =========================================================================
+
     @Override
     @Transactional
     public StationResponse createStation(CreateStationRequest request) {
         Vendor vendor = getCurrentVendor();
 
-        // 1. Tạo và LƯU Location trước
+        // 1. Tạo và lưu Location trước
         Location location = new Location();
         location.setLatitude(request.getLatitude());
         location.setLongitude(request.getLongitude());
@@ -88,6 +99,7 @@ public class StationServiceImpl implements StationService {
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Không tìm thấy trạm hoặc bạn không có quyền chỉnh sửa"));
 
+        // Update Station fields
         if (request.getName() != null)
             station.setName(request.getName());
         if (request.getOpenTime() != null)
@@ -132,13 +144,12 @@ public class StationServiceImpl implements StationService {
     @Transactional
     public void deleteStation(Integer stationId) {
         Vendor vendor = getCurrentVendor();
-        
+
         // 1. Tìm trạm và check quyền sở hữu
         Station station = stationRepository.findByIdAndVendorId(stationId, vendor.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm hoặc bạn không có quyền xóa"));
 
-        // 2. CHECK RÀNG BUỘC: Có đang hoạt động không?
-        // Các trạng thái coi là "đang hoạt động"
+        // 2. CHECK RÀNG BUỘC: Có phiên sạc đang hoạt động không?
         List<SessionStatus> activeStatuses = List.of(SessionStatus.PENDING, SessionStatus.CHARGING);
         long activeSessions = chargingSessionRepository.countByStationIdAndStatusIn(stationId, activeStatuses);
 
@@ -146,17 +157,19 @@ public class StationServiceImpl implements StationService {
             throw new IllegalStateException("Không thể xóa: Trạm đang có phiên sạc đang diễn ra.");
         }
 
-        // 3. XÓA MỀM hay XÓA CỨNG?
-        // Kiểm tra xem trạm đã từng có giao dịch/lịch sử chưa (Completed, Cancelled, Failed)
-        List<SessionStatus> historyStatuses = List.of(SessionStatus.COMPLETED, SessionStatus.CANCELLED, SessionStatus.FAILED);
+        // 3. Kiểm tra lịch sử giao dịch
+        List<SessionStatus> historyStatuses = List.of(
+                SessionStatus.COMPLETED,
+                SessionStatus.CANCELLED,
+                SessionStatus.FAILED);
         long historySessions = chargingSessionRepository.countByStationIdAndStatusIn(stationId, historyStatuses);
 
         if (historySessions > 0) {
-            // A. Có lịch sử -> Xóa mềm (Chuyển status sang DELETED = -1)
+            // Có lịch sử -> Xóa mềm (chuyển status sang DELETED)
             station.setStatus(StationStatus.DELETED.getValue());
             stationRepository.save(station);
         } else {
-            // B. Trạm mới tinh, chưa dùng bao giờ -> Xóa cứng (Bay màu khỏi DB)
+            // Trạm mới, chưa có lịch sử -> Xóa cứng
             stationRepository.delete(station);
         }
     }
@@ -170,5 +183,106 @@ public class StationServiceImpl implements StationService {
                 pageable);
 
         return stations.map(stationMapper::toResponse);
+    }
+
+    // =========================================================================
+    // ADMIN METHODS
+    // =========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<StationResponse> getAllStations(Pageable pageable) {
+        Page<Station> stations = stationRepository.findAll(pageable);
+        return stations.map(this::mapToAdminResponse);
+    }
+
+    @Override
+    public StationResponse getStationById(Integer stationId) {
+        Station station = stationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found with id: " + stationId));
+        return mapToAdminResponse(station);
+    }
+
+    @Override
+    @Transactional
+    public void updateStationStatus(Integer stationId, Integer newStatus) {
+        Station station = stationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found with id: " + stationId));
+        station.setStatus(newStatus);
+        stationRepository.save(station);
+    }
+
+    @Override
+    @Transactional
+    public void adminDeleteStation(Integer stationId) {
+        Station station = stationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found with id: " + stationId));
+        stationRepository.delete(station);
+    }
+
+    // =========================================================================
+    // MAPPER HELPER
+    // =========================================================================
+
+    /**
+     * Mapper cho Admin - đầy đủ thông tin (revenue, ports, poles, status...)
+     */
+    private StationResponse mapToAdminResponse(Station station) {
+        try {
+            // 1. Xử lý địa chỉ an toàn
+            String fullAddress = "Chưa cập nhật";
+            if (station.getLocation() != null) {
+                String detail = station.getLocation().getAddressDetail() != null
+                        ? station.getLocation().getAddressDetail()
+                        : "";
+                String province = station.getLocation().getProvince() != null
+                        ? station.getLocation().getProvince()
+                        : "";
+                fullAddress = detail + ", " + province;
+            }
+
+            // 2. Tính tổng cổng sạc (Ports) và số trụ sạc (Poles)
+            int totalPorts = 0;
+            int totalPoles = 0;
+
+            if (station.getChargingPoles() != null) {
+                totalPoles = station.getChargingPoles().size();
+                totalPorts = station.getChargingPoles().stream()
+                        .mapToInt(pole -> pole.getConnectorCount() != null ? pole.getConnectorCount() : 0)
+                        .sum();
+            }
+
+            // 3. Xử lý trạng thái an toàn
+            String statusStr = "INACTIVE";
+            if (station.getStatus() != null) {
+                statusStr = StationStatus.fromInt(station.getStatus()).name();
+            }
+
+            return StationResponse.builder()
+                    .id(station.getId())
+                    .name(station.getName() != null ? station.getName() : "Trạm không tên")
+                    .address(fullAddress)
+                    .poles(totalPoles)
+                    .ports(totalPorts)
+                    .status2(statusStr)
+                    .revenue(BigDecimal.ZERO)
+                    .build();
+
+        } catch (Exception e) {
+            // Log lỗi để debug
+            System.err.println("Lỗi khi map trạm ID: " + station.getId());
+            e.printStackTrace();
+
+            // Trả về object mặc định thay vì null để tránh crash
+            return StationResponse.builder()
+                    .id(station.getId())
+                    .name("Lỗi dữ liệu")
+                    .address("N/A")
+                    .poles(0)
+                    .ports(0)
+                    .status2("UNKNOWN")
+                    .revenue(BigDecimal.ZERO)
+                    .build();
+        }
     }
 }

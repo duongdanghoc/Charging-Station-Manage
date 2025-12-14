@@ -112,6 +112,16 @@ public class ApiExceptionHandler {
         return buildErrorResponse(HttpStatus.CONFLICT, errorTitle, errorMessage, request, null);
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<BaseApiResponse<ErrorResponse>> handleRuntimeException(
+            RuntimeException ex, HttpServletRequest request) {
+        
+        String errorTitle = "Lỗi xử lý";
+        String errorMessage = ex.getMessage();
+        
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, errorTitle, errorMessage, request, null);
+    }
+
     // ==============
     // HELPER METHOD 
     // ==============

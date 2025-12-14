@@ -32,9 +32,12 @@ export default function CustomerDashboard() {
     error: overviewError,
     isLoading: isLoadingOverview,
     isFetching: isFetchingOverview,
-  } = useGetProfileOverviewQuery(userId?.toString() ?? "", {
-    skip: !userId,
-  });
+  } = useGetProfileOverviewQuery(
+    { userId: userId?.toString() ?? "", role: "CUSTOMER" },
+    {
+      skip: !userId,
+    }
+  );
 
   // Dashboard data (recent activities)
   const {

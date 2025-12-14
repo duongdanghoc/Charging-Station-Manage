@@ -9,6 +9,7 @@ import { adminApi } from "./services/adminApi";
 import authReducer from "./services/authSlice";
 import { stationApi } from "./services/stationApi";
 import { connectorApi } from "./services/connectorApi";
+// 👇 Import thêm từ nhánh 'nam'
 import { priceApi } from "./services/priceApi";
 import { chargingPoleApi } from "./services/chargingPoleApi";
 
@@ -23,6 +24,7 @@ export const store = configureStore({
     [adminApi.reducerPath]: adminApi.reducer,
     [stationApi.reducerPath]: stationApi.reducer,
     [connectorApi.reducerPath]: connectorApi.reducer,
+    // 👇 Thêm Reducer mới
     [priceApi.reducerPath]: priceApi.reducer,
     [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
   },
@@ -33,6 +35,7 @@ export const store = configureStore({
       .concat(adminApi.middleware)
       .concat(stationApi.middleware)
       .concat(connectorApi.middleware)
+      // 👇 Thêm Middleware mới
       .concat(priceApi.middleware)
       .concat(chargingPoleApi.middleware),
 });

@@ -20,12 +20,11 @@ public class Price {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // 👇 MERGE: Chọn phiên bản của nhánh 'nam'
-    // Lý do: Để khớp với mappedBy="pole" bên ChargingPole.java
+    // 👇 MERGE: Chọn nhánh 'nam' để khớp với mappedBy="pole" bên ChargingPole
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "charging_pole_id", nullable = false)
-    @ToString.Exclude // Thêm cái này để tránh lỗi khi log đối tượng Lazy
+    @ToString.Exclude // Tránh lỗi vòng lặp log
     private ChargingPole pole;
 
     @Enumerated(EnumType.STRING)

@@ -42,6 +42,6 @@ public class Station {
     @Column(nullable = false, length = 100)
     private VehicleType type;
 
-    @OneToMany(mappedBy = "station", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "station", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ChargingPole> chargingPoles;
 }
