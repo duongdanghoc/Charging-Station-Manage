@@ -135,7 +135,7 @@ CREATE TABLE charging_sessions (
 -- 2.11 Transactions
 CREATE TABLE transactions (
     id SERIAL PRIMARY KEY,
-    charging_session_id INTEGER NOT NULL UNIQUE REFERENCES charging_sessions(id),
+    charging_session_id INTEGER NOT NULL,
     customer_id INTEGER NOT NULL REFERENCES customers(user_id),
     amount DECIMAL(15, 2) NOT NULL,
     payment_method VARCHAR(100) NOT NULL, -- Enum: PaymentMethod
@@ -192,6 +192,10 @@ INSERT INTO users (name, email, password, phone, status, user_type)
 VALUES ('Tran Thi Binh', 'binh.tran@yahoo.com', '$2a$12$iTOeSm.NoT8jH6wKIfmrKulOeA90vmz58bmDeBQTdz7eDk2CRZDna', '0988777666', 1, 'CUSTOMER');
 INSERT INTO customers (user_id) VALUES (5);
 
+INSERT INTO users (name, email, password, phone, status, user_type) VALUES
+('Nguyễn Văn A', 'a@email.com', '$2a$12$iTOeSm.NoT8jH6wKIfmrKulOeA90vmz58bmDeBQTdz7eDk2CRZDna', '0901234567', 1, 'Customer'),
+('Trần Thị B', 'b@email.com', '$2a$12$iTOeSm.NoT8jH6wKIfmrKulOeA90vmz58bmDeBQTdz7eDk2CRZDna', '0909876543', 1, 'Customer');
+INSERT INTO customers (user_id) VALUES (6), (7);
 
 -- 3.2 LOCATIONS (5 dòng)
 INSERT INTO locations (latitude, longitude, province, address_detail) VALUES
@@ -252,7 +256,9 @@ INSERT INTO prices (charging_pole_id, name, price, effective_from, effective_to,
 -- Customer A (ID 4): 2 xe
 INSERT INTO electric_vehicles (customer_id, vehicle_type, brand, model, license_plate, battery_capacity, connector_type) VALUES
 (4, 'CAR', 'VinFast', 'VF8', '51K-123.45', 87.70, 'CCS'),
-(4, 'MOTORBIKE', 'VinFast', 'Klara S', '59-M1 999.99', 3.50, 'TYPE1');
+(4, 'MOTORBIKE', 'VinFast', 'Klara S', '59-M1 999.99', 3.50, 'TYPE1'),
+(6, 'CAR', 'VinFast', 'VF8', '30A-12345', 82.0, 'CCS'),
+(7, 'CAR', 'VinFast', 'VFe34', '59B-67890', 42.0, 'CCS');
 
 -- Customer B (ID 5): 3 xe
 INSERT INTO electric_vehicles (customer_id, vehicle_type, brand, model, license_plate, battery_capacity, connector_type) VALUES
@@ -266,28 +272,161 @@ INSERT INTO charging_sessions (electric_vehicle_id, charging_connector_id, start
 (2, 6, '2023-10-02 10:00:00', NULL, 1.2, 5000.00, 'CHARGING'),               -- Xe 2 đang sạc
 (3, 4, '2023-10-03 14:00:00', '2023-10-03 14:05:00', 0.1, 0.00, 'FAILED'),      -- Xe 3 lỗi
 (4, 5, '2023-10-04 15:00:00', NULL, NULL, NULL, 'PENDING'),                     -- Xe 4 đặt trước
-(5, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'CANCELLED');   -- Xe 5 hủy
+(5, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'CANCELLED'),   -- Xe 5 hủy
+(6, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'CANCELLED'),   
+(6, 6, '2023-10-06 11:00:00', '2023-10-06 12:30:00', 30.0, 120000.00, 'COMPLETED'),
+(6, 7, '2023-10-07 13:00:00', NULL, NULL, NULL, 'CHARGING'),
+(7, 7, '2023-09-15 08:00:00', '2023-09-15 09:00:00', 40.0, 140000.00, 'COMPLETED'),
+(6, 6, '2023-09-20 10:00:00', '2023-09-20 11:30:00', 35.0, 130000.00, 'COMPLETED'),
+(7, 7, '2023-09-25 14:00:00', '2023-09-25 14:05:00', 0.1, 0.00, 'COMPLETED'),
+(6, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'COMPLETED'),   
+(7, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'COMPLETED'),   
+(6, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'COMPLETED'),   
+(6, 8, '2023-10-05 09:00:00', '2023-10-05 09:10:00', 0.5, 0.00, 'COMPLETED');   
 
--- 3.10 TRANSACTIONS (5 dòng - Bao phủ PaymentMethod & PaymentStatus)
--- Gắn với Session 1 (Completed, Paid)
+-- 3.10 TRANSACTIONS 
 INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, account_number, payment_time) VALUES
-(1, 4, 159250.00, 'CREDITCARD', 'PAID', 'Vietcombank', '****1234', '2023-10-01 09:01:00');
+-- --- GROUP 1: CÁCH ĐÂY 1 NĂM (YEARLY) ---
+-- Session 1: Thành công ngay
+(6, 6, 150000.00, 'CREDITCARD', 'PAID', 'Vietcombank', '****1234', NOW() - INTERVAL '1 year'),
 
--- Gắn với Session 2 (Charging, Pending)
-INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, account_number, payment_time) VALUES
-(2, 4, 100000.00, 'EWALLET', 'PENDING', 'Momo', '0912111222', NULL); -- Tạm ứng
+-- Session 2: Fail 1 lần, sau đó Success
+(7, 6, 220000.00, 'EWALLET', 'FAILED', 'Momo', '0901234567', NOW() - INTERVAL '1 year' + INTERVAL '1 hour'),
+(7, 6, 220000.00, 'BANKTRASFER', 'PAID', 'Techcombank', '190333444', NOW() - INTERVAL '1 year' + INTERVAL '1 hour 5 minutes'),
 
--- Gắn với Session 3 (Failed, Refunded)
-INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, account_number, payment_time) VALUES
-(3, 5, 50000.00, 'BANKTRASFER', 'REFUNDED', 'Techcombank', '190333444555', '2023-10-03 14:30:00');
+-- Session 3: Thành công
+(8, 7, 55000.00, 'CASH', 'PAID', 'VNPAY', NULL, NOW() - INTERVAL '11 months'),
 
--- Gắn với Session 4 (Pending, Failed Payment)
-INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, account_number, payment_time) VALUES
-(4, 5, 20000.00, 'CASH', 'FAILED', NULL, NULL, '2023-10-04 15:05:00');
 
--- Gắn với Session 5 (Cancelled, Void) - Tạo thêm một dòng cho đủ 5
-INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, account_number, payment_time) VALUES
-(5, 5, 0.00, 'EWALLET', 'PENDING', 'ZaloPay', '0988777666', NULL);
+-- --- GROUP 2: CÁCH ĐÂY 3 THÁNG (QUARTERLY) ---
+-- Session 4: Thành công
+(9, 7, 300000.00, 'CREDITCARD', 'PAID', 'TPBank', '****5678', NOW() - INTERVAL '3 months'),
+
+-- Session 5: Fail 2 lần (do lỗi mạng/số dư), sau đó Success
+(10, 6, 180000.00, 'EWALLET', 'FAILED', 'ZaloPay', '0901234567', NOW() - INTERVAL '3 months' + INTERVAL '2 days'),
+(10, 6, 180000.00, 'EWALLET', 'FAILED', 'ZaloPay', '0901234567', NOW() - INTERVAL '3 months' + INTERVAL '2 days 1 minute'),
+(10, 6, 180000.00, 'CREDITCARD', 'PAID', 'MBBank', '****9999', NOW() - INTERVAL '3 months' + INTERVAL '2 days 5 minutes'),
+
+
+-- --- GROUP 3: CÁCH ĐÂY 30 NGÀY (MONTHLY) ---
+-- Session 6: Thành công
+(11, 7, 95000.00, 'BANKTRASFER', 'PAID', 'ACB', '88889999', NOW() - INTERVAL '25 days'),
+
+-- Session 7: Fail 1 lần, Success 1 lần
+(12, 6, 450000.00, 'CREDITCARD', 'FAILED', 'Vietinbank', '****0000', NOW() - INTERVAL '20 days'),
+(12, 6, 450000.00, 'CREDITCARD', 'PAID', 'Vietinbank', '****0000', NOW() - INTERVAL '20 days' + INTERVAL '2 minutes'),
+
+
+-- --- GROUP 4: TRONG 7 NGÀY QUA (WEEKLY) ---
+-- Session 8: Thành công (Cách đây 5 ngày)
+(13, 7, 120000.00, 'EWALLET', 'PAID', 'ShopeePay', '0909876543', NOW() - INTERVAL '5 days'),
+
+-- Session 9: Thành công (Hôm qua)
+(14, 6, 200000.00, 'CASH', 'PAID', 'VNPAY', NULL, NOW() - INTERVAL '1 day'),
+
+-- Session 10: Thành công (Hôm nay - Vừa xong)
+(15, 6, 75000.00, 'EWALLET', 'PAID', 'Momo', '0901234567', NOW() - INTERVAL '30 minutes');
+
+DO $$
+DECLARE
+    -- Cấu hình số lượng
+    _total_groups INTEGER := 4; 
+    _tx_per_group INTEGER := 10; -- 10 cái mỗi nhóm thời gian
+    
+    -- Biến tạm
+    _i INTEGER;
+    _j INTEGER;
+    _customer_id INTEGER;
+    _vehicle_id INTEGER;
+    _connector_id INTEGER;
+    _session_id INTEGER;
+    _time_offset INTERVAL;
+    _base_time TIMESTAMP;
+    _amount DECIMAL(15,2);
+    _status VARCHAR;
+    
+    -- Danh sách connector của Vendor 3 (ID 6, 7, 8 dựa trên dữ liệu mẫu)
+    _vendor3_connectors INTEGER[] := ARRAY[6, 7, 8]; 
+BEGIN
+    -- Vòng lặp qua 4 nhóm thời gian
+    -- 1: 0-7 ngày | 2: 8-30 ngày | 3: 31-90 ngày | 4: 91-365 ngày
+    FOR _i IN 1.._total_groups LOOP
+        
+        FOR _j IN 1.._tx_per_group LOOP
+            
+            -- 1. TÍNH TOÁN THỜI GIAN (Random trong khoảng)
+            IF _i = 1 THEN
+                -- 0 đến 7 ngày
+                _time_offset := (floor(random() * 7) || ' days')::interval + (floor(random() * 24) || ' hours')::interval;
+            ELSIF _i = 2 THEN
+                -- 8 đến 30 ngày
+                _time_offset := (8 + floor(random() * 22) || ' days')::interval;
+            ELSIF _i = 3 THEN
+                -- 31 đến 90 ngày (3 tháng)
+                _time_offset := (31 + floor(random() * 59) || ' days')::interval;
+            ELSE
+                -- 91 đến 365 ngày (1 năm)
+                _time_offset := (91 + floor(random() * 274) || ' days')::interval;
+            END IF;
+
+            _base_time := NOW() - _time_offset;
+
+            -- 2. CHỌN NGẪU NHIÊN DỮ LIỆU
+            -- Chọn random Customer (4, 5, 6, 7)
+            _customer_id := 4 + floor(random() * 4); 
+            
+            -- Chọn xe tương ứng (đơn giản hóa: chọn xe bất kỳ từ 1-7)
+            _vehicle_id := 1 + floor(random() * 7);
+            
+            -- Chọn Connector CHỈ CỦA VENDOR 3
+            _connector_id := _vendor3_connectors[1 + floor(random() * array_length(_vendor3_connectors, 1))];
+            
+            -- Random tiền
+            _amount := (50 + floor(random() * 450)) * 1000; -- 50k đến 500k
+
+            -- 3. TẠO SESSION
+            INSERT INTO charging_sessions (electric_vehicle_id, charging_connector_id, start_time, end_time, energy_kwh, cost, status)
+            VALUES (
+                _vehicle_id, 
+                _connector_id, 
+                _base_time, 
+                _base_time + INTERVAL '45 minutes', 
+                15.5 + (random() * 30), -- kwh
+                _amount, 
+                'COMPLETED'
+            ) RETURNING id INTO _session_id;
+
+            -- 4. TẠO TRANSACTION (Xử lý Fail trước nếu trúng vé số)
+            -- Cứ mỗi 5 giao dịch (index chia hết cho 5) thì tạo 1 cái Fail trước
+            IF _j % 5 = 0 THEN
+                INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, payment_time)
+                VALUES (
+                    _session_id,
+                    _customer_id,
+                    _amount,
+                    'EWALLET',
+                    'FAILED', -- Giao dịch lỗi
+                    'BANKTRASFER',
+                    _base_time + INTERVAL '46 minutes'
+                );
+            END IF;
+
+            -- Tạo giao dịch thành công (Luôn có)
+            INSERT INTO transactions (charging_session_id, customer_id, amount, payment_method, payment_status, bank_name, account_number, payment_time)
+            VALUES (
+                _session_id,
+                _customer_id,
+                _amount,
+                CASE WHEN random() > 0.5 THEN 'CREDITCARD' ELSE 'CASH' END,
+                'PAID', -- Giao dịch thành công
+                CASE WHEN random() > 0.5 THEN 'Vietcombank' ELSE 'VNPAY' END,
+                '****' || floor(random() * 9000 + 1000),
+                _base_time + INTERVAL '48 minutes' -- Thanh toán sau khi sạc xong 3p
+            );
+
+        END LOOP;
+    END LOOP;
+END $$;
 
 -- 3.11 RATINGS (5 dòng - Bao phủ TargetType)
 -- Cust 4 rate Station

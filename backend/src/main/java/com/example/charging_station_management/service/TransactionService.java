@@ -1,7 +1,12 @@
 package com.example.charging_station_management.service;
 
 import com.example.charging_station_management.dto.request.TransactionFilterRequest;
+import com.example.charging_station_management.dto.response.ChartData;
 import com.example.charging_station_management.dto.response.TransactionDetailResponse;
+import com.example.charging_station_management.dto.response.VendorRevenueStats;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -25,4 +30,8 @@ public interface TransactionService {
      * @return Transaction detail
      */
     TransactionDetailResponse getTransactionById(Integer transactionId);
+
+    VendorRevenueStats getVendorRevenueStats(Integer vendorId);
+
+    List<ChartData> getVendorChartData(Integer vendorId, int days);
 }
