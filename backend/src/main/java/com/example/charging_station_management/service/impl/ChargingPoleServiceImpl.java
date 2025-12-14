@@ -44,7 +44,6 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
         Station station = stationRepository.findById(request.getStationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạm sạc với ID: " + request.getStationId()));
 
-        // 👇 SỬA LỖI 1: Dùng != thay cho !...equals(...)
         if (station.getVendor().getId() != currentVendor.getId()) {
             throw new AccessDeniedException("Bạn không có quyền thêm trụ vào trạm sạc này");
         }
@@ -52,10 +51,7 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
         ChargingPole pole = new ChargingPole();
         pole.setStation(station);
         pole.setManufacturer(request.getManufacturer());
-        
-        // Xử lý maxPower (nếu request là Double thì giữ nguyên valueOf, nếu BigDecimal thì bỏ)
         pole.setMaxPower(BigDecimal.valueOf(request.getMaxPower())); 
-        
         pole.setInstallDate(request.getInstallDate() != null ? request.getInstallDate() : LocalDate.now());
         pole.setConnectorCount(0);
 
@@ -71,10 +67,20 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
         ChargingPole pole = chargingPoleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trụ sạc"));
 
-        // 👇 SỬA LỖI 2: Dùng != thay cho !...equals(...)
         if (pole.getStation().getVendor().getId() != currentVendor.getId()) {
             throw new AccessDeniedException("Bạn không có quyền xóa trụ sạc này");
         }
+
+        // --- [QUAN TRỌNG] FIX LỖI XÓA KHÔNG THÀNH CÔNG ---
+        // Nguyên nhân: Do Station load danh sách poles dạng EAGER, object Station trong bộ nhớ
+        // vẫn giữ tham chiếu đến pole cần xóa. Khi commit, JPA có thể vô tình "cứu" lại pole đó.
+        Station station = pole.getStation();
+        if (station != null && station.getChargingPoles() != null) {
+            // Xóa pole khỏi list của station để đồng bộ trạng thái trong bộ nhớ
+            // Dùng removeIf so sánh theo ID để an toàn hơn so với equals()
+            station.getChargingPoles().removeIf(p -> p.getId().equals(id));
+        }
+        // -------------------------------------------------
 
         chargingPoleRepository.delete(pole);
     }
@@ -87,7 +93,6 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
         ChargingPole pole = chargingPoleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trụ sạc"));
 
-        // 👇 SỬA LỖI 3: Dùng != thay cho !...equals(...)
         if (pole.getStation().getVendor().getId() != currentVendor.getId()) {
             throw new AccessDeniedException("Bạn không có quyền sửa trụ sạc này");
         }

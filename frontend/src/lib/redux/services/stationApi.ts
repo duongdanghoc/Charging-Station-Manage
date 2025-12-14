@@ -222,11 +222,10 @@ export const stationApi = createApi({
     }),
 
     // 👇 11. API Lấy danh sách trụ theo trạm (QUAN TRỌNG)
-    getPolesByStationId: builder.query<ChargingPole[], number>({
-      query: (stationId) => `/api/stations/${stationId}/poles`,
-      // Tag "Poles" để khi thêm/xóa trụ thì list này tự refresh
-      providesTags: (result, error, id) => [{ type: "Poles", id }],
-    }),
+    getPolesByStationId: builder.query<BaseApiResponse<ChargingPole[]>, number>({
+  query: (stationId) => `/api/stations/${stationId}/poles`,
+  providesTags: (result, error, id) => [{ type: "Poles", id }],
+}),
 
 
     // Get customer's vehicles
