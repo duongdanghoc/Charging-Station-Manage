@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.List;
 
 @Data
 @Builder
@@ -28,8 +27,11 @@ public class StationResponse {
     private String vendorName;
     private Double averageRating;
     private Integer totalRatings;
-    private Integer poles;
-    private Integer ports;
+    
+    // 👇 Phần đã giải quyết conflict (Giữ lại đủ 4 trường này là được)
+    // Tôi giữ theo thứ tự của HEAD (nhánh bạn đang làm)
     private String status2;
+    private Integer ports;
     private BigDecimal revenue;
+    private Integer poles;
 }
