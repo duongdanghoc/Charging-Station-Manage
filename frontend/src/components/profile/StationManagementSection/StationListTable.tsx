@@ -23,7 +23,7 @@ const StationListTable: React.FC<StationListTableProps> = ({
     onManageConnectors
 }) => {
     
-    // Đã xóa hàm getConnectorStats cũ vì không còn cần thiết
+    // Đã xóa hàm getConnectorStats cũ vì dữ liệu activePorts/ports đã có sẵn từ API
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -73,7 +73,7 @@ const StationListTable: React.FC<StationListTableProps> = ({
                                 <td className="px-6 py-3">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm">
-                                            {/* 👇 SỬA Ở ĐÂY: Dùng trực tiếp trường activePorts và ports từ API */}
+                                            {/* 👇 Sử dụng trực tiếp dữ liệu từ API Backend */}
                                             <span className="font-semibold text-emerald-600">{station.activePorts || 0}</span>
                                             <span className="text-gray-400">/</span>
                                             <span className="font-medium text-gray-600">{station.ports || 0}</span>

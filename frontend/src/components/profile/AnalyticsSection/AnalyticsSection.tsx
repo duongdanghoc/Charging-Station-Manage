@@ -1,228 +1,285 @@
 'use client';
 
-import React, { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart3, TrendingUp } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, TrendingUp, Calendar, RefreshCcw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserRole, roleLabels } from "../types";
+import { Button } from "@/components/ui/button";
+import { UserRole } from "../types";
+import { useGetVendorRevenueStatsQuery, useGetVendorChartDataQuery } from "@/lib/redux/services/profileApi";
+import { Area, Line, ComposedChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
 interface AnalyticsSectionProps {
     role: Extract<UserRole, "SUPPLIER" | "TECH">;
 }
 
-type TimeRange = "7d" | "30d" | "90d";
-
-type Metric = {
-    label: string;
-    value: string;
-    delta: number;
-    description: string;
-};
-
-type SeriesPoint = {
-    label: string;
-    value: number;
-};
-
-type Dataset = {
-    revenueSeries: SeriesPoint[];
-    sessionsSeries: SeriesPoint[];
-    metrics: Metric[];
-};
-
-const baseLabels: Record<TimeRange, string[]> = {
-    "7d": ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-    "30d": ["1", "5", "10", "15", "20", "25", "30"],
-    "90d": ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7"],
-};
+type TimeRange = "7" | "30" | "90" | "365";
 
 const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ role }) => {
-    const [range, setRange] = useState<TimeRange>("30d");
+    const [range, setRange] = useState<TimeRange>("30");
 
-    const dataset: Dataset = useMemo(() => {
-        const labels = baseLabels[range];
+    const { data: revenueStats, isLoading: isLoadingStats, refetch: refetchStats } = useGetVendorRevenueStatsQuery(undefined, {
+        skip: role !== "SUPPLIER",
+    });
 
-        if (role === "SUPPLIER") {
-            const revenueValues = range === "7d" ? [52, 60, 48, 70, 66, 74, 81] : range === "30d" ? [32, 41, 45, 52, 60, 68, 74] : [18, 28, 35, 44, 55, 61, 72];
-            const sessions = range === "7d" ? [120, 96, 134, 150, 160, 170, 190] : range === "30d" ? [90, 110, 132, 155, 172, 195, 210] : [70, 82, 94, 120, 140, 168, 189];
+    const { data: chartData, isLoading: isLoadingChart, refetch: refetchChart } = useGetVendorChartDataQuery({ days: parseInt(range) }, {
+        skip: role !== "SUPPLIER",
+    });
 
-            const metrics: Metric[] = [
-                {
-                    label: "Doanh thu",
-                    value: "175 triệu",
-                    delta: 12.5,
-                    description: "Tổng doanh thu từ phí sạc trong kỳ",
-                },
-                {
-                    label: "Phiên sạc thành công",
-                    value: "1.245",
-                    delta: 8.7,
-                    description: "Số lượt sạc hoàn tất tại toàn bộ trạm",
-                },
-                {
-                    label: "Tỷ lệ sử dụng trạm",
-                    value: "84%",
-                    delta: 5.2,
-                    description: "So với kỳ trước",
-                },
-            ];
+    const handleRefresh = () => {
+        refetchStats();
+        refetchChart();
+    };
 
-            return {
-                revenueSeries: labels.map((label, index) => ({ label, value: revenueValues[index] ?? 0 })),
-                sessionsSeries: labels.map((label, index) => ({ label, value: sessions[index] ?? 0 })),
-                metrics,
-            };
+    const formatCurrency = (amount?: number) => {
+        if (amount === undefined || amount === null) return "0 ₫";
+        if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(1)} tỷ`;
+        if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)} tr`;
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount);
+    };
+
+    // --- LOGIC XỬ LÝ DỮ LIỆU ---
+    const processedChartData = useMemo(() => {
+        if (!chartData || chartData.length === 0) return [];
+
+        // 1. 7 Ngày & 30 Ngày: Giữ nguyên từng ngày
+        if (range === "7" || range === "30") {
+            return chartData.map(item => ({
+                date: item.date,
+                revenue: item.revenue,
+                sessions: item.sessions
+            }));
         }
 
-        const revenueValues = range === "7d" ? [12, 16, 20, 18, 22, 27, 30] : range === "30d" ? [8, 12, 15, 18, 22, 24, 28] : [4, 8, 12, 16, 21, 25, 31];
-        const sessions = range === "7d" ? [8, 12, 10, 14, 16, 18, 20] : range === "30d" ? [6, 9, 11, 13, 15, 16, 18] : [4, 6, 8, 10, 12, 14, 16];
+        // 2. 90 Ngày: Gộp theo Tuần (7 ngày/nhóm)
+        if (range === "90") {
+            const aggregated = [];
+            let chunkRevenue = 0;
+            let chunkSessions = 0;
+            let startDateStr = "";
 
-        const metrics: Metric[] = [
-            {
-                label: "Doanh thu cứu hộ",
-                value: "28 triệu",
-                delta: 9.1,
-                description: "Tổng doanh thu dịch vụ cứu hộ",
-            },
-            {
-                label: "Ca cứu hộ hoàn thành",
-                value: "156",
-                delta: 11.3,
-                description: "Tăng trưởng số ca xử lý thành công",
-            },
-            {
-                label: "Thời gian phản hồi trung bình",
-                value: "18 phút",
-                delta: -3.6,
-                description: "Giảm so với kỳ trước",
-            },
-        ];
+            for (let i = 0; i < chartData.length; i++) {
+                if (i % 7 === 0) {
+                    startDateStr = chartData[i].date; // Ngày bắt đầu tuần
+                    chunkRevenue = 0;
+                    chunkSessions = 0;
+                }
 
-        return {
-            revenueSeries: labels.map((label, index) => ({ label, value: revenueValues[index] ?? 0 })),
-            sessionsSeries: labels.map((label, index) => ({ label, value: sessions[index] ?? 0 })),
-            metrics,
-        };
-    }, [range, role]);
+                chunkRevenue += chartData[i].revenue;
+                chunkSessions += chartData[i].sessions;
+
+                // Nếu là ngày cuối của block 7 hoặc ngày cuối cùng của mảng
+                if ((i + 1) % 7 === 0 || i === chartData.length - 1) {
+                    aggregated.push({
+                        date: `${startDateStr} - ${chartData[i].date}`,
+                        revenue: chunkRevenue,
+                        sessions: chunkSessions
+                    });
+                }
+            }
+            return aggregated;
+        }
+
+        // 3. 1 Năm: Gộp theo Tháng
+        if (range === "365") {
+            const monthMap = new Map<string, { revenue: number; sessions: number; label: string }>();
+
+            chartData.forEach(item => {
+                // item.date dạng "dd/MM" -> Lấy "MM"
+                const month = item.date.split('/')[1];
+                if (!monthMap.has(month)) {
+                    monthMap.set(month, { revenue: 0, sessions: 0, label: `Tháng ${month}` });
+                }
+                const entry = monthMap.get(month)!;
+                entry.revenue += item.revenue;
+                entry.sessions += item.sessions;
+            });
+
+            return Array.from(monthMap.values()).map(v => ({
+                date: v.label,
+                revenue: v.revenue,
+                sessions: v.sessions
+            }));
+        }
+
+        return [];
+    }, [chartData, range]);
+
+    const chartConfig = {
+        revenue: { label: "Doanh thu", color: "#2563eb" },
+        sessions: { label: "Lượt sạc", color: "#f59e0b" },
+    } satisfies ChartConfig;
 
     return (
-        <section className="space-y-6" aria-labelledby="analytics-section">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col gap-1">
-                    <h2 id="analytics-section" className="text-xl font-semibold text-gray-900">
-                        Phân tích hiệu suất – {roleLabels[role]}
-                    </h2>
-                    <p className="text-sm text-gray-600 max-w-3xl">
-                        Nắm bắt các chỉ số vận hành chính: doanh thu, lượt sạc/cứu hộ theo thời gian và các chỉ số hiệu suất trọng yếu.
-                    </p>
+        <section className="space-y-8 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Tổng quan hoạt động</h2>
+                    <p className="text-sm text-gray-500 mt-1">Cập nhật số liệu kinh doanh và hiệu suất trạm sạc.</p>
                 </div>
-                <Select value={range} onValueChange={(value: TimeRange) => setRange(value)}>
-                    <SelectTrigger className="w-44">
-                        <SelectValue placeholder="Chọn phạm vi" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="7d">7 ngày</SelectItem>
-                        <SelectItem value="30d">30 ngày</SelectItem>
-                        <SelectItem value="90d">90 ngày</SelectItem>
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                    <Select value={range} onValueChange={(value: TimeRange) => setRange(value)}>
+                        <SelectTrigger className="w-[160px] h-9 text-sm flex flex-row items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <SelectValue placeholder="Chọn thời gian" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="7">7 ngày qua</SelectItem>
+                            <SelectItem value="30">30 ngày qua</SelectItem>
+                            <SelectItem value="90">3 tháng qua</SelectItem>
+                            <SelectItem value="365">1 năm qua</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm" className="h-9 px-3" onClick={handleRefresh}>
+                        <RefreshCcw className={`h-4 w-4 text-gray-500 ${isLoadingStats || isLoadingChart ? 'animate-spin' : ''}`} />
+                    </Button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {dataset.metrics.map((metric) => (
-                    <MetricCard key={metric.label} metric={metric} />
-                ))}
+            {/* Metric Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <ModernMetricCard
+                    title="Doanh thu hôm nay"
+                    value={formatCurrency(revenueStats?.dailyRevenue)}
+                    subValue={revenueStats?.monthlyGrowth ?? null}
+                    subLabel="so với tháng trước"
+                    icon={<TrendingUp className="h-5 w-5 text-white" />}
+                    color="bg-blue-600" isLoading={isLoadingStats} />
+
+                <ModernMetricCard
+                    title="Doanh thu tháng này"
+                    value={formatCurrency(revenueStats?.monthlyRevenue)}
+                    subValue={null}
+                    subLabel="Tháng hiện tại"
+                    icon={<Calendar className="h-5 w-5 text-white" />}
+                    color="bg-indigo-600"
+                    isLoading={isLoadingStats} />
+
+                <ModernMetricCard
+                    title="Doanh thu tháng trước"
+                    value={formatCurrency(revenueStats?.lastMonthRevenue)}
+                    subValue={null}
+                    subLabel="Đã chốt sổ"
+                    icon={<BarChart3 className="h-5 w-5 text-white" />}
+                    color="bg-slate-600"
+                    isLoading={isLoadingStats} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ChartCard
-                    title={role === "SUPPLIER" ? "Doanh thu trạm sạc" : "Doanh thu dịch vụ rescue"}
-                    subtitle="Triệu đồng"
-                    icon={<TrendingUp className="size-5 text-blue-600" />}
-                    series={dataset.revenueSeries}
-                />
-                <ChartCard
-                    title={role === "SUPPLIER" ? "Số phiên sạc" : "Số ca cứu hộ"}
-                    subtitle={role === "SUPPLIER" ? "Phiên" : "Ca"}
-                    icon={<BarChart3 className="size-5 text-indigo-600" />}
-                    series={dataset.sessionsSeries}
-                />
+            {/* Chart */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="mb-6">
+                    <h3 className="font-semibold text-gray-900 text-lg">Hiệu suất kinh doanh</h3>
+                    <p className="text-sm text-gray-500">Doanh thu và lượt sạc</p>
+                </div>
+                <div className="h-[400px] w-full">
+                    {isLoadingChart ? (
+                        <div className="h-full w-full flex items-center justify-center bg-gray-50 rounded-lg animate-pulse"><p className="text-gray-400 text-sm">Đang tải dữ liệu...</p></div>
+                    ) : processedChartData.length > 0 ? (
+                        <ChartContainer config={chartConfig} className="h-full w-full">
+                            <ComposedChart
+                                accessibilityLayer
+                                data={processedChartData}
+                                margin={{ left: 10, right: 10, top: 20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                                        <stop
+                                            offset="5%"
+                                            stopColor={chartConfig.revenue.color}
+                                            stopOpacity={0.3} />
+                                        <stop
+                                            offset="95%"
+                                            stopColor={chartConfig.revenue.color}
+                                            stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
+
+                                {/* Trục X: 30 ngày -> hiện label cách nhật */}
+                                <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={10}
+                                    minTickGap={30}
+                                    interval={range === "30" ? 1 : "preserveStartEnd"}
+                                    style={{ fontSize: '12px', fill: '#6b7280' }}
+                                />
+
+                                {/* Trục Y Trái: Doanh thu */}
+                                <YAxis
+                                    yAxisId="left"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                                    style={{ fontSize: '12px', fill: chartConfig.revenue.color }} />
+
+                                {/* Trục Y Phải: Lượt sạc */}
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    style={{ fontSize: '12px', fill: chartConfig.sessions.color }} />
+
+                                <ChartTooltip content={
+                                    <ChartTooltipContent labelFormatter={(value) =>
+                                        <span className="font-semibold text-gray-700">{value}</span>} />} />
+                                <ChartLegend />
+
+                                <Area
+                                    yAxisId="left"
+                                    dataKey="revenue"
+                                    type="monotone"
+                                    fill="url(#fillRevenue)"
+                                    stroke={chartConfig.revenue.color}
+                                    strokeWidth={3}
+                                    name="Doanh thu"
+                                    dot={false}
+                                    activeDot={{ r: 6 }} />
+                                <Line
+                                    yAxisId="right"
+                                    dataKey="sessions"
+                                    type="monotone"
+                                    stroke={chartConfig.sessions.color}
+                                    strokeWidth={2}
+                                    name="Lượt sạc"
+                                    dot={{ r: 3, fill: chartConfig.sessions.color }}
+                                    activeDot={{ r: 6 }} />
+                            </ComposedChart>
+                        </ChartContainer>
+                    ) : (
+                        <div className="h-full w-full flex items-center justify-center text-gray-400">Chưa có dữ liệu</div>
+                    )}
+                </div>
             </div>
         </section>
     );
 };
 
-const MetricCard: React.FC<{ metric: Metric }> = ({ metric }) => {
-    const isPositive = metric.delta >= 0;
-    const Icon = isPositive ? ArrowUpRight : ArrowDownRight;
-    return (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 flex flex-col gap-3">
-            <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">{metric.label}</p>
-                <p className="text-2xl font-semibold text-gray-900 mt-1">{metric.value}</p>
-            </div>
-            <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${isPositive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                }`}>
-                <Icon className="size-4" />
-                {Math.abs(metric.delta).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% so với kỳ trước
-            </div>
-            <p className="text-xs text-gray-500">{metric.description}</p>
-        </div>
-    );
-};
-
-const ChartCard: React.FC<{
-    title: string;
-    subtitle: string;
-    series: SeriesPoint[];
-    icon: React.ReactNode;
-}> = ({ title, subtitle, series, icon }) => {
-    const maxValue = Math.max(...series.map((point) => point.value), 1);
-    const points = series
-        .map((point, index) => {
-            const x = (index / (series.length - 1 || 1)) * 100;
-            const y = 100 - (point.value / maxValue) * 100;
-            return `${x},${y}`;
-        })
-        .join(" ");
-
-    return (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-                    <p className="text-xs text-gray-500">Đơn vị: {subtitle}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                    {icon}
-                </div>
-            </div>
-            <div className="relative h-48">
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-50/60 via-white to-white rounded-lg border border-dashed border-gray-200" />
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-3 w-[calc(100%-24px)] h-[calc(100%-24px)]">
-                    <polyline
-                        fill="none"
-                        stroke="url(#chartGradient)"
-                        strokeWidth={2.5}
-                        strokeLinecap="round"
-                        points={points}
-                    />
-                    <defs>
-                        <linearGradient id="chartGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="100">
-                            <stop offset="0%" stopColor="#2563eb" />
-                            <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.4} />
-                        </linearGradient>
-                    </defs>
-                </svg>
-                <div className="absolute inset-3 flex items-end justify-between">
-                    {series.map((point) => (
-                        <div key={point.label} className="text-[10px] text-gray-400">
-                            {point.label}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
 export default AnalyticsSection;
+
+const ModernMetricCard: React.FC<{
+    title: string;
+    value: string;
+    subValue: number | null;
+    subLabel: string;
+    icon: React.ReactNode;
+    color: string;
+    isLoading: boolean;
+}> = ({ title, value, subValue, subLabel, icon, color, isLoading }) => {
+    if (isLoading) return <div className="h-32 rounded-2xl bg-gray-50 animate-pulse border border-gray-100" />;
+    const isPositive = (subValue || 0) >= 0;
+    return (
+        <div className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-6 shadow-sm hover:shadow-md transition-all group">
+            <div className="flex items-start justify-between">
+                <div><p className="text-sm font-medium text-gray-500">{title}</p><h3 className="mt-2 text-2xl font-bold text-gray-900 tracking-tight">{value}</h3></div>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-sm ${color}`}>{icon}</div>
+            </div>
+            <div className="mt-4 flex items-center text-sm">
+                {subValue !== null && (<span className={`flex items-center font-medium ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>{isPositive ? <ArrowUpRight className="mr-1 h-4 w-4" /> : <ArrowDownRight className="mr-1 h-4 w-4" />}{Math.abs(subValue).toFixed(1)}%</span>)}
+                <span className={`text-gray-500 ${subValue !== null ? 'ml-2' : ''}`}>{subLabel}</span>
+            </div>
+        </div>
+    );
+};

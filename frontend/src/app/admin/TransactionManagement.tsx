@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { toast } from "sonner";
 import {
   Search, Filter, Calendar, CreditCard, User, Building, Banknote,
   ChevronLeft, ChevronRight, Eye, CheckCircle, XCircle, Clock,
-  Download, Shield
+  Shield
 } from "lucide-react";
 import {
   useGetTransactionsQuery,
@@ -36,9 +35,8 @@ export default function TransactionManagement() {
   // Redux API Hooks
   const { data: transactionsData, isLoading, isFetching } = useGetTransactionsQuery(filters);
 
-  // ✅ ĐÚNG: Parse response theo cấu trúc backend mới
-  const transactions = transactionsData?.data?.content || [];
-  const totalPages = transactionsData?.data?.totalPages || 0;
+  const transactions = transactionsData?.content || [];
+  const totalPages = transactionsData?.totalPages || 0;
 
   // Handlers
   const handleFilterChange = (key: keyof TransactionFilterParams, value: any) => {

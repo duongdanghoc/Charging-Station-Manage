@@ -1,12 +1,28 @@
 package com.example.charging_station_management.service.impl;
 
+import com.example.charging_station_management.dto.mapper.VendorStatsMapper;
 import com.example.charging_station_management.dto.request.TransactionFilterRequest;
+import com.example.charging_station_management.dto.response.ChartData;
 import com.example.charging_station_management.dto.response.TransactionDetailResponse;
 import com.example.charging_station_management.entity.converters.*;
+import com.example.charging_station_management.dto.response.VendorRevenueStats;
+import com.example.charging_station_management.entity.converters.Transaction;
+import com.example.charging_station_management.entity.enums.PaymentStatus;
 import com.example.charging_station_management.repository.TransactionRepository;
 import com.example.charging_station_management.service.TransactionService;
 import com.example.charging_station_management.repository.specification.TransactionSpecification;
 import lombok.RequiredArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final VendorStatsMapper vendorStatsMapper;
 
     @Override
     public Page<TransactionDetailResponse> getAllTransactions(
@@ -112,12 +129,99 @@ public class TransactionServiceImpl implements TransactionService {
 
                 // Connector info
                 .connectorId(connector != null ? connector.getId() : null)
-                .connectorType(connector != null && connector.getConnectorType() != null ?
-                        connector.getConnectorType().toString() : null)
+                .connectorType(connector != null && connector.getConnectorType() != null
+                        ? connector.getConnectorType().toString()
+                        : null)
 
                 // Pole info
                 .poleId(pole != null ? pole.getId() : null)
                 .poleManufacturer(pole != null ? pole.getManufacturer() : null)
                 .build();
+    }
+
+    private BigDecimal calculateTotalRevenue(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return transactions.stream()
+                .filter(t -> t.getAmount() != null)
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Override
+    public VendorRevenueStats getVendorRevenueStats(Integer vendorId) {
+        LocalDateTime now = LocalDateTime.now();
+
+        // 1. Xác định khung thời gian chuẩn xác
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = now.toLocalDate().atTime(LocalTime.MAX);
+
+        LocalDateTime startOfMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+        LocalDateTime endOfMonth = now.toLocalDate().atTime(LocalTime.MAX);
+
+        // Tháng trước: Từ ngày 1 tháng trước -> Giây cuối cùng của tháng trước
+        LocalDateTime startOfLastMonth = now.minusMonths(1).withDayOfMonth(1).toLocalDate().atStartOfDay();
+        LocalDateTime endOfLastMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay().minusSeconds(1);
+
+        // 2. Gọi Repo (Sử dụng hàm mới viết lại)
+        List<Transaction> dailyTxs = transactionRepository.findTransactionsByVendorAndDateRange(
+                vendorId, PaymentStatus.PAID, startOfDay, endOfDay);
+
+        List<Transaction> monthlyTxs = transactionRepository.findTransactionsByVendorAndDateRange(
+                vendorId, PaymentStatus.PAID, startOfMonth, endOfMonth);
+
+        List<Transaction> lastMonthTxs = transactionRepository.findTransactionsByVendorAndDateRange(
+                vendorId, PaymentStatus.PAID, startOfLastMonth, endOfLastMonth);
+
+        // 3. Tính toán
+        BigDecimal dailyRevenue = calculateTotalRevenue(dailyTxs);
+        BigDecimal monthlyRevenue = calculateTotalRevenue(monthlyTxs);
+        BigDecimal lastMonthRevenue = calculateTotalRevenue(lastMonthTxs);
+
+        // Mapping dữ liệu trả về
+        return vendorStatsMapper.toRevenueStats(dailyRevenue, monthlyRevenue, lastMonthRevenue);
+    }
+
+    @Override
+    public List<ChartData> getVendorChartData(Integer vendorId, int days) {
+        // Lấy dữ liệu đến hết ngày hiện tại
+        LocalDateTime endDate = LocalDateTime.now().toLocalDate().atTime(LocalTime.MAX);
+        // Lùi lại 'days' ngày bắt đầu từ 00:00:00
+        LocalDateTime startDate = LocalDateTime.now().minusDays(days - 1).toLocalDate().atStartOfDay();
+
+        // 1. Lấy toàn bộ transaction trong khoảng thời gian (Query 1 lần duy nhất)
+        List<Transaction> transactions = transactionRepository.findTransactionsByVendorAndDateRange(
+                vendorId, PaymentStatus.PAID, startDate, endDate);
+
+        // 2. Group by Date tại Service (Java Stream)
+        // Key: LocalDate, Value: List<Transaction> trong ngày đó
+        Map<LocalDate, List<Transaction>> groupedByDate = transactions.stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.getPaymentTime().toLocalDate()));
+
+        // 3. Loop tạo data cho biểu đồ (Fill gap - điền vào những ngày không có doanh
+        // thu)
+        List<ChartData> result = new ArrayList<>();
+        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd/MM");
+
+        for (int i = 0; i < days; i++) {
+            // Tính toán ngày đang xét trong vòng lặp
+            LocalDate loopDate = startDate.plusDays(i).toLocalDate();
+
+            // Lấy list transaction của ngày đó từ Map, nếu null thì trả về list rỗng
+            List<Transaction> txsInDay = groupedByDate.getOrDefault(loopDate, new ArrayList<>());
+
+            BigDecimal revenue = calculateTotalRevenue(txsInDay);
+            long sessionCount = txsInDay.size();
+
+            result.add(ChartData.builder()
+                    .date(loopDate.format(displayFormatter))
+                    .revenue(revenue)
+                    .sessions(sessionCount)
+                    .build());
+        }
+
+        return result;
     }
 }
