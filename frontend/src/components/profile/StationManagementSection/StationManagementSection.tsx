@@ -4,16 +4,13 @@ import React, { useState } from "react";
 import { ListIcon, MapIcon, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
+import dynamic from "next/dynamic"; // Giữ dynamic import
 
 import StationDetailSheet from "./StationDetailSheet";
 import StationListTable from "./StationListTable";
 import StationFormDialog from "./StationFormDialog";
 import ConfirmModal from "@/components/common/ConfirmModal";
-// ✅ GIỮ LẠI: ConnectorManagement
-import ConnectorManagement from "../ConnectorManagement"; 
-
-// ❌ ĐÃ XÓA: import StationMapList... (Vì đã dùng dynamic import bên dưới để tối ưu Map)
+import ConnectorManagement from "../ConnectorManagement"; // Giữ lại import ConnectorManagement
 
 import {
     useGetMyStationsQuery,
@@ -29,17 +26,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export type StationItem = Station;
 export type StationStatus = "ACTIVE" | "INACTIVE";
 
-// 👇 Dynamic Import cho Map (Giữ nguyên logic tối ưu này)
+// Dynamic Import cho Map (Giữ nguyên logic tối ưu này)
 const StationMapList = dynamic(
-  () => import("./StationMapList"), 
-  { 
-    ssr: false, // Ngăn render map trên server tránh lỗi window/document not found
-    loading: () => (
-        <div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-gray-400">
-            Đang tải bản đồ...
-        </div>
-    )
-  }
+    () => import("./StationMapList"),
+    {
+        ssr: false, // Ngăn render map trên server tránh lỗi window/document not found
+        loading: () => (
+            <div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-gray-400">
+                Đang tải bản đồ...
+            </div>
+        )
+    }
 );
 
 const StationManagementSection: React.FC = () => {

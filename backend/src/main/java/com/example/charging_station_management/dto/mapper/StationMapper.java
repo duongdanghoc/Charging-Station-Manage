@@ -10,6 +10,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
+import java.math.BigDecimal; // Đảm bảo import BigDecimal cho Helper method nếu cần
 
 @Mapper(componentModel = "spring")
 public interface StationMapper {
@@ -35,7 +36,7 @@ public interface StationMapper {
 
 
     // --- MAPPING CHARGING POLE ---
-    // 👇 Map ID của Station vào DTO response (QUAN TRỌNG)
+    // 👇 Map ID của Station vào DTO response (QUAN TRỌNG - Giữ lại từ nam2)
     @Mapping(source = "station.id", target = "stationId")
     // Lưu ý: source là "chargingConnectors" (tên trong Entity), target là "connectors" (tên trong DTO)
     @Mapping(source = "chargingConnectors", target = "connectors")

@@ -27,9 +27,9 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/stations")
+@RequestMapping("/api/stations") // SỬA LẠI: Dùng chung cho cả hệ thống
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*") // Giữ lại comment chi tiết từ main
 public class StationController {
 
     private final CustomerServiceImpl customerService;
@@ -37,7 +37,8 @@ public class StationController {
     private final ChargingPoleService chargingPoleService;
 
     /* =================================================================
-       1. PUBLIC / CUSTOMER API
+       1. PUBLIC / CUSTOMER API (Ai cũng truy cập được)
+       Url: /api/stations
     ================================================================= */
 
     @GetMapping
@@ -62,7 +63,7 @@ public class StationController {
         return ResponseEntity.ok(customerService.getStationById(id));
     }
 
-    // Endpoint lấy danh sách trụ (Code của bạn - Current)
+    // Endpoint lấy danh sách trụ (Code của bạn)
     @GetMapping("/{id}/poles")
     public ResponseEntity<BaseApiResponse<List<ChargingPoleResponse>>> getPolesByStationId(@PathVariable Integer id) {
         List<ChargingPoleResponse> poles = chargingPoleService.getAllPolesByStationId(id);
@@ -77,7 +78,8 @@ public class StationController {
     }
 
     /* =================================================================
-       2. VENDOR API
+       2. VENDOR API (Cần quyền VENDOR) // Giữ lại comment chi tiết từ main
+       Url: /api/stations
     ================================================================= */
 
     @PostMapping
@@ -113,23 +115,30 @@ public class StationController {
     }
 
     /* =================================================================
-       3. ADMIN API (Lấy từ Main - Incoming)
+       3. ADMIN API (Cần quyền ADMIN) // Giữ lại comment chi tiết từ main
+       Url: /api/stations/admin/...
     ================================================================= */
 
+    // Lưu ý: Url sẽ là /api/stations/admin/all // Giữ lại comment chi tiết từ main
     @GetMapping("/admin/all")
+    //@PreAuthorize("hasRole('ADMIN')") // Giữ lại annotation bị comment từ main
     public ResponseEntity<Page<StationResponse>> getAllStationsForAdmin(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(stationService.getAllStations(pageable));
     }
 
+    // Đổi trạng thái trạm // Giữ lại comment chi tiết từ main
     @PatchMapping("/admin/{id}/status")
+    //@PreAuthorize("hasRole('ADMIN')") // Giữ lại annotation bị comment từ main
     public ResponseEntity<Void> updateStatus(@PathVariable Integer id, @RequestParam String status) {
         Integer statusInt = StationStatus.fromString(status).getValue();
         stationService.updateStationStatus(id, statusInt);
         return ResponseEntity.ok().build();
     }
 
+    // Xóa trạm quyền Admin // Giữ lại comment chi tiết từ main
     @DeleteMapping("/admin/{id}")
+    //@PreAuthorize("hasRole('ADMIN')") // Giữ lại annotation bị comment từ main
     public ResponseEntity<Void> adminDeleteStation(@PathVariable Integer id) {
         stationService.adminDeleteStation(id);
         return ResponseEntity.noContent().build();

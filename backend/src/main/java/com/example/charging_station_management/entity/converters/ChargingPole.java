@@ -23,10 +23,10 @@ public class ChargingPole {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // 👇 MERGE: Chọn cấu hình tối ưu từ nhánh 'nam'
-    @ManyToOne(fetch = FetchType.LAZY)
+    // --- Quan hệ ManyToOne với Station (Giữ LAZY và JsonIgnore) ---
+    @ManyToOne(fetch = FetchType.LAZY) // Chọn LAZY để tối ưu hiệu năng
     @JoinColumn(name = "station_id", nullable = false)
-    @JsonIgnore
+    @JsonIgnore // Ngăn vòng lặp vô tận khi in JSON
     @ToString.Exclude
     private Station station;
 
@@ -42,9 +42,9 @@ public class ChargingPole {
 
     private LocalDate installDate;
 
-    // 👇 MERGE: Chọn cấu hình đầy đủ từ nhánh 'nam' (EAGER + orphanRemoval + Init List)
+    // --- Quan hệ OneToMany với Connector (Giữ cấu hình đầy đủ và khởi tạo List) ---
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private List<ChargingConnector> chargingConnectors = new ArrayList<>();
+    private List<ChargingConnector> chargingConnectors = new ArrayList<>(); // Khởi tạo để tránh NPE
 
     // Giữ lại tính năng Price
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -28,7 +28,7 @@ public class StationResponse {
     private Double averageRating;
     private Integer totalRatings;
     
-    // Các trường thống kê (Giữ lại code sạch)
+    // Các trường thống kê
     private String status2;
     private Integer ports;
     private BigDecimal revenue;

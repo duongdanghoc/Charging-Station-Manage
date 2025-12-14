@@ -9,7 +9,8 @@ import { adminApi } from "./services/adminApi";
 import authReducer from "./services/authSlice";
 import { stationApi } from "./services/stationApi";
 import { connectorApi } from "./services/connectorApi";
-// 👇 Import thêm từ nhánh 'nam'
+
+// Giữ lại imports mới từ nhánh 'nam2'
 import { priceApi } from "./services/priceApi";
 import { chargingPoleApi } from "./services/chargingPoleApi";
 
@@ -17,27 +18,27 @@ import { chargingPoleApi } from "./services/chargingPoleApi";
  * Configure and export the Redux store
  */
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    [authApi.reducerPath]: authApi.reducer,
-    [profileApi.reducerPath]: profileApi.reducer,
-    [adminApi.reducerPath]: adminApi.reducer,
-    [stationApi.reducerPath]: stationApi.reducer,
-    [connectorApi.reducerPath]: connectorApi.reducer,
-    // 👇 Thêm Reducer mới
-    [priceApi.reducerPath]: priceApi.reducer,
-    [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware()
-      .concat(authApi.middleware)
-      .concat(profileApi.middleware)
-      .concat(adminApi.middleware)
-      .concat(stationApi.middleware)
-      .concat(connectorApi.middleware)
-      // 👇 Thêm Middleware mới
-      .concat(priceApi.middleware)
-      .concat(chargingPoleApi.middleware),
+    reducer: {
+        auth: authReducer,
+        [authApi.reducerPath]: authApi.reducer,
+        [profileApi.reducerPath]: profileApi.reducer,
+        [adminApi.reducerPath]: adminApi.reducer,
+        [stationApi.reducerPath]: stationApi.reducer,
+        [connectorApi.reducerPath]: connectorApi.reducer,
+        // Thêm Reducer mới
+        [priceApi.reducerPath]: priceApi.reducer,
+        [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
+    },
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware()
+            .concat(authApi.middleware)
+            .concat(profileApi.middleware)
+            .concat(adminApi.middleware)
+            .concat(stationApi.middleware)
+            .concat(connectorApi.middleware)
+            // Thêm Middleware mới
+            .concat(priceApi.middleware)
+            .concat(chargingPoleApi.middleware),
 });
 
 // Enable refetchOnFocus and refetchOnReconnect
