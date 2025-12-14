@@ -311,6 +311,11 @@ export const profileApi = createApi({
       transformResponse: (response: BaseResponse<ChartData[]>) => response.data,
       providesTags: ["Profile"],
     }),
+    getVendorChartDataByRange: builder.query<ChartData[], { from: string; to: string }>({
+      query: ({ from, to }) => `/api/vendor/stats/chart/range?from=${from}&to=${to}`,
+      transformResponse: (response: BaseResponse<ChartData[]>) => response.data,
+      providesTags: ["Profile"],
+    }),
   }),
 });
 
@@ -331,4 +336,5 @@ export const {
   useGetTransactionsQuery,
   useGetVendorRevenueStatsQuery,
   useGetVendorChartDataQuery,
+  useGetVendorChartDataByRangeQuery,
 } = profileApi;

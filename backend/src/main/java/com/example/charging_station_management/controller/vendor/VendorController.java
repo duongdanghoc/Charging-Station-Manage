@@ -10,6 +10,8 @@ import com.example.charging_station_management.utils.helper.UserHelper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -17,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -95,5 +98,18 @@ public class VendorController {
 
         List<ChartData> data = transactionService.getVendorChartData(currentVendor.getId(), days);
         return ResponseEntity.ok(BaseApiResponse.success(data, "Lấy dữ liệu biểu đồ thành công"));
+    }
+
+    @GetMapping("/stats/chart/range")
+    public ResponseEntity<BaseApiResponse<List<ChartData>>> getChartDataByRange(
+            @RequestParam("from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam("to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        log.info("API Hit: /stats/chart/range with from={}, to={}", from, to);
+
+        Vendor currentVendor = getCurrentVendor();
+
+        List<ChartData> data = transactionService.getVendorChartDataByDateRange(currentVendor.getId(), from, to);
+        return ResponseEntity.ok(BaseApiResponse.success(data, "Lấy dữ liệu biểu đồ theo khoảng thời gian thành công"));
     }
 }
