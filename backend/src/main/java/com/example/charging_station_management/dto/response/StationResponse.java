@@ -30,7 +30,8 @@ public class StationResponse {
     
     // Các trường thống kê
     private String status2;
-    private Integer ports;
     private BigDecimal revenue;
-    private Integer poles;
+    private Integer poles;       // Số lượng trụ
+    private Integer ports;       // Tổng số đầu sạc
+    private Integer activePorts; // 👇 MỚI: Số đầu sạc sẵn sàng (AVAILABLE)
 }

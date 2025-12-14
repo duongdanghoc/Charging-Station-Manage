@@ -28,8 +28,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ConnectorServiceImpl implements ConnectorService {
 
-    private static final int MAX_CONNECTORS_LIMIT = 2; 
-
+    // ❌ Đã xóa MAX_CONNECTORS_LIMIT = 2 vì giờ lấy động từ Pole
     private final ChargingConnectorRepository connectorRepository;
     private final ChargingPoleRepository poleRepository;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -49,14 +48,17 @@ public class ConnectorServiceImpl implements ConnectorService {
 
         List<ChargingConnector> existingConnectors = connectorRepository.findByPoleId(pole.getId());
         
-        // 👇 SỬA QUAN TRỌNG: Chỉ đếm những connector chưa bị xóa mềm (Status != OUTOFSERVICE)
+        // Đếm số lượng connector đang hoạt động
         long activeCount = existingConnectors.stream()
                 .filter(c -> c.getStatus() != ConnectorStatus.OUTOFSERVICE)
                 .count();
         
-        if (activeCount >= MAX_CONNECTORS_LIMIT) {
+        // 👇 CẬP NHẬT: So sánh với pole.getMaxConnectors() thay vì số cứng 2
+        int limit = pole.getMaxConnectors() != null ? pole.getMaxConnectors() : 2;
+
+        if (activeCount >= limit) {
             log.error("Pole {} has reached maximum connector count", pole.getId());
-            throw new RuntimeException("Pole đã đạt số lượng connector tối đa: " + MAX_CONNECTORS_LIMIT);
+            throw new RuntimeException("Pole đã đạt số lượng connector tối đa: " + limit);
         }
 
         if (request.getMaxPower().compareTo(pole.getMaxPower()) > 0) {
@@ -73,10 +75,8 @@ public class ConnectorServiceImpl implements ConnectorService {
         ChargingConnector savedConnector = connectorRepository.save(connector);
         log.info("Connector created successfully with ID: {}", savedConnector.getId());
 
-        // Cập nhật lại số lượng connector đang hoạt động vào Pole
-        // (Cast long về int)
-        pole.setConnectorCount((int) activeCount + 1);
-        poleRepository.save(pole);
+        // ❌ ĐÃ XÓA ĐOẠN setConnectorCount VÌ BIẾN NÀY KHÔNG CÒN TỒN TẠI
+        // Số lượng hiện tại sẽ được tính toán (count) mỗi khi cần dùng.
 
         return mapToConnectorResponse(savedConnector);
     }
@@ -135,7 +135,6 @@ public class ConnectorServiceImpl implements ConnectorService {
         ChargingConnector connector = connectorRepository.findByIdAndVendorId(connectorId, vendorId)
                 .orElseThrow(() -> new RuntimeException("Connector không tồn tại hoặc bạn không có quyền truy cập"));
 
-        // 1. Chặn nếu đang sạc
         if (connector.getStatus() == ConnectorStatus.INUSE) {
             throw new RuntimeException("Không thể xóa đầu sạc đang ở trạng thái 'Đang sạc' (INUSE). Vui lòng kết thúc phiên sạc trước.");
         }
@@ -144,24 +143,20 @@ public class ConnectorServiceImpl implements ConnectorService {
             throw new RuntimeException("Hệ thống phát hiện đầu sạc đang có phiên hoạt động. Không thể xóa.");
         }
 
-        Integer poleId = connector.getPole().getId();
+        // Integer poleId = connector.getPole().getId(); // Không cần poleId nữa vì không update count
         boolean hasHistory = connector.getChargingSessions() != null && !connector.getChargingSessions().isEmpty();
 
         if (hasHistory) {
-            // Soft Delete: Chuyển trạng thái sang OUTOFSERVICE
             log.info("Connector {} has history. Switching to OUTOFSERVICE.", connectorId);
             connector.setStatus(ConnectorStatus.OUTOFSERVICE);
             connectorRepository.save(connector);
-            
-            // Lưu ý: Không cần giảm connector_count ở đây, vì hàm createConnector ở trên 
-            // sẽ tự động tính toán lại dựa trên (Total - OUTOFSERVICE) khi thêm mới.
         } else {
-            // Hard Delete: Xóa vĩnh viễn bằng SQL
             connectorRepository.deleteHard(connectorId);
             log.info("Connector {} deleted successfully (Hard Delete)", connectorId);
             
-            // Giảm số lượng connector trên Pole
-            poleRepository.decrementConnectorCount(poleId);
+            // ❌ ĐÃ XÓA: poleRepository.decrementConnectorCount(poleId);
+            // Vì nếu gọi hàm này, nó sẽ trừ vào cột connector_count (đang lưu Max Capacity) 
+            // dẫn đến làm giảm dung lượng tối đa của trụ -> SAI LOGIC.
         }
     }
 

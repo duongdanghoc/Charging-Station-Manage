@@ -9,4 +9,5 @@ public class UpdateChargingPoleRequest {
     private String manufacturer;
     private BigDecimal maxPower;
     private LocalDate installDate;
+    private Integer maxConnectors;
 }

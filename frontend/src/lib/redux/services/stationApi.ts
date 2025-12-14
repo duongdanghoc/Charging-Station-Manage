@@ -2,7 +2,6 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // --- CÁC INTERFACE DỮ LIỆU ---
 
-// Wrapper cho response từ Backend
 export interface BaseApiResponse<T> {
   code: number;
   message: string;
@@ -11,14 +10,14 @@ export interface BaseApiResponse<T> {
 
 export interface ChargingConnector {
   id: number;
-  connectorType: string; // TYPE1, TYPE2, CCS...
+  connectorType: string;
   maxPower: number;
   status: "AVAILABLE" | "INUSE" | "OUTOFSERVICE";
 }
 
 export interface ChargingPole {
   id: number;
-  stationId?: number; // Thêm field này cho đầy đủ (tùy backend trả về)
+  stationId?: number;
   manufacturer: string;
   maxPower: number;
   connectorCount: number;
@@ -31,6 +30,7 @@ export interface UpdateChargingPoleRequest {
   maxPower?: number;
   maxConnectors?: number;
   installDate?: string;
+  connectors: ChargingConnector[];
 }
 
 export interface Station {
@@ -45,8 +45,11 @@ export interface Station {
   status: number;
   type: "CAR" | "MOTORBIKE" | "BICYCLE";
   vendorName?: string;
-  // 👇 QUAN TRỌNG: poles là number (số lượng)
   poles: number;
+  
+  // 👇 CẬP NHẬT: Thêm 2 trường mới để hiển thị thống kê chính xác
+  ports: number;       // Tổng số đầu sạc
+  activePorts: number; // Số đầu sạc đang sẵn sàng
 }
 
 export interface CreateStationRequest {
@@ -60,7 +63,6 @@ export interface CreateStationRequest {
   addressDetail: string;
 }
 
-// Interface cho request tạo trụ sạc
 export interface CreateChargingPoleRequest {
   stationId: number;
   manufacturer: string;
@@ -69,7 +71,6 @@ export interface CreateChargingPoleRequest {
   installDate?: string;
 }
 
-// Interface cho request tạo đầu sạc
 export interface CreateConnectorRequest {
   poleId: number;
   connectorType: string;
@@ -103,7 +104,6 @@ export const stationApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     prepareHeaders: (headers) => {
-      // 👇 SỬA LỖI WINDOW: Chỉ gọi localStorage khi ở Client
       if (typeof window !== "undefined") {
         const token = localStorage.getItem("authToken");
         if (token) {
@@ -113,14 +113,12 @@ export const stationApi = createApi({
       return headers;
     },
   }),
-  // 👇 THÊM "Poles" VÀO ĐÂY
   tagTypes: ["Stations", "Poles"],
   endpoints: (builder) => ({
 
     // 1. Lấy danh sách trạm
     getMyStations: builder.query<PageResponse<Station>, StationFilterParams>({
       query: (params) => {
-        // Build query string
         const qs = new URLSearchParams();
         qs.append("page", params.page.toString());
         qs.append("size", params.size.toString());
@@ -177,7 +175,6 @@ export const stationApi = createApi({
         method: "POST",
         body,
       }),
-      // 👇 Invalidate cả Stations (để cập nhật số lượng) và Poles (để cập nhật list chi tiết)
       invalidatesTags: ["Stations", "Poles"],
     }),
 
@@ -209,7 +206,8 @@ export const stationApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Poles"], // Cập nhật lại list trụ để hiện connector mới
+      // 👇 Quan trọng: Reload cả Poles (chi tiết) và Stations (để cập nhật số lượng connectors bên ngoài)
+      invalidatesTags: ["Poles", "Stations"], 
     }),
 
     // 10. Xóa đầu sạc
@@ -218,15 +216,15 @@ export const stationApi = createApi({
         url: `/api/vendor/connectors/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Poles"],
+      // 👇 Quan trọng: Reload cả Poles và Stations
+      invalidatesTags: ["Poles", "Stations"],
     }),
 
-    // 👇 11. API Lấy danh sách trụ theo trạm (QUAN TRỌNG)
+    // 11. API Lấy danh sách trụ theo trạm
     getPolesByStationId: builder.query<BaseApiResponse<ChargingPole[]>, number>({
-  query: (stationId) => `/api/stations/${stationId}/poles`,
-  providesTags: (result, error, id) => [{ type: "Poles", id }],
-}),
-
+      query: (stationId) => `/api/stations/${stationId}/poles`,
+      providesTags: (result, error, id) => [{ type: "Poles", id }],
+    }),
 
     // Get customer's vehicles
     getCustomerVehicles: builder.query<any[], void>({
@@ -253,6 +251,5 @@ export const {
   useCreateConnectorMutation,
   useDeleteConnectorMutation,
 
-  // 👇 Đừng quên Export cái này
   useGetPolesByStationIdQuery,
 } = stationApi;

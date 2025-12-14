@@ -1,5 +1,6 @@
 package com.example.charging_station_management.service.impl;
 
+import com.example.charging_station_management.dto.mapper.StationMapper;
 import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
 import com.example.charging_station_management.dto.response.StationResponse;
@@ -7,8 +8,8 @@ import com.example.charging_station_management.entity.converters.Location;
 import com.example.charging_station_management.entity.converters.Station;
 import com.example.charging_station_management.entity.converters.User;
 import com.example.charging_station_management.entity.converters.Vendor;
-import com.example.charging_station_management.entity.enums.StationStatus;
 import com.example.charging_station_management.entity.enums.SessionStatus;
+import com.example.charging_station_management.entity.enums.StationStatus;
 import com.example.charging_station_management.entity.enums.VehicleType;
 import com.example.charging_station_management.exception.ResourceNotFoundException;
 import com.example.charging_station_management.repository.ChargingSessionRepository;
@@ -17,18 +18,16 @@ import com.example.charging_station_management.repository.StationRepository;
 import com.example.charging_station_management.repository.specification.StationSpecification;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.utils.helper.UserHelper;
-import com.example.charging_station_management.dto.mapper.StationMapper;
 import lombok.RequiredArgsConstructor;
-
-import java.math.BigDecimal;
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -45,9 +44,6 @@ public class StationServiceImpl implements StationService {
     // HELPER METHODS
     // =========================================================================
 
-    /**
-     * Lấy Vendor hiện tại từ SecurityContext
-     */
     private Vendor getCurrentVendor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
@@ -248,8 +244,9 @@ public class StationServiceImpl implements StationService {
 
             if (station.getChargingPoles() != null) {
                 totalPoles = station.getChargingPoles().size();
+                // 👇 ĐÃ SỬA: Đếm từ list connectors thay vì gọi getConnectorCount() (biến đã xóa)
                 totalPorts = station.getChargingPoles().stream()
-                        .mapToInt(pole -> pole.getConnectorCount() != null ? pole.getConnectorCount() : 0)
+                        .mapToInt(pole -> pole.getChargingConnectors() != null ? pole.getChargingConnectors().size() : 0)
                         .sum();
             }
 

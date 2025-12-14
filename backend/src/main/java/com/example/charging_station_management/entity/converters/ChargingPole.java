@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
@@ -23,11 +24,12 @@ public class ChargingPole {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // --- Quan hệ ManyToOne với Station (Giữ LAZY và JsonIgnore) ---
-    @ManyToOne(fetch = FetchType.LAZY) // Chọn LAZY để tối ưu hiệu năng
+    // --- Quan hệ ManyToOne với Station ---
+    @ManyToOne(fetch = FetchType.LAZY) 
     @JoinColumn(name = "station_id", nullable = false)
-    @JsonIgnore // Ngăn vòng lặp vô tận khi in JSON
+    @JsonIgnore 
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude // Ngăn chặn lỗi StackOverflow do Lombok
     private Station station;
 
     @Column(nullable = false)
@@ -36,17 +38,21 @@ public class ChargingPole {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal maxPower;
 
-    // Số lượng đầu sạc HIỆN TẠI
-    @Column(nullable = false)
-    private Integer connectorCount = 0;
+    // 👇 QUAN TRỌNG: Map biến này vào cột 'connector_count' có sẵn trong DB
+    // để lưu giới hạn số lượng đầu sạc mà không cần tạo cột mới trong DB.
+    @Column(name = "connector_count", nullable = false)
+    private Integer maxConnectors = 2;
+
+    // ❌ Đã xóa biến connectorCount để tránh lỗi "Repeated column mapping"
+    // (Vì cột connector_count giờ đã được dùng cho maxConnectors ở trên)
 
     private LocalDate installDate;
 
-    // --- Quan hệ OneToMany với Connector (Giữ cấu hình đầy đủ và khởi tạo List) ---
+    // --- Quan hệ OneToMany với Connector ---
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private List<ChargingConnector> chargingConnectors = new ArrayList<>(); // Khởi tạo để tránh NPE
+    private List<ChargingConnector> chargingConnectors = new ArrayList<>();
 
-    // Giữ lại tính năng Price
+    // --- Quan hệ OneToMany với Price ---
     @OneToMany(mappedBy = "pole", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Price> prices = new ArrayList<>();
 }
