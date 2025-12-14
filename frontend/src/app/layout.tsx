@@ -13,10 +13,9 @@ import MobileMenu from "@/components/MobileMenu";
 import NavbarShadow from "./_NavbarShadow";
 import ProfileUpdater from "@/components/profile/ProfileUpdater";
 import { Toaster } from "@/components/ui/sonner";
-import MapHeader from "@/components/MapHeader";
-import MAP_LINKS from '@/config/mapLinks';
 import Script from 'next/script';
 import ScrollHeader from "@/components/ScrollHeader";
+import ClientAuthGuard from "./_ClientAuthGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,6 +47,7 @@ export default function RootLayout({
     { href: "/map?view=trackAsiaTraffic", label: "Track Asia Traffic" },
     { href: "/map?view=guide", label: "Hướng dẫn" },
   ];
+  
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body
@@ -60,57 +60,59 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <ReduxProvider>
-          <ProfileUpdater />
-          <NavbarShadow />
-          {/* Navigation Header */}
-          <ScrollHeader className="fixed w-full z-50">
-            <nav
-              className="w-full backdrop-blur-[20px] border-b-1 border-gray-200 transition-shadow duration-500"
-              id="navbar"
-            >
-              <div className="container mx-auto px-4 max-w-7xl">
-                <div className="flex justify-between h-16 items-center">
-                  {/* Left side: Logo and navigation links */}
-                  <div className="flex items-center">
-                    {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3">
-                      <Image
-                        src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.svg"}
-                        alt="WAYO Logo"
-                        width={32}
-                        height={32}
-                        className="rounded-md"
-                      />
-                      <span className="font-semibold text-xl">WAYO</span>
-                    </Link>
+          <ClientAuthGuard>
+            <ProfileUpdater />
+            <NavbarShadow />
+            {/* Navigation Header */}
+            <ScrollHeader className="fixed w-full z-50">
+              <nav
+                className="w-full backdrop-blur-[20px] border-b-1 border-gray-200 transition-shadow duration-500"
+                id="navbar"
+              >
+                <div className="container mx-auto px-4 max-w-7xl">
+                  <div className="flex justify-between h-16 items-center">
+                    {/* Left side: Logo and navigation links */}
+                    <div className="flex items-center">
+                      {/* Logo */}
+                      <Link href="/" className="flex items-center gap-3">
+                        <Image
+                          src={process.env.NEXT_PUBLIC_LOGO_WAYO || "/favicon.svg"}
+                          alt="WAYO Logo"
+                          width={32}
+                          height={32}
+                          className="rounded-md"
+                        />
+                        <span className="font-semibold text-xl">WAYO</span>
+                      </Link>
 
-                    {/* Desktop Navigation Links (map-aware) */}
-                    {/* TODO bổ sung các header tại đây*/}
-                    {/* <MapHeader defaultLinks={navLinks} mapLinks={MAP_LINKS} /> */}
-                  </div>
-
-                  {/* User navigation and mobile menu */}
-                  <div className="flex items-center">
-                    {/* Desktop Auth Navigation */}
-                    <div className="hidden md:block">
-                      <DesktopLoginsSignups />
+                      {/* Desktop Navigation Links (map-aware) */}
+                      {/* TODO bổ sung các header tại đây*/}
+                      {/* <MapHeader defaultLinks={navLinks} mapLinks={MAP_LINKS} /> */}
                     </div>
 
-                    {/* Mobile Menu Button */}
-                    <div className="md:hidden">
-                      <MobileMenu />
+                    {/* User navigation and mobile menu */}
+                    <div className="flex items-center">
+                      {/* Desktop Auth Navigation */}
+                      <div className="hidden md:block">
+                        <DesktopLoginsSignups />
+                      </div>
+
+                      {/* Mobile Menu Button */}
+                      <div className="md:hidden">
+                        <MobileMenu />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </nav>
-          </ScrollHeader>
+              </nav>
+            </ScrollHeader>
 
-          <main className="pt-16">{children}</main>
+            <main className="pt-16">{children}</main>
 
-          {/* Footer */}
-          {/* <Footer /> */}
-          <Toaster />
+            {/* Footer */}
+            {/* <Footer /> */}
+            <Toaster />
+          </ClientAuthGuard>
         </ReduxProvider>
       </body>
     </html>

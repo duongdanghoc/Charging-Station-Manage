@@ -18,12 +18,32 @@ interface JwtPayload {
 }
 
 /**
+ * Get dashboard URL based on role
+ */
+function getDashboardUrl(role: string): string {
+  const normalizedRole = role.toUpperCase().replace("ROLE_", "");
+  
+  switch (normalizedRole) {
+    case "ADMIN":
+      return "/admin";
+    case "VENDOR":
+      return "/vendor/dashboard";
+    case "CUSTOMER":
+      return "/customer/dashboard";
+    default:
+      console.warn(`Unknown role: ${role}, redirecting to customer dashboard`);
+      return "/customer/dashboard";
+  }
+}
+
+/**
  * Login form content component
  */
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
+  const resetSuccess = searchParams.get("reset");
   const [login, { isLoading, error }] = useLoginMutation();
 
   const [credentials, setCredentials] = useState<LoginCredentials & {
@@ -35,12 +55,15 @@ function LoginContent() {
   });
 
   const [successMessage, setSuccessMessage] = useState("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     if (registered === "success") {
       setSuccessMessage("Đăng ký thành công! Vui lòng đăng nhập.");
+    } else if (resetSuccess === "success") {
+      setSuccessMessage("Đặt lại mật khẩu thành công! Vui lòng đăng nhập.");
     }
-  }, [registered]);
+  }, [registered, resetSuccess]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value, type, checked } = e.target;
@@ -53,60 +76,81 @@ function LoginContent() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
 
+    if (isRedirecting) {
+      console.log("Already redirecting, ignoring duplicate submit");
+      return;
+    }
+
     try {
+      setIsRedirecting(true);
+
       const result = await login({
         email: credentials.email,
         password: credentials.password,
       }).unwrap();
 
-      console.log("Login response:", result);
+      console.log("✅ Login response:", result);
 
       if (!result || !result.token) {
         throw new Error("Invalid login response - missing token");
       }
 
-      // ✅ Decode JWT to get user info
+      // Decode JWT to get user info
       const decoded = jwtDecode<JwtPayload>(result.token);
-      console.log("Decoded JWT:", decoded);
+      console.log("✅ Decoded JWT:", decoded);
 
-      // Save token
-      localStorage.setItem("authToken", result.token);
-
-      // ✅ Save user info (from JWT)
-      localStorage.setItem("user", JSON.stringify({
+      // Prepare user data
+      const userData = {
         id: decoded.id,
         email: decoded.sub,
         name: decoded.name,
         phone: decoded.phone,
         role: decoded.role,
-      }));
+      };
 
-      console.log("Login successful, redirecting...");
+      // Save to localStorage SYNCHRONOUSLY before redirect
+      localStorage.setItem("authToken", result.token);
+      localStorage.setItem("user", JSON.stringify(userData));
 
-      // Redirect based on role (replace to prevent navigation history issues)
-      if (decoded.role === "VENDOR") {
-        router.replace("/vendor/dashboard");
-      } else if (decoded.role === "ADMIN" || decoded.role === "ROLE_ADMIN") { // Thêm dòng này
-        router.replace("/admin");
-      } else {
-        router.replace("/customer/dashboard");
-      }
+      console.log("✅ Saved to localStorage:", {
+        token: result.token.substring(0, 20) + "...",
+        user: userData
+      });
+
+      // Determine redirect URL
+      const redirectUrl = getDashboardUrl(decoded.role);
+      console.log(`✅ Redirecting to: ${redirectUrl} (role: ${decoded.role})`);
+
+      // Small delay to ensure localStorage is written
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Use window.location for more reliable redirect
+      window.location.href = redirectUrl;
+
+      // Fallback to router.replace after delay
+      setTimeout(() => {
+        router.replace(redirectUrl);
+      }, 200);
+
     } catch (err: unknown) {
-      console.error("Đăng nhập thất bại:", err);
+      console.error("❌ Đăng nhập thất bại:", err);
+      setIsRedirecting(false);
 
       if (err && typeof err === "object" && "status" in err) {
-        const error = err as { status?: string; data?: { message?: string } };
+        const error = err as { status?: string; data?: { message?: string; error?: string } };
 
         if (error.status === "FETCH_ERROR") {
           alert(
             "❌ Không thể kết nối đến server!\n\n" +
               "✅ Kiểm tra:\n" +
-                  "1. Backend đang chạy? (port 8080)\n" +
-                  "2. File .env.local có NEXT_PUBLIC_API_BASE_URL=http://localhost:8080?\n" +
+              "1. Backend đang chạy? (port 8080)\n" +
+              "2. File .env.local có NEXT_PUBLIC_API_BASE_URL=http://localhost:8080?\n" +
               "3. CORS đã cấu hình?"
           );
         } else if (error.data?.message) {
           alert("Đăng nhập thất bại: " + error.data.message);
+        } else if (error.data?.error) {
+          alert("Đăng nhập thất bại: " + error.data.error);
         }
       }
     }
@@ -116,7 +160,7 @@ function LoginContent() {
     if (!error) return null;
 
     if (isErrorWithData(error)) {
-      return error.data.message || "Email hoặc mật khẩu không hợp lệ";
+      return error.data.message || error.data.error || "Email hoặc mật khẩu không hợp lệ";
     }
 
     if ("error" in error) {
@@ -164,6 +208,19 @@ function LoginContent() {
               </div>
             )}
 
+            {/* Redirecting message */}
+            {isRedirecting && (
+              <div className="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 text-sm">
+                <div className="flex items-center">
+                  <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Đang chuyển hướng...
+                </div>
+              </div>
+            )}
+
             {/* Email field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -175,7 +232,8 @@ function LoginContent() {
                 type="email"
                 autoComplete="email"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isRedirecting}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                 placeholder="example@email.com"
                 value={credentials.email}
                 onChange={handleChange}
@@ -193,7 +251,8 @@ function LoginContent() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isRedirecting}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                 placeholder="••••••••"
                 value={credentials.password}
                 onChange={handleChange}
@@ -207,6 +266,7 @@ function LoginContent() {
                   id="rememberMe"
                   name="rememberMe"
                   type="checkbox"
+                  disabled={isRedirecting}
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
                   checked={credentials.rememberMe}
                   onChange={handleChange}
@@ -215,7 +275,10 @@ function LoginContent() {
                   Ghi nhớ tôi
                 </label>
               </div>
-              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800 underline">
+              <Link 
+                href="/forgot-password" 
+                className={`text-sm text-blue-600 hover:text-blue-800 underline ${isRedirecting ? 'pointer-events-none opacity-50' : ''}`}
+              >
                 Quên mật khẩu?
               </Link>
             </div>
@@ -223,10 +286,10 @@ function LoginContent() {
             {/* Submit button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isRedirecting}
               className="w-full py-2.5 px-4 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isLoading || isRedirecting ? (
                 <span className="flex items-center justify-center">
                   <svg
                     className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -248,7 +311,7 @@ function LoginContent() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Đang đăng nhập...
+                  {isRedirecting ? "Đang chuyển hướng..." : "Đang đăng nhập..."}
                 </span>
               ) : (
                 "Đăng nhập"
@@ -261,7 +324,10 @@ function LoginContent() {
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
             Chưa có tài khoản?{" "}
-            <Link href="/register" className="text-blue-600 hover:text-blue-800 font-medium underline">
+            <Link 
+              href="/register" 
+              className={`text-blue-600 hover:text-blue-800 font-medium underline ${isRedirecting ? 'pointer-events-none opacity-50' : ''}`}
+            >
               Đăng ký ngay
             </Link>
           </p>
