@@ -92,12 +92,19 @@ public class SecurityConfig {
 
                         // 3. Authenticated Auth endpoints (Đổi pass, xem profile...)
                         // QUAN TRỌNG: Phải đặt trước wildcard /api/auth/** nếu có
-                        .requestMatchers("/api/auth/me", "/api/auth/logout", "/api/auth/change-password").authenticated()
+                        .requestMatchers("/api/auth/me", "/api/auth/logout")
+                        .permitAll()
+
+                        .requestMatchers(
+                                "/api/auth/forgot-password",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password")
+                        .permitAll()
 
                         // 4. ADMIN endpoints (Bảo vệ nghiêm ngặt nhất)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/stations/admin/**").hasRole("ADMIN")
-                        
+
                         // 5. VENDOR endpoints
                         .requestMatchers(HttpMethod.GET, "/api/stations/**").permitAll()
                         .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR")

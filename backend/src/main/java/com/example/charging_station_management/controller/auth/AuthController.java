@@ -1,8 +1,6 @@
 package com.example.charging_station_management.controller.auth;
 
-import com.example.charging_station_management.dto.request.ChangePasswordRequest;
-import com.example.charging_station_management.dto.request.LoginRequest;
-import com.example.charging_station_management.dto.request.RegisterRequest;
+import com.example.charging_station_management.dto.request.*;
 import com.example.charging_station_management.dto.response.ChangePasswordResponse;
 import com.example.charging_station_management.dto.response.JwtResponse;
 import com.example.charging_station_management.dto.response.RegisterResponse;
@@ -114,6 +112,44 @@ public class AuthController {
     /**
      * Change password for authenticated user
      */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            BindingResult bindingResult) {
+
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = new HashMap<>();
+            bindingResult.getFieldErrors()
+                    .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
+            return ResponseEntity.badRequest().body(Map.of("errors", errors));
+        }
+
+        authService.forgotPassword(request.getEmail());
+
+        return ResponseEntity.ok(
+                Map.of("message", "Vui lòng kiểm tra email để đặt lại mật khẩu"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request,
+            BindingResult bindingResult) {
+
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = new HashMap<>();
+            bindingResult.getFieldErrors()
+                    .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
+            return ResponseEntity.badRequest().body(Map.of("errors", errors));
+        }
+
+        authService.resetPassword(
+                request.getToken(),
+                request.getNewPassword());
+
+        return ResponseEntity.ok(
+                Map.of("message", "Đặt lại mật khẩu thành công"));
+    }
+
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
@@ -130,17 +166,15 @@ public class AuthController {
 
             if (bindingResult.hasErrors()) {
                 Map<String, String> errors = new HashMap<>();
-                bindingResult.getFieldErrors().forEach(error ->
-                        errors.put(error.getField(), error.getDefaultMessage())
-                );
+                bindingResult.getFieldErrors()
+                        .forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
                 log.warn("Validation errors for change password: {}", errors);
                 return ResponseEntity.badRequest().body(Map.of("errors", errors));
             }
 
             ChangePasswordResponse response = authService.changePassword(
                     userDetails.getId(),
-                    request
-            );
+                    request);
 
             return ResponseEntity.ok(response);
 
@@ -153,4 +187,5 @@ public class AuthController {
                     .body(Map.of("error", "Có lỗi xảy ra khi đổi mật khẩu"));
         }
     }
+
 }
