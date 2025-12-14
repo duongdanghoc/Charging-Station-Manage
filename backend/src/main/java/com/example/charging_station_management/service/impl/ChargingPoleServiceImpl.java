@@ -7,6 +7,7 @@ import com.example.charging_station_management.dto.response.ChargingPoleResponse
 import com.example.charging_station_management.entity.converters.ChargingPole;
 import com.example.charging_station_management.entity.converters.Station;
 import com.example.charging_station_management.entity.converters.Vendor;
+import com.example.charging_station_management.entity.enums.ConnectorStatus;
 import com.example.charging_station_management.exception.ResourceNotFoundException;
 import com.example.charging_station_management.repository.ChargingPoleRepository;
 import com.example.charging_station_management.repository.StationRepository;
@@ -51,9 +52,18 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
         ChargingPole pole = new ChargingPole();
         pole.setStation(station);
         pole.setManufacturer(request.getManufacturer());
+        
+        // Xử lý maxPower
         pole.setMaxPower(BigDecimal.valueOf(request.getMaxPower())); 
+        
+        // Lưu giới hạn số lượng đầu sạc (map vào cột connector_count cũ trong DB)
+        Integer maxConnectors = request.getMaxConnectors() != null ? request.getMaxConnectors() : 2;
+        pole.setMaxConnectors(maxConnectors);
+
         pole.setInstallDate(request.getInstallDate() != null ? request.getInstallDate() : LocalDate.now());
-        pole.setConnectorCount(0);
+        
+        // ❌ ĐÃ XÓA: pole.setConnectorCount(0); 
+        // Vì field này đã bị bỏ trong Entity để nhường chỗ cho maxConnectors
 
         ChargingPole savedPole = chargingPoleRepository.save(pole);
         return stationMapper.toPoleResponse(savedPole);
@@ -71,17 +81,21 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
             throw new AccessDeniedException("Bạn không có quyền xóa trụ sạc này");
         }
 
-        // --- [QUAN TRỌNG] FIX LỖI XÓA KHÔNG THÀNH CÔNG ---
-        // Nguyên nhân: Do Station load danh sách poles dạng EAGER, object Station trong bộ nhớ
-        // vẫn giữ tham chiếu đến pole cần xóa. Khi commit, JPA có thể vô tình "cứu" lại pole đó.
+        // --- 1. CHECK AN TOÀN ---
+        boolean isBusy = pole.getChargingConnectors().stream()
+                .anyMatch(c -> ConnectorStatus.INUSE.equals(c.getStatus()));
+
+        if (isBusy) {
+            throw new IllegalStateException("Không thể xóa trụ sạc đang hoạt động (INUSE). Vui lòng đợi phiên sạc kết thúc.");
+        }
+
+        // --- 2. FIX LỖI JPA (Ngắt quan hệ) ---
         Station station = pole.getStation();
         if (station != null && station.getChargingPoles() != null) {
-            // Xóa pole khỏi list của station để đồng bộ trạng thái trong bộ nhớ
-            // Dùng removeIf so sánh theo ID để an toàn hơn so với equals()
             station.getChargingPoles().removeIf(p -> p.getId().equals(id));
         }
-        // -------------------------------------------------
-
+        
+        // --- 3. XÓA ---
         chargingPoleRepository.delete(pole);
     }
 
@@ -105,6 +119,11 @@ public class ChargingPoleServiceImpl implements ChargingPoleService {
         }
         if (request.getInstallDate() != null) {
             pole.setInstallDate(request.getInstallDate());
+        }
+        
+        // Cập nhật số lượng súng tối đa
+        if (request.getMaxConnectors() != null) {
+            pole.setMaxConnectors(request.getMaxConnectors());
         }
         
         return stationMapper.toPoleResponse(chargingPoleRepository.save(pole));

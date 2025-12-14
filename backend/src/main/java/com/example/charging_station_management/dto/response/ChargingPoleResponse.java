@@ -20,5 +20,6 @@ public class ChargingPoleResponse {
     private BigDecimal maxPower;
     private Integer connectorCount;
     private LocalDate installDate;
+    private Integer maxConnectors;
     private List<ChargingConnectorResponse> connectors;
 }

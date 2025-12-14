@@ -24,7 +24,7 @@ import {
   useDeleteConnectorMutation,
   ChargingPole,
 } from "@/lib/redux/services/stationApi";
-import ConfirmModal from "@/components/common/ConfirmModal"; // Import component ConfirmModal
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 interface ConnectorManagerDialogProps {
   open: boolean;
@@ -62,6 +62,10 @@ export function ConnectorManagerDialog({
     (c) => c.status !== "OUTOFSERVICE"
   );
 
+  // 👇 LẤY GIỚI HẠN SỐ LƯỢNG TỪ POLE
+  // (Ép kiểu as any để tránh lỗi nếu file interface chưa kịp cập nhật, fallback về 2)
+  const maxConnectors = (pole as any).maxConnectors || 2;
+
   const handleAdd = async () => {
     if (formData.maxPower <= 0) {
       toast.error("Công suất phải lớn hơn 0");
@@ -79,13 +83,13 @@ export function ConnectorManagerDialog({
     }
   };
 
-  // Bước 1: Mở modal xác nhận thay vì dùng confirm()
+  // Bước 1: Mở modal xác nhận
   const handleDeleteClick = (id: number) => {
     setConnectorToDeleteId(id);
     setIsDeleteModalOpen(true);
   };
 
-  // Bước 2: Thực hiện xóa khi người dùng ấn xác nhận trên Modal
+  // Bước 2: Thực hiện xóa
   const handleConfirmDelete = async () => {
     if (!connectorToDeleteId) return;
     try {
@@ -113,7 +117,8 @@ export function ConnectorManagerDialog({
           {/* --- DANH SÁCH ĐẦU SẠC HIỆN CÓ --- */}
           <div className="space-y-3 my-4">
             <h4 className="text-sm font-medium text-gray-700">
-              Danh sách đầu sạc hiện tại ({activeConnectors.length}/2):
+              {/* 👇 Hiển thị số lượng động theo maxConnectors */}
+              Danh sách đầu sạc hiện tại ({activeConnectors.length}/{maxConnectors}):
             </h4>
 
             <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
@@ -144,8 +149,7 @@ export function ConnectorManagerDialog({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => handleDeleteClick(c.id)} // Mở modal
-                    // disabled={isDeleting} // Không cần disable ở đây vì modal sẽ chặn
+                    onClick={() => handleDeleteClick(c.id)}
                     title="Gỡ bỏ"
                   >
                     <Trash2 className="size-4" />
@@ -195,9 +199,10 @@ export function ConnectorManagerDialog({
                   size="sm"
                   className="w-full h-9 bg-blue-600 hover:bg-blue-700"
                   onClick={handleAdd}
-                  disabled={isCreating || activeConnectors.length >= 2}
+                  // 👇 Sử dụng maxConnectors để kiểm tra disable
+                  disabled={isCreating || activeConnectors.length >= maxConnectors}
                   title={
-                    activeConnectors.length >= 2
+                    activeConnectors.length >= maxConnectors
                       ? "Đã đạt giới hạn số lượng đầu sạc"
                       : "Thêm mới"
                   }

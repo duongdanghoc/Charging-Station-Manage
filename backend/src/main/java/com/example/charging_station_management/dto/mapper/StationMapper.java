@@ -6,6 +6,7 @@ import com.example.charging_station_management.dto.response.StationResponse;
 import com.example.charging_station_management.entity.converters.ChargingConnector;
 import com.example.charging_station_management.entity.converters.ChargingPole;
 import com.example.charging_station_management.entity.converters.Station;
+import com.example.charging_station_management.entity.enums.ConnectorStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -21,10 +22,10 @@ public interface StationMapper {
     @Mapping(source = "location.longitude", target = "longitude")
     @Mapping(source = "vendor.name", target = "vendorName")
     
-    // Logic tính toán số lượng thay vì map toàn bộ list object (Tối ưu cho API list/map)
-    // YÊU CẦU: StationResponse.java phải có field 'poles' kiểu Integer
+    // Logic tính toán số lượng
     @Mapping(target = "poles", expression = "java(station.getChargingPoles() != null ? station.getChargingPoles().size() : 0)")
     @Mapping(target = "ports", expression = "java(calculateTotalPorts(station))")
+    @Mapping(target = "activePorts", expression = "java(calculateActivePorts(station))")
     
     // Các trường mặc định hoặc tính toán khác
     @Mapping(target = "averageRating", constant = "0.0")
@@ -35,10 +36,10 @@ public interface StationMapper {
 
 
     // --- MAPPING CHARGING POLE ---
-    // 👇 Map ID của Station vào DTO response (QUAN TRỌNG - Giữ lại từ nam2)
     @Mapping(source = "station.id", target = "stationId")
-    // Lưu ý: source là "chargingConnectors" (tên trong Entity), target là "connectors" (tên trong DTO)
     @Mapping(source = "chargingConnectors", target = "connectors")
+    // Map thêm trường maxConnectors (nếu DTO Response đã có)
+    @Mapping(source = "maxConnectors", target = "maxConnectors") 
     ChargingPoleResponse toPoleResponse(ChargingPole pole);
 
 
@@ -53,17 +54,34 @@ public interface StationMapper {
 
     // 1. Tính tổng số cổng sạc (connectors) của toàn bộ trạm
     default Integer calculateTotalPorts(Station station) {
-        if (station.getChargingPoles() == null)
+        if (station.getChargingPoles() == null) {
             return 0;
+        }
         return station.getChargingPoles().stream()
                 .mapToInt(pole -> pole.getChargingConnectors() != null ? pole.getChargingConnectors().size() : 0)
                 .sum();
     }
 
-    // 2. Chuyển đổi trạng thái số (Integer) sang chuỗi (String)
+    // 2. Tính tổng số cổng sạc đang SẴN SÀNG (AVAILABLE)
+    default Integer calculateActivePorts(Station station) {
+        if (station.getChargingPoles() == null) {
+            return 0;
+        }
+        return station.getChargingPoles().stream()
+                .mapToInt(pole -> {
+                    if (pole.getChargingConnectors() == null) return 0;
+                    return (int) pole.getChargingConnectors().stream()
+                            .filter(c -> ConnectorStatus.AVAILABLE.equals(c.getStatus()))
+                            .count();
+                })
+                .sum();
+    }
+
+    // 3. Chuyển đổi trạng thái số (Integer) sang chuỗi (String)
     default String mapStatusToString(Integer status) {
-        if (status == null)
+        if (status == null) {
             return "Unknown";
+        }
         return switch (status) {
             case 1 -> "Active";
             case 0 -> "Inactive";

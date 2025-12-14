@@ -22,29 +22,9 @@ const StationListTable: React.FC<StationListTableProps> = ({
     onToggleStatus,
     onManageConnectors
 }) => {
-    // Calculate connector statistics for each station
-    const getConnectorStats = (station: Station) => {
-        // Check if poles exists and is an array
-        if (!station.poles || !Array.isArray(station.poles) || station.poles.length === 0) {
-            return { active: 0, total: 0 };
-        }
-        
-        let active = 0;
-        let total = 0;
-        
-        station.poles.forEach((pole : any ) => {
-            if (pole && pole.connectors && Array.isArray(pole.connectors)) {
-                pole.connectors.forEach((connector: any)  => {
-                    total++;
-                    if (connector.status === "AVAILABLE") {
-                        active++;
-                    }
-                });
-            }
-        });
-        
-        return { active, total };
-    };
+    
+    // Đã xóa hàm getConnectorStats cũ vì dữ liệu activePorts/ports đã có sẵn từ API
+
     return (
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
@@ -70,7 +50,6 @@ const StationListTable: React.FC<StationListTableProps> = ({
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
                         {stations.map((station) => {
-                            const connectorStats = getConnectorStats(station);
                             return (
                             <tr key={station.id} className="hover:bg-gray-50/60">
                                 <td className="px-6 py-3">
@@ -94,9 +73,10 @@ const StationListTable: React.FC<StationListTableProps> = ({
                                 <td className="px-6 py-3">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm">
-                                            <span className="font-semibold text-emerald-600">{connectorStats.active}</span>
+                                            {/* 👇 Sử dụng trực tiếp dữ liệu từ API Backend */}
+                                            <span className="font-semibold text-emerald-600">{station.activePorts || 0}</span>
                                             <span className="text-gray-400">/</span>
-                                            <span className="font-medium text-gray-600">{connectorStats.total}</span>
+                                            <span className="font-medium text-gray-600">{station.ports || 0}</span>
                                         </span>
                                         <Button
                                             size="sm"
