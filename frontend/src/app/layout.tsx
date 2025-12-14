@@ -15,6 +15,8 @@ import ProfileUpdater from "@/components/profile/ProfileUpdater";
 import { Toaster } from "@/components/ui/sonner";
 import Script from 'next/script';
 import ScrollHeader from "@/components/ScrollHeader";
+import QuickStartCharging from "@/components/charging/QuickStartCharging";
+import ChargingMonitor from "@/components/charging/ChargingMonitor";
 import ClientAuthGuard from "./_ClientAuthGuard";
 
 const geistSans = Geist({
@@ -47,7 +49,7 @@ export default function RootLayout({
     { href: "/map?view=trackAsiaTraffic", label: "Track Asia Traffic" },
     { href: "/map?view=guide", label: "Hướng dẫn" },
   ];
-  
+
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body
@@ -90,12 +92,13 @@ export default function RootLayout({
                       {/* <MapHeader defaultLinks={navLinks} mapLinks={MAP_LINKS} /> */}
                     </div>
 
-                    {/* User navigation and mobile menu */}
-                    <div className="flex items-center">
-                      {/* Desktop Auth Navigation */}
-                      <div className="hidden md:block">
-                        <DesktopLoginsSignups />
-                      </div>
+                  {/* User navigation and mobile menu */}
+                  <div className="flex items-center">
+                    {/* Desktop Auth Navigation */}
+                    <div className="hidden md:flex items-center gap-4">
+
+                      <DesktopLoginsSignups />
+                    </div>
 
                       {/* Mobile Menu Button */}
                       <div className="md:hidden">
@@ -109,9 +112,11 @@ export default function RootLayout({
 
             <main className="pt-16">{children}</main>
 
-            {/* Footer */}
-            {/* <Footer /> */}
-            <Toaster />
+          {/* Footer */}
+          {/* <Footer /> */}
+          {/* <Footer /> */}
+
+          <Toaster />
           </ClientAuthGuard>
         </ReduxProvider>
       </body>

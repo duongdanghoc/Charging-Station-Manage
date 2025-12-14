@@ -122,25 +122,34 @@ export default function MobileMenu() {
               {/* Navigation Items */}
               <nav className="flex flex-col space-y-8">
 
-                {/* Map-specific links (kept consistent with desktop navbar) */}
-                {MAP_LINKS.map((l) => (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className="text-lg font-medium text-gray-800 hover:text-blue-600"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {l.label}
-                  </Link>
-                ))}
+              {/* Map-specific links (kept consistent with desktop navbar) */}
+              {MAP_LINKS.map((l) => (
                 <Link
-                  href="/profile"
+                  key={l.href}
+                  href={l.href}
                   className="text-lg font-medium text-gray-800 hover:text-blue-600"
                   onClick={() => setIsOpen(false)}
                 >
-                  Hồ sơ
+                  {l.label}
                 </Link>
-              </nav>
+              ))}
+              <Link
+                href="/profile"
+                className="text-lg font-medium text-gray-800 hover:text-blue-600"
+                onClick={() => setIsOpen(false)}
+              >
+                Hồ sơ
+              </Link>
+              <Link
+                href="/quick-charge"
+                className="text-lg font-medium text-rose-600 hover:text-rose-700"
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="flex items-center gap-2">
+                    Sạc nhanh
+                </span>
+              </Link>
+            </nav>
 
               {/* Auth Links */}
               <div className="mt-12 border-t border-gray-100 pt-8">

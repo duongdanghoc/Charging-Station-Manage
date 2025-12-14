@@ -2,6 +2,7 @@ package com.example.charging_station_management.repository;
 
 import com.example.charging_station_management.entity.converters.ChargingSession;
 import com.example.charging_station_management.entity.enums.SessionStatus;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -126,5 +127,9 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
                         @Param("stationName") String stationName,
                         @Param("licensePlate") String licensePlate,
                         Pageable pageable);
+
+    List<ChargingSession> findByElectricVehicle_Customer_IdAndStatusOrderByStartTimeDesc(Integer customerId, SessionStatus status);
+
+    List<ChargingSession> findByElectricVehicle_Customer_IdAndStatus(Integer customerId, SessionStatus status);
 
 }

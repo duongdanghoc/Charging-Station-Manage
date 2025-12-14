@@ -14,31 +14,28 @@ import { connectorApi } from "./services/connectorApi";
 import { priceApi } from "./services/priceApi";
 import { chargingPoleApi } from "./services/chargingPoleApi";
 
+import { sessionApi } from "./services/sessionApi";
 /**
  * Configure and export the Redux store
  */
 export const store = configureStore({
-    reducer: {
-        auth: authReducer,
-        [authApi.reducerPath]: authApi.reducer,
-        [profileApi.reducerPath]: profileApi.reducer,
-        [adminApi.reducerPath]: adminApi.reducer,
-        [stationApi.reducerPath]: stationApi.reducer,
-        [connectorApi.reducerPath]: connectorApi.reducer,
-        // Thêm Reducer mới
-        [priceApi.reducerPath]: priceApi.reducer,
-        [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
-    },
-    middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware()
-            .concat(authApi.middleware)
-            .concat(profileApi.middleware)
-            .concat(adminApi.middleware)
-            .concat(stationApi.middleware)
-            .concat(connectorApi.middleware)
-            // Thêm Middleware mới
-            .concat(priceApi.middleware)
-            .concat(chargingPoleApi.middleware),
+  reducer: {
+    auth: authReducer,
+    [authApi.reducerPath]: authApi.reducer,
+    [profileApi.reducerPath]: profileApi.reducer,
+    [adminApi.reducerPath]: adminApi.reducer,
+    [stationApi.reducerPath]: stationApi.reducer,
+    [connectorApi.reducerPath]: connectorApi.reducer,
+    [sessionApi.reducerPath]: sessionApi.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware()
+      .concat(authApi.middleware)
+      .concat(profileApi.middleware)
+      .concat(adminApi.middleware)
+      .concat(stationApi.middleware)
+      .concat(connectorApi.middleware)
+      .concat(sessionApi.middleware),
 });
 
 // Enable refetchOnFocus and refetchOnReconnect
