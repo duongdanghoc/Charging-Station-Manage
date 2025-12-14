@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import ConnectorListTable from "./ConnectorListTable";
 import ConnectorFormDialog from "./ConnectorFormDialog";
 import ConnectorDetailSheet from "./ConnectorDetailSheet";
-import ConfirmModal from "@/components/common/ConfirmModal";
+import ConfirmModal from "@/components/common/ConfirmModal"; // Đảm bảo ConfirmModal đã được fix props
 
 import {
     useSearchConnectorsQuery,
@@ -240,11 +240,13 @@ const ConnectorManagement: React.FC<ConnectorManagementProps> = ({ stationId }) 
             />
 
             <ConfirmModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
+                open={isDeleteModalOpen} // ĐÃ SỬA: isOpen -> open
+                onOpenChange={setIsDeleteModalOpen} // ĐÃ SỬA: onClose -> onOpenChange
                 onConfirm={onConfirmDelete}
                 title="Xác nhận xóa connector"
-                message="Bạn có chắc chắn muốn xóa connector này? Hành động này không thể hoàn tác."
+                description="Bạn có chắc chắn muốn xóa connector này? Hành động này không thể hoàn tác." // ĐÃ SỬA: message -> description
+                confirmLabel="Xóa"
+                cancelLabel="Hủy"
             />
         </section>
     );

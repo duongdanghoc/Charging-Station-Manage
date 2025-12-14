@@ -2,11 +2,14 @@ package com.example.charging_station_management.controller;
 
 import com.example.charging_station_management.dto.request.CreateStationRequest;
 import com.example.charging_station_management.dto.request.UpdateStationRequest;
+import com.example.charging_station_management.dto.BaseApiResponse;
+import com.example.charging_station_management.dto.response.ChargingPoleResponse;
 import com.example.charging_station_management.dto.response.ReviewResponse;
 import com.example.charging_station_management.dto.response.StationResponse;
 import com.example.charging_station_management.entity.enums.StationStatus;
 import com.example.charging_station_management.entity.enums.ConnectorType;
 import com.example.charging_station_management.entity.enums.VehicleType;
+import com.example.charging_station_management.service.ChargingPoleService;
 import com.example.charging_station_management.service.StationService;
 import com.example.charging_station_management.service.impl.CustomerServiceImpl;
 
@@ -20,15 +23,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/stations") // SỬA LẠI: Dùng chung cho cả hệ thống
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Hoặc cấu hình cụ thể domain frontend của bạn
+@CrossOrigin(origins = "*") // Giữ lại comment chi tiết từ main
 public class StationController {
 
     private final CustomerServiceImpl customerService;
     private final StationService stationService;
+    private final ChargingPoleService chargingPoleService;
 
     /* =================================================================
        1. PUBLIC / CUSTOMER API (Ai cũng truy cập được)
@@ -57,6 +63,13 @@ public class StationController {
         return ResponseEntity.ok(customerService.getStationById(id));
     }
 
+    // Endpoint lấy danh sách trụ (Code của bạn)
+    @GetMapping("/{id}/poles")
+    public ResponseEntity<BaseApiResponse<List<ChargingPoleResponse>>> getPolesByStationId(@PathVariable Integer id) {
+        List<ChargingPoleResponse> poles = chargingPoleService.getAllPolesByStationId(id);
+        return ResponseEntity.ok(BaseApiResponse.success(poles, "Lấy danh sách trụ thành công"));
+    }
+
     @GetMapping("/{id}/reviews")
     public ResponseEntity<Page<ReviewResponse>> getStationReviews(
             @PathVariable Integer id,
@@ -65,7 +78,7 @@ public class StationController {
     }
 
     /* =================================================================
-       2. VENDOR API (Cần quyền VENDOR)
+       2. VENDOR API (Cần quyền VENDOR) // Giữ lại comment chi tiết từ main
        Url: /api/stations
     ================================================================= */
 
@@ -102,33 +115,32 @@ public class StationController {
     }
 
     /* =================================================================
-       3. ADMIN API (Cần quyền ADMIN)
+       3. ADMIN API (Cần quyền ADMIN) // Giữ lại comment chi tiết từ main
        Url: /api/stations/admin/...
     ================================================================= */
 
-    // Lưu ý: Url sẽ là /api/stations/admin/all
+    // Lưu ý: Url sẽ là /api/stations/admin/all // Giữ lại comment chi tiết từ main
     @GetMapping("/admin/all")
-    //@PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')") // Giữ lại annotation bị comment từ main
     public ResponseEntity<Page<StationResponse>> getAllStationsForAdmin(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(stationService.getAllStations(pageable));
     }
 
-    // Đổi trạng thái trạm
+    // Đổi trạng thái trạm // Giữ lại comment chi tiết từ main
     @PatchMapping("/admin/{id}/status")
-    //@PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')") // Giữ lại annotation bị comment từ main
     public ResponseEntity<Void> updateStatus(@PathVariable Integer id, @RequestParam String status) {
         Integer statusInt = StationStatus.fromString(status).getValue();
         stationService.updateStationStatus(id, statusInt);
         return ResponseEntity.ok().build();
     }
 
-    // Xóa trạm quyền Admin
+    // Xóa trạm quyền Admin // Giữ lại comment chi tiết từ main
     @DeleteMapping("/admin/{id}")
-    //@PreAuthorize("hasRole('ADMIN')")
+    //@PreAuthorize("hasRole('ADMIN')") // Giữ lại annotation bị comment từ main
     public ResponseEntity<Void> adminDeleteStation(@PathVariable Integer id) {
         stationService.adminDeleteStation(id);
         return ResponseEntity.noContent().build();
     }
- 
 }
