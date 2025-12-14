@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   Search, Filter, BatteryCharging, Car, MapPin, User,
-  ChevronLeft, ChevronRight, Eye, Clock, Zap
+  ChevronLeft, ChevronRight, Eye, Clock, Zap, CreditCard
 } from "lucide-react";
 import {
   useGetChargingSessionsQuery,
@@ -11,7 +11,6 @@ import {
 } from "@/lib/redux/services/adminApi";
 
 export default function ChargingSessionManagement() {
-  // State quản lý Filters
   const [filters, setFilters] = useState<ChargingSessionFilterParams>({
     page: 0,
     size: 10,
@@ -25,17 +24,14 @@ export default function ChargingSessionManagement() {
     licensePlate: ''
   });
 
-  // State UI
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
 
-  // Redux API Hooks
   const { data: sessionsData, isLoading, isFetching } = useGetChargingSessionsQuery(filters);
 
   const sessions = sessionsData?.data?.content || [];
   const totalPages = sessionsData?.data?.totalPages || 0;
 
-  // Handlers
   const handleFilterChange = (key: keyof ChargingSessionFilterParams, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 0 }));
   };
@@ -197,7 +193,7 @@ export default function ChargingSessionManagement() {
                 </tr>
               ) : (
                 sessions.map((session: any) => (
-                  <tr key={session.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={session.sessionId} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
@@ -232,13 +228,15 @@ export default function ChargingSessionManagement() {
                       </div>
                     </td>
                     <td className="p-4">
+                      {/* ✅ ĐÚNG: Dùng session.cost */}
                       <div className="font-bold text-green-600">
-                        {formatCurrency(session.totalAmount || 0)}
+                        {formatCurrency(session.cost || 0)}
                       </div>
+                      {/* ✅ ĐÚNG: Dùng session.energyKwh */}
                       <div className="text-xs text-gray-500 mt-1">
                         <span className="flex items-center gap-1">
                           <Zap className="w-3 h-3" />
-                          {session.energyConsumed || 0} kWh
+                          {session.energyKwh || 0} kWh
                         </span>
                       </div>
                     </td>
@@ -293,7 +291,7 @@ export default function ChargingSessionManagement() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="bg-gradient-to-r from-green-600 to-green-500 p-6 text-white flex justify-between items-start">
               <div>
-                <h3 className="text-xl font-bold">Chi tiết phiên sạc #{selectedSession.id}</h3>
+                <h3 className="text-xl font-bold">Chi tiết phiên sạc #{selectedSession.sessionId}</h3>
                 <p className="text-green-100 text-sm mt-1">
                   {selectedSession.customerName} • {selectedSession.stationName}
                 </p>
@@ -314,7 +312,10 @@ export default function ChargingSessionManagement() {
                     <User className="w-3 h-3" /> Khách hàng
                   </div>
                   <div className="text-gray-900 font-medium">{selectedSession.customerName}</div>
-                  <div className="text-sm text-gray-500 mt-1">ID: #{selectedSession.customerId}</div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {selectedSession.customerEmail && <div>{selectedSession.customerEmail}</div>}
+                    {selectedSession.customerPhone && <div>{selectedSession.customerPhone}</div>}
+                  </div>
                 </div>
                 
                 <div className="p-4 bg-gray-50 rounded-lg border">
@@ -325,7 +326,8 @@ export default function ChargingSessionManagement() {
                     {selectedSession.licensePlate || 'Chưa có biển số'}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    Model: {selectedSession.vehicleModel || 'N/A'}
+                    {/* ✅ ĐÚNG: Dùng vehicleBrand */}
+                    {selectedSession.vehicleBrand} {selectedSession.vehicleModel || 'N/A'}
                   </div>
                 </div>
               </div>
@@ -346,11 +348,12 @@ export default function ChargingSessionManagement() {
                   </div>
                   <div>
                     <div className="text-xs text-blue-600 mb-1">Cổng sạc</div>
-                    <div className="font-medium">Port #{selectedSession.portId}</div>
+                    {/* ✅ ĐÚNG: Dùng poleId */}
+                    <div className="font-medium">Pole #{selectedSession.poleId || 'N/A'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-blue-600 mb-1">Vendor</div>
-                    <div className="font-medium">{selectedSession.vendorName}</div>
+                    <div className="font-medium">{selectedSession.vendorName || 'N/A'}</div>
                   </div>
                 </div>
               </div>
@@ -361,11 +364,13 @@ export default function ChargingSessionManagement() {
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
                     <Zap className="w-3 h-3" /> Năng lượng
                   </div>
+                  {/* ✅ ĐÚNG: Dùng energyKwh */}
                   <div className="text-2xl font-bold text-gray-900">
-                    {selectedSession.energyConsumed || 0} kWh
+                    {selectedSession.energyKwh || 0} kWh
                   </div>
+                  {/* ✅ ĐÚNG: Dùng poleMaxPower hoặc connectorMaxPower */}
                   <div className="text-sm text-gray-500 mt-1">
-                    Công suất: {selectedSession.power || 'N/A'} kW
+                    Công suất: {selectedSession.poleMaxPower || selectedSession.connectorMaxPower || 'N/A'} kW
                   </div>
                 </div>
                 
@@ -373,11 +378,15 @@ export default function ChargingSessionManagement() {
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
                     <CreditCard className="w-3 h-3" /> Thanh toán
                   </div>
+                  {/* ✅ ĐÚNG: Dùng cost */}
                   <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(selectedSession.totalAmount || 0)}
+                    {formatCurrency(selectedSession.cost || 0)}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    Giá: {selectedSession.pricePerKwh || 0} đ/kWh
+                    {/* Tính giá nếu có đủ dữ liệu */}
+                    {selectedSession.energyKwh > 0 ? (
+                      <>Đơn giá: {formatCurrency((selectedSession.cost / selectedSession.energyKwh))} /kWh</>
+                    ) : 'N/A'}
                   </div>
                 </div>
               </div>
@@ -396,12 +405,6 @@ export default function ChargingSessionManagement() {
                       <span className="font-medium">{formatDateTime(selectedSession.endTime)}</span>
                     </div>
                   )}
-                  {selectedSession.duration && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Thời lượng:</span>
-                      <span className="font-medium">{selectedSession.duration} phút</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -412,16 +415,18 @@ export default function ChargingSessionManagement() {
                     <div className="text-gray-500 text-sm mb-1">Trạng thái phiên sạc</div>
                     {getStatusBadge(selectedSession.status)}
                   </div>
-                  <div>
-                    <div className="text-gray-500 text-sm mb-1">Trạng thái thanh toán</div>
-                    <span className={`px-3 py-1 rounded text-sm font-medium ${
-                      selectedSession.paymentStatus === 'PAID' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {selectedSession.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
-                    </span>
-                  </div>
+                  {selectedSession.paymentStatus && (
+                    <div>
+                      <div className="text-gray-500 text-sm mb-1">Trạng thái thanh toán</div>
+                      <span className={`px-3 py-1 rounded text-sm font-medium ${
+                        selectedSession.paymentStatus === 'PAID' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {selectedSession.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

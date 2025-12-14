@@ -36,6 +36,7 @@ export default function TransactionManagement() {
   // Redux API Hooks
   const { data: transactionsData, isLoading, isFetching } = useGetTransactionsQuery(filters);
 
+  // ✅ ĐÚNG: Parse response theo cấu trúc backend mới
   const transactions = transactionsData?.data?.content || [];
   const totalPages = transactionsData?.data?.totalPages || 0;
 
@@ -121,9 +122,6 @@ export default function TransactionManagement() {
     );
   };
 
-  const handleExport = () => {
-    toast.info("Chức năng xuất báo cáo đang được phát triển");
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -135,14 +133,6 @@ export default function TransactionManagement() {
           </h2>
           <p className="text-sm text-gray-500 mt-1">Theo dõi và quản lý tất cả các giao dịch thanh toán trên hệ thống.</p>
         </div>
-        
-        <button
-          onClick={handleExport}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition"
-        >
-          <Download className="w-4 h-4" />
-          Xuất báo cáo
-        </button>
       </div>
 
       {/* Filter Bar */}
@@ -289,11 +279,11 @@ export default function TransactionManagement() {
                 </tr>
               ) : (
                 transactions.map((transaction: any) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={transaction.transactionId} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       <div className="space-y-1">
                         <div className="font-medium text-gray-900">
-                          Mã GD: <span className="font-mono">#{transaction.transactionCode}</span>
+                          Mã GD: <span className="font-mono">#{transaction.transactionId}</span>
                         </div>
                         <div className="text-xs text-gray-500">
                           <span className="flex items-center gap-1">
@@ -303,7 +293,7 @@ export default function TransactionManagement() {
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1">
                           <Building className="w-3 h-3" />
-                          {transaction.stationName}
+                          {transaction.stationName || 'N/A'}
                         </div>
                       </div>
                     </td>
@@ -311,10 +301,10 @@ export default function TransactionManagement() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{transaction.customerName}</span>
+                          <span className="font-medium">{transaction.customerName || 'N/A'}</span>
                         </div>
                         <div className="text-xs text-gray-500">
-                          ID: #{transaction.customerId}
+                          ID: #{transaction.customerId || 'N/A'}
                         </div>
                         {transaction.customerPhone && (
                           <div className="text-xs text-gray-500">
@@ -341,11 +331,14 @@ export default function TransactionManagement() {
                     </td>
                     <td className="p-4">
                       <div className="font-bold text-green-600 text-lg">
-                        {formatCurrency(transaction.amount)}
+                        {formatCurrency(transaction.amount || 0)}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Phí dịch vụ: {formatCurrency(transaction.fee || 0)}
-                      </div>
+                      {/* ✅ Hiển thị thông tin phiên sạc liên quan */}
+                      {transaction.sessionId && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Phiên sạc: #{transaction.sessionId}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4 text-right">
                       <button
@@ -368,7 +361,7 @@ export default function TransactionManagement() {
           <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
             <div className="text-sm text-gray-500">
               Hiển thị {transactions.length} giao dịch • 
-              Tổng tiền: {formatCurrency(transactions.reduce((sum: number, t: any) => sum + t.amount, 0))}
+              Tổng tiền: {formatCurrency(transactions.reduce((sum: number, t: any) => sum + (t.amount || 0), 0))}
             </div>
             <div className="flex gap-2">
               <button
@@ -399,9 +392,9 @@ export default function TransactionManagement() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="bg-gradient-to-r from-purple-600 to-purple-500 p-6 text-white flex justify-between items-start">
               <div>
-                <h3 className="text-xl font-bold">Chi tiết giao dịch #{selectedTransaction.id}</h3>
+                <h3 className="text-xl font-bold">Chi tiết giao dịch #{selectedTransaction.transactionId}</h3>
                 <p className="text-purple-100 text-sm mt-1">
-                  Mã GD: <span className="font-mono">{selectedTransaction.transactionCode}</span>
+                  Mã GD: <span className="font-mono">{selectedTransaction.transactionId}</span>
                 </p>
               </div>
               <button 
@@ -419,7 +412,7 @@ export default function TransactionManagement() {
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
                     <User className="w-3 h-3" /> Khách hàng
                   </div>
-                  <div className="text-gray-900 font-medium">{selectedTransaction.customerName}</div>
+                  <div className="text-gray-900 font-medium">{selectedTransaction.customerName || 'N/A'}</div>
                   <div className="text-sm text-gray-500 mt-1">
                     {selectedTransaction.customerEmail && (
                       <div>{selectedTransaction.customerEmail}</div>
@@ -427,6 +420,7 @@ export default function TransactionManagement() {
                     {selectedTransaction.customerPhone && (
                       <div>{selectedTransaction.customerPhone}</div>
                     )}
+                    <div>ID: #{selectedTransaction.customerId || 'N/A'}</div>
                   </div>
                 </div>
                 
@@ -434,9 +428,10 @@ export default function TransactionManagement() {
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
                     <Building className="w-3 h-3" /> Trạm sạc
                   </div>
-                  <div className="text-gray-900 font-medium">{selectedTransaction.stationName}</div>
+                  <div className="text-gray-900 font-medium">{selectedTransaction.stationName || 'N/A'}</div>
                   <div className="text-sm text-gray-500 mt-1">
-                    {selectedTransaction.stationAddress}
+                    {selectedTransaction.stationAddress || 'N/A'}
+                    <div>Vendor: {selectedTransaction.vendorName || 'N/A'}</div>
                   </div>
                 </div>
               </div>
@@ -450,13 +445,7 @@ export default function TransactionManagement() {
                   <div>
                     <div className="text-xs text-purple-600 mb-1">Số tiền</div>
                     <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(selectedTransaction.amount)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-purple-600 mb-1">Phí dịch vụ</div>
-                    <div className="text-lg font-medium">
-                      {formatCurrency(selectedTransaction.fee || 0)}
+                      {formatCurrency(selectedTransaction.amount || 0)}
                     </div>
                   </div>
                   <div>
@@ -471,19 +460,50 @@ export default function TransactionManagement() {
                       {getPaymentStatusBadge(selectedTransaction.paymentStatus)}
                     </div>
                   </div>
+                  <div>
+                    <div className="text-xs text-purple-600 mb-1">Ngân hàng</div>
+                    <div className="font-medium">{selectedTransaction.bankName || 'N/A'}</div>
+                  </div>
                 </div>
                 
-                {selectedTransaction.bankName && (
+                {selectedTransaction.accountNumber && (
                   <div className="mt-4 pt-4 border-t border-purple-200">
-                    <div className="text-xs text-purple-600 mb-1">Thông tin ngân hàng</div>
-                    <div className="font-medium">{selectedTransaction.bankName}</div>
-                    {selectedTransaction.bankAccount && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        Số tài khoản: {selectedTransaction.bankAccount}
-                      </div>
-                    )}
+                    <div className="text-xs text-purple-600 mb-1">Số tài khoản</div>
+                    <div className="font-medium font-mono">{selectedTransaction.accountNumber}</div>
                   </div>
                 )}
+              </div>
+
+              {/* Thông tin phiên sạc liên quan */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                  🔌 Thông tin phiên sạc
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-blue-600 mb-1">Mã phiên sạc</div>
+                    <div className="font-medium">#{selectedTransaction.sessionId || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-blue-600 mb-1">Phương tiện</div>
+                    <div className="font-medium">
+                      {selectedTransaction.licensePlate || 'N/A'}
+                      <div className="text-sm text-gray-600">
+                        {selectedTransaction.vehicleBrand} {selectedTransaction.vehicleModel}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-blue-600 mb-1">Năng lượng</div>
+                    <div className="font-medium">{selectedTransaction.energyKwh || 0} kWh</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-blue-600 mb-1">Thời gian sạc</div>
+                    <div className="text-sm">
+                      {selectedTransaction.sessionStartTime ? formatDateTime(selectedTransaction.sessionStartTime) : 'N/A'}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Thông tin thời gian */}
@@ -506,42 +526,27 @@ export default function TransactionManagement() {
                 
                 <div className="p-4 bg-gray-50 rounded-lg border">
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
-                    <Shield className="w-3 h-3" /> Bảo mật
+                    <Shield className="w-3 h-3" /> Thiết bị sạc
                   </div>
                   <div className="space-y-2">
                     <div className="text-sm">
-                      <span className="text-gray-600">Mã giao dịch:</span>
-                      <div className="font-mono text-xs mt-1 p-2 bg-gray-100 rounded">
-                        {selectedTransaction.transactionCode}
+                      <span className="text-gray-600">Cổng sạc:</span>
+                      <div className="font-medium">
+                        #{selectedTransaction.connectorId} ({selectedTransaction.connectorType})
                       </div>
                     </div>
-                    {selectedTransaction.paymentReference && (
-                      <div className="text-sm">
-                        <span className="text-gray-600">Mã tham chiếu:</span>
-                        <div className="font-mono text-xs mt-1 p-2 bg-gray-100 rounded">
-                          {selectedTransaction.paymentReference}
-                        </div>
+                    <div className="text-sm">
+                      <span className="text-gray-600">Trạm sạc:</span>
+                      <div className="font-medium">
+                        Pole #{selectedTransaction.poleId} ({selectedTransaction.poleManufacturer})
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Ghi chú */}
-              {selectedTransaction.note && (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                  <div className="flex items-center gap-2 text-yellow-800 text-sm font-medium mb-2">
-                    📝 Ghi chú giao dịch
-                  </div>
-                  <div className="text-gray-700">{selectedTransaction.note}</div>
-                </div>
-              )}
             </div>
             
-            <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
-              <div className="text-sm text-gray-500">
-                Phiên sạc: #{selectedTransaction.sessionId || 'N/A'}
-              </div>
+            <div className="p-6 border-t bg-gray-50 flex justify-end">
               <div className="flex gap-2">
                 <button 
                   onClick={() => setSelectedTransaction(null)}

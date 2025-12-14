@@ -10,13 +10,17 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-// Response phân trang từ Backend (Page)
 export interface PageResponse<T> {
   content: T[];
   totalPages: number;
   totalElements: number;
   size: number;
   number: number;
+  pageNumber?: number; 
+  last?: boolean;
+  first?: boolean;
+  empty?: boolean;
+  numberOfElements?: number;
 }
 
 export interface RegisterRequest {
@@ -46,7 +50,6 @@ export interface UserFilterParams {
   sortDirection?: 'asc' | 'desc';
 }
 
-// 👇 Interface cho dữ liệu Dashboard & Biểu đồ
 export interface ChartData {
   name: string;
   value: number;
@@ -63,17 +66,16 @@ export interface DashboardStats {
   sessionChartData: ChartData[];
 }
 
-// 👇 Interface cho Trạm Cứu Hộ (Nên định nghĩa rõ thay vì dùng any)
 export interface RescueStationRequest {
-    name: string;
-    phone: string;
-    email?: string;
-    addressDetail: string;
-    province: string;
-    openTime: string; // HH:mm
-    closeTime: string; // HH:mm
-    latitude?: number;
-    longitude?: number;
+  name: string;
+  phone: string;
+  email?: string;
+  addressDetail: string;
+  province: string;
+  openTime: string;
+  closeTime: string; 
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ChargingSessionFilterParams {
@@ -84,9 +86,36 @@ export interface ChargingSessionFilterParams {
   status?: string;
   startTimeFrom?: string;
   startTimeTo?: string;
+  endTimeFrom?: string;
+  endTimeTo?: string;
   customerName?: string;
   stationName?: string;
   licensePlate?: string;
+}
+
+export interface ChargingSessionDetailResponse {
+  sessionId: number;
+  id?: number;
+  customerId: number;
+  customerName: string;
+  stationId: number;
+  stationName: string;
+  stationAddress?: string;
+  vendorName?: string;
+  licensePlate?: string;
+  vehicleModel?: string;
+  startTime: string;
+  endTime?: string;
+  duration?: number;
+  energyConsumed?: number;
+  energyKwh?: number; 
+  power?: number;
+  pricePerKwh?: number;
+  totalAmount?: number;
+  cost?: number;
+  status: 'PENDING' | 'CHARGING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+  paymentStatus?: string;
+  portId?: number;
 }
 
 export interface TransactionFilterParams {
@@ -103,17 +132,53 @@ export interface TransactionFilterParams {
   customerName?: string;
   stationName?: string;
 }
+
+export interface TransactionDetailResponse {
+  id: number;
+  transactionId: string;
+  transactionCode?: string;
+  customerId: number;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  stationId: number;
+  stationName: string;
+  stationAddress?: string;
+  sessionId?: number;
+  amount: number;
+  fee?: number;
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+  paymentMethod: 'BANK_TRANSFER' | 'CREDIT_CARD' | 'E_WALLET' | 'CASH' | 'SYSTEM';
+  paymentTime: string;
+  createdAt: string;
+  bankName?: string;
+  bankAccount?: string;
+  paymentReference?: string;
+  note?: string;
+}
+
+export interface ChargingSessionApiResponse {
+  success: boolean;
+  message: string;
+  data: PageResponse<ChargingSessionDetailResponse>;
+  timestamp: string;
+}
+
 // ----------------------------------------------------
 
 // --- 2. CẤU HÌNH API ---
 
 export const adminApi = createApi({
   reducerPath: 'adminApi',
-  tagTypes: ['Users', 'Stats', 'Rescue'],
+  tagTypes: ['Users', 'Stats', 'Rescue', 'ChargingSessions', 'Transactions'],
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_URL + '/api/admin',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
+      
+      // 🔍 Debug logging
+      console.log('🔑 Token from Redux:', token ? 'EXISTS' : 'MISSING');
+      
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
@@ -183,7 +248,7 @@ export const adminApi = createApi({
       }),
     }),
 
- // 1. Get List (Có Search & Page)
+    // 8. Get Rescue Stations
     getRescueStations: builder.query<ApiResponse<PageResponse<any>>, { page?: number, keyword?: string }>({
       query: ({ page, keyword }) => ({
         url: '/rescue-stations',
@@ -192,7 +257,7 @@ export const adminApi = createApi({
       providesTags: ['Rescue'],
     }),
 
-    // 2. Create
+    // 9. Create Rescue Station
     createRescueStation: builder.mutation<ApiResponse<any>, RescueStationRequest>({
       query: (body) => ({
         url: '/rescue-stations',
@@ -202,7 +267,7 @@ export const adminApi = createApi({
       invalidatesTags: ['Rescue'],
     }),
 
-    // 3. Update (QUAN TRỌNG: Bạn cần đoạn này để có hook useUpdate...)
+    // 10. Update Rescue Station
     updateRescueStation: builder.mutation<ApiResponse<any>, { id: number, data: RescueStationRequest }>({
       query: ({ id, data }) => ({
         url: `/rescue-stations/${id}`,
@@ -212,7 +277,7 @@ export const adminApi = createApi({
       invalidatesTags: ['Rescue'],
     }),
 
-    // 4. Delete
+    // 11. Delete Rescue Station
     deleteRescueStation: builder.mutation<ApiResponse<any>, number>({
       query: (id) => ({
         url: `/rescue-stations/${id}`,
@@ -221,22 +286,98 @@ export const adminApi = createApi({
       invalidatesTags: ['Rescue'],
     }),
 
-    getChargingSessions: builder.query({
-      query: (params: ChargingSessionFilterParams) => ({
-        url: '/admin/charging-sessions',
-        params
-      })
+    // 12. GET CHARGING SESSIONS - FIXED VERSION
+    getChargingSessions: builder.query<
+      ChargingSessionApiResponse,
+      ChargingSessionFilterParams
+    >({
+      query: (params) => {
+        // Loại bỏ các params undefined/null/empty
+        const cleanParams = Object.fromEntries(
+          Object.entries(params).filter(([_, v]) => 
+            v !== undefined && v !== null && v !== ''
+          )
+        );
+        
+        console.log('📡 Fetching Charging Sessions with params:', cleanParams);
+        
+        return {
+          url: '/charging-sessions',
+          params: cleanParams,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.content
+          ? [
+              ...result.data.content.map(({ sessionId, id }) => ({ 
+                type: 'ChargingSessions' as const, 
+                id: sessionId || id 
+              })),
+              { type: 'ChargingSessions', id: 'LIST' },
+            ]
+          : [{ type: 'ChargingSessions', id: 'LIST' }],
+      transformResponse: (response: ChargingSessionApiResponse) => {
+        console.log('✅ Charging Sessions Response:', response);
+        return response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.error('❌ Charging Sessions Error:', response);
+        return response;
+      },
     }),
-    
-    getTransactions: builder.query({
-      query: (params: TransactionFilterParams) => ({
-        url: '/admin/transactions',
-        params
-      })
+
+    // 13. GET TRANSACTIONS - FIXED VERSION
+    getTransactions: builder.query<
+      PageResponse<TransactionDetailResponse>,
+      TransactionFilterParams
+    >({
+      query: (params) => {
+        const cleanParams = Object.fromEntries(
+          Object.entries(params).filter(([_, v]) => 
+            v !== undefined && v !== null && v !== ''
+          )
+        );
+        
+        console.log('📡 Fetching Transactions with params:', cleanParams);
+        
+        return {
+          url: '/transactions',
+          params: cleanParams,
+        };
+      },
+      providesTags: (result) =>
+        result?.content
+          ? [
+              ...result.content.map(({ id }) => ({ 
+                type: 'Transactions' as const, 
+                id 
+              })),
+              { type: 'Transactions', id: 'LIST' },
+            ]
+          : [{ type: 'Transactions', id: 'LIST' }],
+      transformResponse: (response: PageResponse<TransactionDetailResponse>) => {
+        console.log('✅ Transactions Response:', response);
+        // TransactionController trả về trực tiếp Page object, không có wrapper
+        return response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.error('❌ Transactions Error:', response);
+        return response;
+      },
+    }),
+
+    // 14. Export transactions
+    exportTransactions: builder.query({
+      query: (params) => ({
+        url: '/transactions/export',
+        params,
+        responseHandler: (response) => response.blob(),
+      }),
     }),
 
   }),
 });
+
 // --- 3. EXPORT HOOKS ---
 export const {
   useGetDashboardStatsQuery,
@@ -245,7 +386,8 @@ export const {
   useCreateUserMutation,
   useGetVendorStationsQuery,
   useGetCustomerVehiclesQuery,
-  useGetDashboardOverviewQuery, // 👈 Đã thêm dấu phẩy ở đây (Code cũ bị thiếu)
+  useGetDashboardOverviewQuery,
+  useExportTransactionsQuery,
   useGetRescueStationsQuery,
   useCreateRescueStationMutation,
   useDeleteRescueStationMutation,

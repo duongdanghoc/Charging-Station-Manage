@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,7 +17,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface ChargingSessionRepository extends JpaRepository<ChargingSession, Integer> {
+public interface ChargingSessionRepository
+                extends JpaRepository<ChargingSession, Integer>, JpaSpecificationExecutor<ChargingSession> {
 
         // 1. Tính tổng doanh thu (Giữ nguyên, SQL chuẩn)
         @Query("SELECT SUM(s.cost) FROM ChargingSession s WHERE s.status = 'COMPLETED'")
@@ -54,21 +56,21 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
                         "transaction"
         })
         Page<ChargingSession> findByElectricVehicle_Customer_IdOrderByStartTimeDesc(Integer customerId,
-                                                                                    Pageable pageable);
+                        Pageable pageable);
 
-        @Query("SELECT cs FROM ChargingSession cs " +
-                        "JOIN FETCH cs.electricVehicle ev " +
-                        "JOIN FETCH ev.customer c " +
-                        "JOIN FETCH cs.chargingConnector cc " +
-                        "JOIN FETCH cc.pole p " +
-                        "JOIN FETCH p.station s " +
-                        "JOIN FETCH s.location l " +
-                        "JOIN FETCH s.vendor v " +
-                        "LEFT JOIN FETCH cs.transaction t " +
-                        "WHERE c.id = :customerId " +
-                        "AND (:status IS NULL OR cs.status = :status) " +
-                        "AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom) " +
-                        "AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo)")
+        @Query("""
+                            SELECT cs FROM ChargingSession cs
+                            WHERE cs.electricVehicle.customer.id = :customerId
+                              AND (:status IS NULL OR cs.status = :status)
+                              AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom)
+                              AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo)
+                        """)
+        @EntityGraph(attributePaths = {
+                        "electricVehicle",
+                        "electricVehicle.customer",
+                        "chargingConnector.pole.station.location",
+                        "transaction"
+        })
         Page<ChargingSession> findByCustomerWithFilters(
                         @Param("customerId") Integer customerId,
                         @Param("status") SessionStatus status,
@@ -76,19 +78,19 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
                         @Param("startTimeTo") LocalDateTime startTimeTo,
                         Pageable pageable);
 
-        @Query("SELECT cs FROM ChargingSession cs " +
-                        "JOIN FETCH cs.electricVehicle ev " +
-                        "JOIN FETCH ev.customer c " +
-                        "JOIN FETCH cs.chargingConnector cc " +
-                        "JOIN FETCH cc.pole p " +
-                        "JOIN FETCH p.station s " +
-                        "JOIN FETCH s.location l " +
-                        "JOIN FETCH s.vendor v " +
-                        "LEFT JOIN FETCH cs.transaction t " +
-                        "WHERE s.id = :stationId " +
-                        "AND (:status IS NULL OR cs.status = :status) " +
-                        "AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom) " +
-                        "AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo)")
+        @Query("""
+                            SELECT cs FROM ChargingSession cs
+                            WHERE cs.chargingConnector.pole.station.id = :stationId
+                              AND (:status IS NULL OR cs.status = :status)
+                              AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom)
+                              AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo)
+                        """)
+        @EntityGraph(attributePaths = {
+                        "electricVehicle",
+                        "electricVehicle.customer",
+                        "chargingConnector.pole.station.location",
+                        "transaction"
+        })
         Page<ChargingSession> findByStationWithFilters(
                         @Param("stationId") Integer stationId,
                         @Param("status") SessionStatus status,
@@ -96,25 +98,31 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
                         @Param("startTimeTo") LocalDateTime startTimeTo,
                         Pageable pageable);
 
-        @Query("SELECT DISTINCT cs FROM ChargingSession cs " +
-                        "JOIN FETCH cs.electricVehicle ev " +
-                        "JOIN FETCH ev.customer c " +
-                        "JOIN FETCH cs.chargingConnector cc " +
-                        "JOIN FETCH cc.pole p " +
-                        "JOIN FETCH p.station s " +
-                        "JOIN FETCH s.location l " +
-                        "JOIN FETCH s.vendor v " +
-                        "LEFT JOIN FETCH cs.transaction t " +
-                        "WHERE (:customerId IS NULL OR c.id = :customerId) " +
-                        "AND (:stationId IS NULL OR s.id = :stationId) " +
-                        "AND (:status IS NULL OR cs.status = :status) " +
-                        "AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom) " +
-                        "AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo) " +
-                        "AND (:endTimeFrom IS NULL OR cs.endTime >= :endTimeFrom) " +
-                        "AND (:endTimeTo IS NULL OR cs.endTime <= :endTimeTo) " +
-                        "AND (:customerName IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :customerName, '%'))) " +
-                        "AND (:stationName IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :stationName, '%'))) " +
-                        "AND (:licensePlate IS NULL OR LOWER(ev.licensePlate) LIKE LOWER(CONCAT('%', :licensePlate, '%')))")
+        @Query("""
+                            SELECT cs FROM ChargingSession cs
+                            WHERE (:customerId IS NULL OR cs.electricVehicle.customer.id = :customerId)
+                              AND (:stationId IS NULL OR cs.chargingConnector.pole.station.id = :stationId)
+                              AND (:status IS NULL OR cs.status = :status)
+                              AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom)
+                              AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo)
+                              AND (:endTimeFrom IS NULL OR cs.endTime >= :endTimeFrom)
+                              AND (:endTimeTo IS NULL OR cs.endTime <= :endTimeTo)
+                              AND (:customerName IS NULL OR
+                                   LOWER(cs.electricVehicle.customer.name)
+                                   LIKE LOWER(CONCAT('%', :customerName, '%')))
+                              AND (:stationName IS NULL OR
+                                   LOWER(cs.chargingConnector.pole.station.name)
+                                   LIKE LOWER(CONCAT('%', :stationName, '%')))
+                              AND (:licensePlate IS NULL OR
+                                   LOWER(cs.electricVehicle.licensePlate)
+                                   LIKE LOWER(CONCAT('%', :licensePlate, '%')))
+                        """)
+        @EntityGraph(attributePaths = {
+                        "electricVehicle",
+                        "electricVehicle.customer",
+                        "chargingConnector.pole.station.location",
+                        "transaction"
+        })
         Page<ChargingSession> searchChargingSessions(
                         @Param("customerId") Integer customerId,
                         @Param("stationId") Integer stationId,

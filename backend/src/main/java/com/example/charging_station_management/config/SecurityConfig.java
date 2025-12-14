@@ -103,6 +103,7 @@ public class SecurityConfig {
 
                         // 4. ADMIN endpoints (Bảo vệ nghiêm ngặt nhất)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/transactions/**").hasRole("ADMIN")
                         .requestMatchers("/api/stations/admin/**").hasRole("ADMIN")
 
                         // 5. VENDOR endpoints

@@ -16,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -26,7 +27,7 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminChargingSessionController {
 
-    private final ChargingSessionService changingSessionService;
+    private final ChargingSessionService chargingSessionService;
 
     @GetMapping("/charging-sessions")
     public ResponseEntity<?> getAllChargingSessions(
@@ -43,10 +44,7 @@ public class AdminChargingSessionController {
             @PageableDefault(size = 10, page = 0, sort = "startTime", direction = Sort.Direction.DESC) Pageable pageable) {
 
         try {
-            log.info(
-                    "Admin requesting charging sessions - customerId: {}, stationId: {}, status: {}, page: {}, size: {}",
-                    customerId, stationId, status, pageable.getPageNumber(), pageable.getPageSize());
-
+            // Build filter request
             ChargingSessionFilterRequest filterRequest = ChargingSessionFilterRequest.builder()
                     .customerId(customerId)
                     .stationId(stationId)
@@ -59,19 +57,33 @@ public class AdminChargingSessionController {
                     .stationName(stationName)
                     .licensePlate(licensePlate)
                     .build();
-
-            Page<ChargingSessionDetailResponse> sessions = changingSessionService.getAllChargingSessions(filterRequest,
+            Page<ChargingSessionDetailResponse> sessions = chargingSessionService.getAllChargingSessions(filterRequest,
                     pageable);
 
-            log.info("Successfully retrieved {} charging sessions (total: {})",
-                    sessions.getNumberOfElements(), sessions.getTotalElements());
+            if (!sessions.isEmpty()) {
+                log.warn("⚠NO SESSIONS FOUND!");
+                log.warn("Possible reasons:");
+                log.warn("  1. Database is empty (no charging_session records)");
+                log.warn("  2. Filter is too strict (no matching records)");
+                log.warn("  3. Query has issues (check ChargingSessionService)");
+            }
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Successfully retrieved charging sessions");
+            response.put("data", createPageResponse(sessions));
+            response.put("timestamp", LocalDateTime.now());
 
-            return ResponseEntity.ok(sessions);
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error retrieving charging sessions", e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to retrieve charging sessions: " + e.getMessage()));
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Failed to retrieve charging sessions");
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 
@@ -80,21 +92,58 @@ public class AdminChargingSessionController {
         try {
             log.info("Admin requesting charging session detail - sessionId: {}", sessionId);
 
-            ChargingSessionDetailResponse session = changingSessionService.getChargingSessionById(sessionId);
+            ChargingSessionDetailResponse session = chargingSessionService.getChargingSessionById(sessionId);
 
-            log.info("Successfully retrieved charging session: {}", sessionId);
+            log.info("Found session: {}", session);
 
-            return ResponseEntity.ok(session);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Successfully retrieved charging session");
+            response.put("data", session);
+            response.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.ok(response);
 
         } catch (RuntimeException e) {
             log.error("Error retrieving charging session: {}", sessionId, e);
-            return ResponseEntity.status(404)
-                    .body(Map.of("error", e.getMessage()));
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("sessionId", sessionId);
+            errorResponse.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.status(404).body(errorResponse);
+
         } catch (Exception e) {
             log.error("Unexpected error retrieving charging session: {}", sessionId, e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Failed to retrieve charging session: " + e.getMessage()));
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Failed to retrieve charging session");
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("timestamp", LocalDateTime.now());
+
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 
+    /**
+     * Tạo cấu trúc page response chuẩn cho FE
+     */
+    private Map<String, Object> createPageResponse(Page<ChargingSessionDetailResponse> page) {
+        Map<String, Object> pageResponse = new HashMap<>();
+
+        pageResponse.put("content", page.getContent());
+        pageResponse.put("pageNumber", page.getNumber());
+        pageResponse.put("pageSize", page.getSize());
+        pageResponse.put("totalElements", page.getTotalElements());
+        pageResponse.put("totalPages", page.getTotalPages());
+        pageResponse.put("last", page.isLast());
+        pageResponse.put("first", page.isFirst());
+        pageResponse.put("empty", page.isEmpty());
+        pageResponse.put("numberOfElements", page.getNumberOfElements());
+
+        return pageResponse;
+    }
 }
