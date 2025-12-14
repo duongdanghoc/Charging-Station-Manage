@@ -6,7 +6,6 @@ import com.example.charging_station_management.dto.response.ChartData;
 import com.example.charging_station_management.dto.response.TransactionDetailResponse;
 import com.example.charging_station_management.entity.converters.*;
 import com.example.charging_station_management.dto.response.VendorRevenueStats;
-import com.example.charging_station_management.entity.converters.Transaction;
 import com.example.charging_station_management.entity.enums.PaymentStatus;
 import com.example.charging_station_management.repository.TransactionRepository;
 import com.example.charging_station_management.service.TransactionService;
@@ -220,6 +219,49 @@ public class TransactionServiceImpl implements TransactionService {
                     .revenue(revenue)
                     .sessions(sessionCount)
                     .build());
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<ChartData> getVendorChartDataByDateRange(Integer vendorId, LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null) fromDate = LocalDate.now().minusDays(30);
+        if (toDate == null) toDate = LocalDate.now();
+
+        // 1. Convert LocalDate sang LocalDateTime để query DB
+        LocalDateTime startDateTime = fromDate.atStartOfDay();
+        LocalDateTime endDateTime = toDate.atTime(LocalTime.MAX);
+
+        // 2. Reuse hàm query repository có sẵn
+        List<Transaction> transactions = transactionRepository.findTransactionsByVendorAndDateRange(
+                vendorId, PaymentStatus.PAID, startDateTime, endDateTime);
+
+        // 3. Group transaction theo ngày
+        Map<LocalDate, List<Transaction>> groupedByDate = transactions.stream()
+                .collect(Collectors.groupingBy(t -> t.getPaymentTime().toLocalDate()));
+
+        // 4. Loop qua từng ngày trong khoảng thời gian để tạo data (Fill gap những ngày
+        // không có doanh thu)
+        List<ChartData> result = new ArrayList<>();
+        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy"); // Format đầy đủ hơn cho range
+                                                                                        // tùy chỉnh
+
+        // Lưu ý: limit loop để tránh vô hạn nếu fromDate > toDate, hoặc range quá lớn
+        LocalDate currentDate = fromDate;
+        while (!currentDate.isAfter(toDate)) {
+            List<Transaction> txsInDay = groupedByDate.getOrDefault(currentDate, new ArrayList<>());
+
+            BigDecimal revenue = calculateTotalRevenue(txsInDay);
+            long sessionCount = txsInDay.size();
+
+            result.add(ChartData.builder()
+                    .date(currentDate.format(displayFormatter)) // Trả về string date
+                    .revenue(revenue)
+                    .sessions(sessionCount)
+                    .build());
+
+            currentDate = currentDate.plusDays(1);
         }
 
         return result;

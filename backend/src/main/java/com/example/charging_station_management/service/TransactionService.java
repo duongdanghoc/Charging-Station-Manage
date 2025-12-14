@@ -5,6 +5,7 @@ import com.example.charging_station_management.dto.response.ChartData;
 import com.example.charging_station_management.dto.response.TransactionDetailResponse;
 import com.example.charging_station_management.dto.response.VendorRevenueStats;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -34,4 +35,6 @@ public interface TransactionService {
     VendorRevenueStats getVendorRevenueStats(Integer vendorId);
 
     List<ChartData> getVendorChartData(Integer vendorId, int days);
+
+    List<ChartData> getVendorChartDataByDateRange(Integer vendorId, LocalDate fromDate, LocalDate toDate);
 }
