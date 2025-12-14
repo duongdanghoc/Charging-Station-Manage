@@ -1,15 +1,25 @@
 package com.example.charging_station_management.controller.vendor;
 
+import com.example.charging_station_management.dto.BaseApiResponse;
+import com.example.charging_station_management.dto.response.ChartData;
+import com.example.charging_station_management.dto.response.VendorRevenueStats;
+import com.example.charging_station_management.entity.converters.Vendor;
+import com.example.charging_station_management.service.TransactionService;
 import com.example.charging_station_management.utils.CustomUserDetails;
+import com.example.charging_station_management.utils.helper.UserHelper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -20,6 +30,20 @@ import java.util.Map;
 @PreAuthorize("hasRole('VENDOR')")
 public class VendorController {
 
+    private final TransactionService transactionService;
+    private final UserHelper userHelper;
+
+    private Vendor getCurrentVendor() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        var user = userHelper.findUserByEmail(email);
+
+        if (user instanceof Vendor vendor) {
+            return vendor;
+        }
+        throw new IllegalArgumentException("Access Denied: Người dùng không phải là Vendor");
+    }
+
     @GetMapping("/profile/{userId}/overview")
     public ResponseEntity<?> getProfileOverview(
             @PathVariable Long userId,
@@ -28,8 +52,8 @@ public class VendorController {
             log.info("Getting profile overview for vendor: {}", userId);
 
             if (userDetails != null && (userDetails.getId() != userId.intValue())) {
-                 log.warn("Access denied: User {} tried to access profile {}", userDetails.getId(), userId);
-                 return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
+                log.warn("Access denied: User {} tried to access profile {}", userDetails.getId(), userId);
+                return ResponseEntity.status(403).body(Map.of("error", "Access denied"));
             }
 
             Map<String, Object> profile = new HashMap<>();
@@ -51,5 +75,25 @@ public class VendorController {
             log.error("Error getting profile overview", e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @GetMapping("/stats/revenue")
+    public ResponseEntity<BaseApiResponse<VendorRevenueStats>> getRevenueStats() {
+        Vendor currentVendor = getCurrentVendor();
+        log.info("Vendor {} requesting revenue stats", currentVendor.getId());
+
+        VendorRevenueStats stats = transactionService.getVendorRevenueStats(currentVendor.getId());
+
+        return ResponseEntity.ok(BaseApiResponse.success(stats, "Lấy thống kê doanh thu thành công"));
+    }
+
+    @GetMapping("/stats/chart")
+    public ResponseEntity<BaseApiResponse<List<ChartData>>> getChartData(
+            @RequestParam(defaultValue = "7") int days) { // Mặc định 7 ngày
+
+        Vendor currentVendor = getCurrentVendor();
+
+        List<ChartData> data = transactionService.getVendorChartData(currentVendor.getId(), days);
+        return ResponseEntity.ok(BaseApiResponse.success(data, "Lấy dữ liệu biểu đồ thành công"));
     }
 }

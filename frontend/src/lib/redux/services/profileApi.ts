@@ -121,6 +121,25 @@ export interface TransactionHistoryResponse {
   number: number;
 }
 
+export interface VendorRevenueStats {
+  dailyRevenue: number;
+  monthlyRevenue: number;
+  monthlyGrowth: number;
+  lastMonthRevenue: number;
+}
+
+export interface ChartData {
+  date: string;
+  revenue: number;
+  sessions: number;
+}
+
+interface BaseResponse<T> {
+  data: T;
+  message: string;
+  status: number;
+}
+
 export const profileApi = createApi({
   reducerPath: "profileApi",
   baseQuery: fetchBaseQuery({
@@ -282,6 +301,16 @@ export const profileApi = createApi({
       providesTags: (result, error, { userId }) =>
         result ? [{ type: "Profile", id: `${userId}-transactions` }] : [],
     }),
+    getVendorRevenueStats: builder.query<VendorRevenueStats, void>({
+      query: () => `/api/vendor/stats/revenue`,
+      transformResponse: (response: BaseResponse<VendorRevenueStats>) => response.data,
+      providesTags: ["Profile"],
+    }),
+    getVendorChartData: builder.query<ChartData[], { days: number }>({
+      query: ({ days }) => `/api/vendor/stats/chart?days=${days}`,
+      transformResponse: (response: BaseResponse<ChartData[]>) => response.data,
+      providesTags: ["Profile"],
+    }),
   }),
 });
 
@@ -300,4 +329,6 @@ export const {
   useUpdateProjectAboutMutation,
   useGetChargingHistoryQuery,
   useGetTransactionsQuery,
+  useGetVendorRevenueStatsQuery,
+  useGetVendorChartDataQuery,
 } = profileApi;
