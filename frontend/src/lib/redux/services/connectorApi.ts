@@ -95,7 +95,7 @@ export const connectorApi = createApi({
                 return `/api/vendor/connectors/search?${queryParams.toString()}`;
             },
             providesTags: (result) =>
-                result
+                result && result.content
                     ? [
                           ...result.content.map(({ id }) => ({ type: "Connector" as const, id })),
                           { type: "Connector", id: "LIST" },

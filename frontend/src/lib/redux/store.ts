@@ -27,6 +27,8 @@ export const store = configureStore({
     [stationApi.reducerPath]: stationApi.reducer,
     [connectorApi.reducerPath]: connectorApi.reducer,
     [sessionApi.reducerPath]: sessionApi.reducer,
+    [priceApi.reducerPath]: priceApi.reducer,
+    [chargingPoleApi.reducerPath]: chargingPoleApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -35,7 +37,9 @@ export const store = configureStore({
       .concat(adminApi.middleware)
       .concat(stationApi.middleware)
       .concat(connectorApi.middleware)
-      .concat(sessionApi.middleware),
+      .concat(sessionApi.middleware)
+      .concat(priceApi.middleware)
+      .concat(chargingPoleApi.middleware),
 });
 
 // Enable refetchOnFocus and refetchOnReconnect
