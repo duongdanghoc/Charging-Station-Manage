@@ -35,8 +35,10 @@ export default function TransactionManagement() {
   // Redux API Hooks
   const { data: transactionsData, isLoading, isFetching } = useGetTransactionsQuery(filters);
 
-  const transactions = transactionsData?.content || [];
-  const totalPages = transactionsData?.totalPages || 0;
+  // --- SỬA LẠI ĐOẠN NÀY ---
+  // Truy cập sâu thêm một cấp vào .data
+  const transactions = transactionsData?.data?.content || [];
+  const totalPages = transactionsData?.data?.totalPages || 0;
 
   // Handlers
   const handleFilterChange = (key: keyof TransactionFilterParams, value: any) => {
@@ -62,39 +64,39 @@ export default function TransactionManagement() {
 
   const getPaymentStatusBadge = (status: string) => {
     const statusConfig: any = {
-      'PAID': { 
-        color: 'bg-green-100 text-green-800 border-green-200', 
-        icon: <CheckCircle className="w-3 h-3" />, 
-        label: 'Thành công' 
+      'PAID': {
+        color: 'bg-green-100 text-green-800 border-green-200',
+        icon: <CheckCircle className="w-3 h-3" />,
+        label: 'Thành công'
       },
-      'PENDING': { 
-        color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
-        icon: <Clock className="w-3 h-3" />, 
-        label: 'Đang xử lý' 
+      'PENDING': {
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        icon: <Clock className="w-3 h-3" />,
+        label: 'Đang xử lý'
       },
-      'FAILED': { 
-        color: 'bg-red-100 text-red-800 border-red-200', 
-        icon: <XCircle className="w-3 h-3" />, 
-        label: 'Thất bại' 
+      'FAILED': {
+        color: 'bg-red-100 text-red-800 border-red-200',
+        icon: <XCircle className="w-3 h-3" />,
+        label: 'Thất bại'
       },
-      'REFUNDED': { 
-        color: 'bg-blue-100 text-blue-800 border-blue-200', 
-        icon: <Banknote className="w-3 h-3" />, 
-        label: 'Hoàn tiền' 
+      'REFUNDED': {
+        color: 'bg-blue-100 text-blue-800 border-blue-200',
+        icon: <Banknote className="w-3 h-3" />,
+        label: 'Hoàn tiền'
       },
-      'CANCELLED': { 
-        color: 'bg-gray-100 text-gray-800 border-gray-200', 
-        icon: <XCircle className="w-3 h-3" />, 
-        label: 'Đã hủy' 
+      'CANCELLED': {
+        color: 'bg-gray-100 text-gray-800 border-gray-200',
+        icon: <XCircle className="w-3 h-3" />,
+        label: 'Đã hủy'
       }
     };
-    
-    const config = statusConfig[status] || { 
-      color: 'bg-gray-100 text-gray-800 border-gray-200', 
-      icon: null, 
-      label: status 
+
+    const config = statusConfig[status] || {
+      color: 'bg-gray-100 text-gray-800 border-gray-200',
+      icon: null,
+      label: status
     };
-    
+
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 ${config.color}`}>
         {config.icon}
@@ -111,7 +113,7 @@ export default function TransactionManagement() {
       'CASH': { color: 'bg-yellow-50 text-yellow-700', label: 'Tiền mặt' },
       'SYSTEM': { color: 'bg-gray-50 text-gray-700', label: 'Hệ thống' }
     };
-    
+
     const config = methodConfig[method] || { color: 'bg-gray-50 text-gray-700', label: method };
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${config.color}`}>
@@ -358,7 +360,7 @@ export default function TransactionManagement() {
         {totalPages > 0 && (
           <div className="p-4 border-t bg-gray-50 flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              Hiển thị {transactions.length} giao dịch • 
+              Hiển thị {transactions.length} giao dịch •
               Tổng tiền: {formatCurrency(transactions.reduce((sum: number, t: any) => sum + (t.amount || 0), 0))}
             </div>
             <div className="flex gap-2">
@@ -395,14 +397,14 @@ export default function TransactionManagement() {
                   Mã GD: <span className="font-mono">{selectedTransaction.transactionId}</span>
                 </p>
               </div>
-              <button 
-                onClick={() => setSelectedTransaction(null)} 
+              <button
+                onClick={() => setSelectedTransaction(null)}
                 className="text-white/80 hover:text-white bg-white/10 p-1 rounded-full"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Thông tin chính */}
               <div className="grid grid-cols-2 gap-4">
@@ -421,7 +423,7 @@ export default function TransactionManagement() {
                     <div>ID: #{selectedTransaction.customerId || 'N/A'}</div>
                   </div>
                 </div>
-                
+
                 <div className="p-4 bg-gray-50 rounded-lg border">
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
                     <Building className="w-3 h-3" /> Trạm sạc
@@ -463,7 +465,7 @@ export default function TransactionManagement() {
                     <div className="font-medium">{selectedTransaction.bankName || 'N/A'}</div>
                   </div>
                 </div>
-                
+
                 {selectedTransaction.accountNumber && (
                   <div className="mt-4 pt-4 border-t border-purple-200">
                     <div className="text-xs text-purple-600 mb-1">Số tài khoản</div>
@@ -521,7 +523,7 @@ export default function TransactionManagement() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="p-4 bg-gray-50 rounded-lg border">
                   <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-1 font-semibold">
                     <Shield className="w-3 h-3" /> Thiết bị sạc
@@ -543,10 +545,10 @@ export default function TransactionManagement() {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6 border-t bg-gray-50 flex justify-end">
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => setSelectedTransaction(null)}
                   className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
                 >

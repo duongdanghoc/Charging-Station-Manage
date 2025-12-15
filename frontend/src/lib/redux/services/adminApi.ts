@@ -16,7 +16,7 @@ export interface PageResponse<T> {
   totalElements: number;
   size: number;
   number: number;
-  pageNumber?: number; 
+  pageNumber?: number;
   last?: boolean;
   first?: boolean;
   empty?: boolean;
@@ -73,7 +73,7 @@ export interface RescueStationRequest {
   addressDetail: string;
   province: string;
   openTime: string;
-  closeTime: string; 
+  closeTime: string;
   latitude?: number;
   longitude?: number;
 }
@@ -108,7 +108,7 @@ export interface ChargingSessionDetailResponse {
   endTime?: string;
   duration?: number;
   energyConsumed?: number;
-  energyKwh?: number; 
+  energyKwh?: number;
   power?: number;
   pricePerKwh?: number;
   totalAmount?: number;
@@ -175,10 +175,10 @@ export const adminApi = createApi({
     baseUrl: process.env.NEXT_PUBLIC_API_URL + '/api/admin',
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
-      
+
       // 🔍 Debug logging
       console.log('🔑 Token from Redux:', token ? 'EXISTS' : 'MISSING');
-      
+
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
@@ -294,13 +294,13 @@ export const adminApi = createApi({
       query: (params) => {
         // Loại bỏ các params undefined/null/empty
         const cleanParams = Object.fromEntries(
-          Object.entries(params).filter(([_, v]) => 
+          Object.entries(params).filter(([_, v]) =>
             v !== undefined && v !== null && v !== ''
           )
         );
-        
+
         console.log('📡 Fetching Charging Sessions with params:', cleanParams);
-        
+
         return {
           url: '/charging-sessions',
           params: cleanParams,
@@ -309,9 +309,9 @@ export const adminApi = createApi({
       providesTags: (result) =>
         result?.data?.content
           ? [
-              ...result.data.content.map(({ sessionId, id }) => ({ 
-                type: 'ChargingSessions' as const, 
-                id: sessionId || id 
+              ...result.data.content.map(({ sessionId, id }) => ({
+                type: 'ChargingSessions' as const,
+                id: sessionId || id
               })),
               { type: 'ChargingSessions', id: 'LIST' },
             ]
@@ -333,13 +333,13 @@ export const adminApi = createApi({
     >({
       query: (params) => {
         const cleanParams = Object.fromEntries(
-          Object.entries(params).filter(([_, v]) => 
+          Object.entries(params).filter(([_, v]) =>
             v !== undefined && v !== null && v !== ''
           )
         );
-        
+
         console.log('📡 Fetching Transactions with params:', cleanParams);
-        
+
         return {
           url: '/transactions',
           params: cleanParams,
@@ -348,9 +348,9 @@ export const adminApi = createApi({
       providesTags: (result) =>
         result?.content
           ? [
-              ...result.content.map(({ id }) => ({ 
-                type: 'Transactions' as const, 
-                id 
+              ...result.content.map(({ id }) => ({
+                type: 'Transactions' as const,
+                id
               })),
               { type: 'Transactions', id: 'LIST' },
             ]
