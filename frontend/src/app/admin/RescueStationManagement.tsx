@@ -1,17 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useGetRescueStationsQuery,
   useCreateRescueStationMutation,
   useDeleteRescueStationMutation,
-  useUpdateRescueStationMutation // 👈 Import thêm hook Update
+  useUpdateRescueStationMutation
 } from "@/lib/redux/services/adminApi";
 import {
   Plus, Trash2, MapPin, Phone, Ambulance, Mail, Clock,
-  Edit, Search, ChevronLeft, ChevronRight // 👈 Import thêm các icon mới
+  Edit, Search, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
+import { getGeocoder } from '@/services/geocoding';
+
+// 👇 QUAN TRỌNG: Khai báo Map bằng dynamic import với ssr: false
+// Điều này ngăn Next.js render bản đồ trên server (nơi không có window)
+const LocationPickerMap = dynamic(
+  () => import("@/components/profile/StationManagementSection/LocationPickerMap"),
+  {
+    ssr: false,
+    loading: () => <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-gray-400">Đang tải bản đồ...</div>
+  }
+);
 
 // --- 1. Helper Validate (Kiểm tra dữ liệu đầu vào) ---
 const validateForm = (form: any) => {
@@ -46,8 +58,43 @@ export default function RescueStationManagement() {
   const [form, setForm] = useState({
     name: "", phone: "", email: "",
     addressDetail: "", province: "",
-    openTime: "08:00", closeTime: "17:00"
+    openTime: "08:00", closeTime: "17:00",
+    latitude: 21.0227, // Default Hanoi
+    longitude: 105.8194
   });
+
+  // Hàm xử lý khi người dùng chọn trên bản đồ -> Cập nhật ngược lại vào Form
+  const handleMapChange = useCallback((lat: number, lng: number) => {
+    setForm(prev => ({
+      ...prev,
+      latitude: parseFloat(lat.toFixed(6)),
+      longitude: parseFloat(lng.toFixed(6))
+    }));
+  }, []);
+
+  // Auto-populate address and province based on coordinates
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const timer = setTimeout(async () => {
+      if (form.latitude && form.longitude) {
+        try {
+          const result = await getGeocoder().reverse(form.longitude, form.latitude);
+          if (result) {
+            setForm(prev => ({
+              ...prev,
+              addressDetail: result.address,
+              province: result.province || result.district || ''
+            }));
+          }
+        } catch (e) {
+          console.error("Reverse geocoding failed", e);
+        }
+      }
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(timer);
+  }, [form.latitude, form.longitude, isModalOpen]);
 
   // --- 5. Effect Debounce Search ---
   // Khi người dùng gõ, đợi 0.5s mới gọi API tìm kiếm để tránh spam request
@@ -75,12 +122,21 @@ export default function RescueStationManagement() {
         province: station.location?.province || "",
         // Cắt chuỗi HH:mm:ss -> HH:mm cho input type="time"
         openTime: station.openTime?.substring(0, 5) || "08:00",
-        closeTime: station.closeTime?.substring(0, 5) || "17:00"
+        closeTime: station.closeTime?.substring(0, 5) || "17:00",
+        // Lấy tọa độ nếu có
+        latitude: station.location?.latitude || 21.0227,
+        longitude: station.location?.longitude || 105.8194
       });
     } else {
       // Mode Tạo mới: Reset form trắng
       setEditingId(null);
-      setForm({ name: "", phone: "", email: "", addressDetail: "", province: "", openTime: "08:00", closeTime: "17:00" });
+      setForm({
+        name: "", phone: "", email: "",
+        addressDetail: "", province: "",
+        openTime: "08:00", closeTime: "17:00",
+        latitude: 21.0227,
+        longitude: 105.8194
+      });
     }
     setIsModalOpen(true);
   };
@@ -179,20 +235,20 @@ export default function RescueStationManagement() {
             <div key={station.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all relative group">
               {/* Toolbar Nút Sửa/Xóa (Hiện khi hover) */}
               <div className="absolute top-4 right-4 flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity bg-white pl-2">
-                 <button
-                    onClick={() => openModal(station)} // Gọi có tham số -> Mode Sửa
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                    title="Chỉnh sửa"
-                 >
-                    <Edit className="w-4 h-4" />
-                 </button>
-                 <button
-                    onClick={() => handleDelete(station.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                    title="Xóa"
-                 >
-                    <Trash2 className="w-4 h-4" />
-                 </button>
+                <button
+                  onClick={() => openModal(station)} // Gọi có tham số -> Mode Sửa
+                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                  title="Chỉnh sửa"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(station.id)}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                  title="Xóa"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
 
               <div className="flex items-center gap-3 mb-3 pr-16">
@@ -202,24 +258,24 @@ export default function RescueStationManagement() {
                 <div className="overflow-hidden">
                   <h3 className="font-bold text-gray-800 truncate" title={station.name}>{station.name}</h3>
                   <div className="text-xs text-gray-500 flex items-center gap-1">
-                     <Clock className="w-3 h-3"/> {station.openTime?.substring(0,5)} - {station.closeTime?.substring(0,5)}
+                    <Clock className="w-3 h-3" /> {station.openTime?.substring(0, 5)} - {station.closeTime?.substring(0, 5)}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 mt-4 pt-4 border-t border-gray-50">
                 <p className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0"/>
+                  <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                   <span className="line-clamp-2" title={`${station.location?.addressDetail}, ${station.location?.province}`}>
                     {station.location?.addressDetail}, {station.location?.province}
                   </span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gray-400"/> {station.phone}
+                  <Phone className="w-4 h-4 text-gray-400" /> {station.phone}
                 </p>
                 {station.email && (
                   <p className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-400"/> <span className="truncate">{station.email}</span>
+                    <Mail className="w-4 h-4 text-gray-400" /> <span className="truncate">{station.email}</span>
                   </p>
                 )}
               </div>
@@ -231,90 +287,119 @@ export default function RescueStationManagement() {
       {/* Pagination Controls (Nút Phân trang) */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 mt-6 pt-4 border-t border-gray-100">
-           <button
-             disabled={page === 0}
-             onClick={() => setPage(p => p - 1)}
-             className="p-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-           >
-             <ChevronLeft className="w-5 h-5" />
-           </button>
-           <span className="text-sm font-medium text-gray-600">Trang {page + 1} / {totalPages}</span>
-           <button
-             disabled={page >= totalPages - 1}
-             onClick={() => setPage(p => p + 1)}
-             className="p-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-           >
-             <ChevronRight className="w-5 h-5" />
-           </button>
+          <button
+            disabled={page === 0}
+            onClick={() => setPage(p => p - 1)}
+            className="p-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-medium text-gray-600">Trang {page + 1} / {totalPages}</span>
+          <button
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage(p => p + 1)}
+            className="p-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       )}
 
       {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                <h3 className="font-bold text-lg text-gray-800">
-                  {editingId ? "Cập Nhật Thông Tin" : "Thêm Trạm Cứu Hộ"}
-                </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition">✕</button>
+              <h3 className="font-bold text-lg text-gray-800">
+                {editingId ? "Cập Nhật Thông Tin" : "Thêm Trạm Cứu Hộ"}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition">✕</button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Form Fields */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tên đơn vị <span className="text-red-500">*</span></label>
-                <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
-                    value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="VD: Cứu hộ Sài Gòn 24/7"/>
-              </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* Layout chia 2 cột: Trái (Input), Phải (Bản đồ) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                {/* Cột Trái: Form nhập liệu */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tên đơn vị <span className="text-red-500">*</span></label>
                     <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
-                        value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="09xxxx"/>
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
-                        value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="admin@example.com"/>
-                 </div>
-              </div>
+                      value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="VD: Cứu hộ Sài Gòn 24/7" />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Giờ mở cửa</label>
-                    <input type="time" required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none"
-                        value={form.openTime} onChange={e => setForm({...form, openTime: e.target.value})} />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Giờ đóng cửa</label>
-                    <input type="time" required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none"
-                        value={form.closeTime} onChange={e => setForm({...form, closeTime: e.target.value})} />
-                 </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                      <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
+                        value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="09xxxx" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input type="email" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
+                        value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="admin@example.com" />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ chi tiết <span className="text-red-500">*</span></label>
-                <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
-                    value={form.addressDetail} onChange={e => setForm({...form, addressDetail: e.target.value})} placeholder="Số nhà, đường, phường..."/>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Giờ mở cửa</label>
+                      <input type="time" required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none"
+                        value={form.openTime} onChange={e => setForm({ ...form, openTime: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Giờ đóng cửa</label>
+                      <input type="time" required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none"
+                        value={form.closeTime} onChange={e => setForm({ ...form, closeTime: e.target.value })} />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh / Thành phố <span className="text-red-500">*</span></label>
-                <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
-                    value={form.province} onChange={e => setForm({...form, province: e.target.value})} placeholder="VD: Hà Nội, TP.HCM..."/>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ chi tiết <span className="text-red-500">*</span></label>
+                    <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
+                      value={form.addressDetail} onChange={e => setForm({ ...form, addressDetail: e.target.value })} placeholder="Số nhà, đường, phường..." />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh / Thành phố <span className="text-red-500">*</span></label>
+                    <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none transition"
+                      value={form.province} onChange={e => setForm({ ...form, province: e.target.value })} placeholder="VD: Hà Nội, TP.HCM..." />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Vĩ độ (Lat)</label>
+                      <input type="number" step="any" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none"
+                        value={form.latitude} onChange={e => setForm({ ...form, latitude: parseFloat(e.target.value) })} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Kinh độ (Long)</label>
+                      <input type="number" step="any" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-200 outline-none"
+                        value={form.longitude} onChange={e => setForm({ ...form, longitude: parseFloat(e.target.value) })} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cột Phải: Bản đồ */}
+                <div className="flex flex-col h-full min-h-[300px]">
+                  <div className="mb-2 text-sm font-medium text-gray-700">Chọn vị trí trên bản đồ</div>
+                  <LocationPickerMap
+                    lat={form.latitude}
+                    lng={form.longitude}
+                    onChange={handleMapChange}
+                  />
+                </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-3 border-t mt-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition">Hủy bỏ</button>
                 <button
-                    type="submit"
-                    disabled={isCreating || isUpdating}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+                  type="submit"
+                  disabled={isCreating || isUpdating}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
                 >
-                    {(isCreating || isUpdating) && <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>}
-                    {editingId ? "Lưu Cập Nhật" : "Thêm Trạm Mới"}
+                  {(isCreating || isUpdating) && <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>}
+                  {editingId ? "Lưu Cập Nhật" : "Thêm Trạm Mới"}
                 </button>
               </div>
             </form>

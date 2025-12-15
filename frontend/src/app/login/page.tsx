@@ -27,12 +27,12 @@ function getDashboardUrl(role: string): string {
     case "ADMIN":
       return "/admin";
     case "VENDOR":
-      return "/vendor/dashboard";
+      return "/";
     case "CUSTOMER":
-      return "/customer/dashboard";
+      return "/";
     default:
-      console.warn(`Unknown role: ${role}, redirecting to customer dashboard`);
-      return "/customer/dashboard";
+      console.warn(`Unknown role: ${role}, redirecting to home page`);
+      return "/";
   }
 }
 

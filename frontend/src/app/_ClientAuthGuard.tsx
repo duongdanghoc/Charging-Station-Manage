@@ -13,11 +13,11 @@ function getDashboardRoute(role: string): string {
     case "ADMIN":
       return "/admin";
     case "VENDOR":
-      return "/vendor/dashboard";
+      return "/";
     case "CUSTOMER":
-      return "/customer/dashboard";
+      return "/";
     default:
-      return "/customer/dashboard";
+      return "/";
   }
 }
 
@@ -87,14 +87,7 @@ export default function ClientAuthGuard({ children }: { children: React.ReactNod
       return;
     }
 
-    // ✅ If user is logged in and on home page "/"
-    if (authInfo && pathname === "/") {
-      const dashboardRoute = getDashboardRoute(authInfo.user.role);
-      console.log("✅ User on home page, redirecting to:", dashboardRoute);
-      
-      window.location.href = dashboardRoute;
-      return;
-    }
+    // Home page "/" is now accessible to all users, no redirect needed
 
     // ✅ If user is not logged in and tries to access protected pages
     const protectedPrefixes = ["/admin", "/vendor", "/customer"];
@@ -112,17 +105,12 @@ export default function ClientAuthGuard({ children }: { children: React.ReactNod
     if (authInfo && isProtectedPage) {
       const currentRole = authInfo.user.role.toUpperCase().replace("ROLE_", "");
       
-      // Check if user is on correct dashboard
+      // Check if user is on correct dashboard (only enforce for Admin)
       if (currentRole === "ADMIN" && !pathname.startsWith("/admin")) {
         console.log("⚠️ Admin user on wrong page, redirecting to /admin");
         window.location.href = "/admin";
-      } else if (currentRole === "VENDOR" && !pathname.startsWith("/vendor")) {
-        console.log("⚠️ Vendor user on wrong page, redirecting to /vendor/dashboard");
-        window.location.href = "/vendor/dashboard";
-      } else if (currentRole === "CUSTOMER" && !pathname.startsWith("/customer")) {
-        console.log("⚠️ Customer user on wrong page, redirecting to /customer/dashboard");
-        window.location.href = "/customer/dashboard";
       }
+      // Vendor and Customer can access any page, no redirect needed
     }
   }, [pathname, router]);
 

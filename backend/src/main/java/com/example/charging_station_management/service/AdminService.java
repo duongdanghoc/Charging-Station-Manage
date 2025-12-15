@@ -36,6 +36,9 @@ public interface AdminService {
     // getAllRescueStations cũ
     Page<RescueStation> getRescueStations(String keyword, Pageable pageable);
 
+    // 1b. Lấy chi tiết theo ID (Public)
+    RescueStation getRescueStationById(Integer id);
+
     // 2. Thêm mới
     RescueStation createRescueStation(RescueStationRequest request);
 

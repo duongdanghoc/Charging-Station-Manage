@@ -68,11 +68,11 @@ export function getDashboardRoute(role?: string): string {
     case "ADMIN":
       return "/admin";
     case "VENDOR":
-      return "/vendor/dashboard";
+      return "/";
     case "CUSTOMER":
-      return "/customer/dashboard";
+      return "/";
     default:
-      return "/customer/dashboard";
+      return "/";
   }
 }
 

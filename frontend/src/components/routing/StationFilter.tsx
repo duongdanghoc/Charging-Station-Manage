@@ -66,6 +66,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
         status: undefined,
         vehicleType: undefined,
         connectorType: undefined,
+        stationType: 'all',
     });
 
     // Drag logic for mobile sheet
@@ -134,6 +135,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                 status: filters.status,
                 vehicleType: filters.vehicleType,
                 connectorType: filters.connectorType,
+                stationType: filters.stationType,
                 size: 100,
             };
 
@@ -152,10 +154,11 @@ export const StationFilter: React.FC<StationFilterProps> = ({
             status: undefined,
             vehicleType: undefined,
             connectorType: undefined,
+            stationType: 'all',
         });
     };
 
-    const hasActiveFilters = searchText || filters.status !== undefined || filters.vehicleType || filters.connectorType;
+    const hasActiveFilters = searchText || filters.status !== undefined || filters.vehicleType || filters.connectorType || (filters.stationType && filters.stationType !== 'all');
 
     const handleDelete = async (stationId: string) => {
         if (!confirm('Bạn có chắc chắn muốn xóa trạm này?')) return;
@@ -252,10 +255,10 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                             {/* Horizontal scroll preview for collapsed state */}
                             {loading ? <span className="text-xs text-gray-400">Đang tải...</span> :
-                                filteredStations.slice(0, 5).map(station => {
+                                filteredStations.slice(0, 5).map((station, index) => {
                                     const Icon = getStationIcon(station.type);
                                     return (
-                                        <div key={station.id} className="min-w-[140px] bg-white p-2 rounded-lg border border-gray-100 shadow-sm flex flex-col gap-1"
+                                        <div key={`preview-${station.id}-${index}`} className="min-w-[140px] bg-white p-2 rounded-lg border border-gray-100 shadow-sm flex flex-col gap-1"
                                             onClick={() => { onStationDetail?.(station.id!); setSheetState('expanded'); }}>
                                             <div className="flex items-center gap-1">
                                                 <Icon size={12} className={station.type === 'rescue' ? 'text-orange-500' : 'text-green-500'} />
@@ -270,6 +273,29 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                     ) : (
                         /* Expanded: Full list logic reused but adapted for mobile container */
                         <div className="space-y-3">
+                            {/* Station Type Filter */}
+                            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
+                                {[
+                                    { value: 'all' as const, label: 'Tất cả', icon: null },
+                                    { value: 'charging' as const, label: 'Sạc', icon: Zap },
+                                    { value: 'rescue' as const, label: 'Cứu hộ', icon: Wrench },
+                                ].map(({ value, label, icon: Icon }) => (
+                                    <button
+                                        key={value}
+                                        onClick={() => setFilters(prev => ({ ...prev, stationType: value }))}
+                                        className={`flex-1 inline-flex items-center justify-center gap-1 rounded px-2 py-1 text-xs font-medium shadow-sm ${
+                                            filters.stationType === value
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white text-gray-700'
+                                        }`}
+                                        title={`Hiển thị ${label.toLowerCase()}`}
+                                    >
+                                        {Icon && <Icon size={14} />}
+                                        <span>{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
                             {/* Keep search/filter inputs active here if expanded */}
                             <div className="bg-white p-2 rounded-lg shadow-sm mb-3">
                                 <div className="flex gap-2 mb-2">
@@ -377,7 +403,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
 
                             {!loading && filteredStations.length === 0 && <div className="text-center py-8 text-gray-400 text-sm">Không tìm thấy trạm nào</div>}
 
-                            {filteredStations.map((station) => {
+                            {filteredStations.map((station, index) => {
                                 const Icon = getStationIcon(station.type);
                                 const statusLabel = (station as StationListItem).status ?? null;
                                 const ratingValue = (station as StationListItem).rating;
@@ -385,7 +411,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
 
                                 return (
                                     <div
-                                        key={station.id}
+                                        key={`mobile-${station.id}-${index}`}
                                         onClick={() => onStationDetail?.(station.id!)}
                                         className="mb-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition-all hover:-translate-y-[1px] hover:border-blue-300 hover:shadow-md cursor-pointer"
                                     >
@@ -536,11 +562,11 @@ export const StationFilter: React.FC<StationFilterProps> = ({
     }
 
     return (
-        <div className={`fixed bottom-4 right-4 z-[350] flex max-h-[calc(60vh-2rem)] w-[370px] max-w-[90vw] flex-col rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur ${className}`}>
+        <div className={`fixed bottom-4 right-4 z-[350] flex h-[calc(60vh-2rem)] w-[370px] max-w-[90vw] flex-col rounded-2xl border border-slate-200 bg-white/95 shadow-xl backdrop-blur ${className}`}>
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200">
                 <div className="flex flex-col">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Trạm sạc và Cứu hộ</span>
-                    <h3 className="text-base font-semibold text-slate-900">Danh sách trạm</h3>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Trạm sạc</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">và Cứu hộ</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -565,6 +591,28 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                             Thêm trạm
                         </button>
                     )} */}
+
+                    <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1">
+                        {[
+                            { value: 'all' as const, label: 'Tất cả', icon: null },
+                            { value: 'charging' as const, label: 'Sạc', icon: Zap },
+                            { value: 'rescue' as const, label: 'Cứu hộ', icon: Wrench },
+                        ].map(({ value, label, icon: Icon }) => (
+                            <button
+                                key={value}
+                                onClick={() => setFilters(prev => ({ ...prev, stationType: value }))}
+                                className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium shadow-sm ${
+                                    filters.stationType === value
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white text-slate-700'
+                                }`}
+                                title={`Hiển thị ${label.toLowerCase()}`}
+                            >
+                                {Icon && <Icon size={14} />}
+                                <span className="hidden lg:inline">{label}</span>
+                            </button>
+                        ))}
+                    </div>
 
                     <button
                         onClick={() => {
@@ -731,7 +779,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
                     </div>
                 )}
 
-                {!loading && !error && filteredStations.map((station) => {
+                {!loading && !error && filteredStations.map((station, index) => {
                     const Icon = getStationIcon(station.type);
                     const statusLabel = (station as StationListItem).status ?? null;
                     const ratingValue = (station as StationListItem).rating;
@@ -739,7 +787,7 @@ export const StationFilter: React.FC<StationFilterProps> = ({
 
                     return (
                         <div
-                            key={station.id}
+                            key={`desktop-${station.id}-${index}`}
                             onClick={() => onStationDetail?.(station.id!)}
                             className="mb-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition-all hover:-translate-y-[1px] hover:border-blue-300 hover:shadow-md cursor-pointer"
                         >
