@@ -82,13 +82,48 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
         Vendor vendor = station != null ? station.getVendor() : null;
         Transaction transaction = session.getTransaction();
 
+        ChargingSessionDetailResponse.builder()
+                // Session info
+                .sessionId(session.getId())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime());
+        // Calculate provisional values for CHARGING sessions if DB values are empty
+        java.math.BigDecimal energyKwh = session.getEnergyKwh();
+        java.math.BigDecimal cost = session.getCost();
+
+        if (session.getStatus() == SessionStatus.CHARGING && session.getStartTime() != null) {
+            boolean hasDbValues = (energyKwh != null && energyKwh.compareTo(java.math.BigDecimal.ZERO) > 0)
+                    || (cost != null && cost.compareTo(java.math.BigDecimal.ZERO) > 0);
+
+            if (!hasDbValues) {
+                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                java.time.Duration duration = java.time.Duration.between(session.getStartTime(), now);
+                long minutes = duration.toMinutes();
+                if (minutes < 1) minutes = 1;
+
+                // Dynamic Power Calculation
+                java.math.BigDecimal powerKw = java.math.BigDecimal.valueOf(11); // Default 11kW
+                if (session.getChargingConnector() != null && session.getChargingConnector().getMaxPower() != null) {
+                    powerKw = session.getChargingConnector().getMaxPower();
+                }
+
+                java.math.BigDecimal hours = java.math.BigDecimal.valueOf(minutes)
+                        .divide(java.math.BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
+                energyKwh = powerKw.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
+
+                // Dynamic Price Lookup
+                java.math.BigDecimal pricePerKwh = getApplicablePrice(session.getChargingConnector());
+                cost = energyKwh.multiply(pricePerKwh);
+            }
+        }
+
         return ChargingSessionDetailResponse.builder()
                 // Session info
                 .sessionId(session.getId())
                 .startTime(session.getStartTime())
                 .endTime(session.getEndTime())
-                .energyKwh(session.getEnergyKwh())
-                .cost(session.getCost())
+                .energyKwh(energyKwh)
+                .cost(cost)
                 .status(session.getStatus() != null ? session.getStatus() : null)
 
                 // Customer info (Customer IS-A User)

@@ -82,7 +82,7 @@ export default function QuickChargeSection() {
                 </div>
 
                 <div className="space-y-3">
-                    <Label className="text-gray-700">Nhập ID Trụ sạc (Connector ID)</Label>
+                    <Label className="text-gray-700">Nhập ID đầu sạc (Connector ID)</Label>
                     <div className="relative">
                         <Input 
                             type="number" 

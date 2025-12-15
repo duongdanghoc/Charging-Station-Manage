@@ -17,6 +17,16 @@ const ChargingHistoryTable: React.FC<Props> = ({ userId }) => {
     const [page, setPage] = useState(0);
     const { data, isLoading, isError } = useGetChargingHistoryQuery({ userId, page, size: 5 });
 
+    const uniqueContent = React.useMemo(() => {
+        if (!data?.content) return [];
+        const seen = new Set();
+        return data.content.filter(item => {
+            const isDuplicate = seen.has(item.sessionId);
+            seen.add(item.sessionId);
+            return !isDuplicate;
+        });
+    }, [data?.content]);
+
     const formatCurrency = (amount: number | null) =>
         amount ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount) : "—";
 
@@ -33,7 +43,8 @@ const ChargingHistoryTable: React.FC<Props> = ({ userId }) => {
 
     if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div>;
     if (isError) return <div className="text-red-500 py-8 text-center">Lỗi tải dữ liệu.</div>;
-    if (!data?.content.length) return <div className="text-gray-500 py-8 text-center">Chưa có lịch sử sạc.</div>;
+    if (!data) return null;
+    if (!uniqueContent.length) return <div className="text-gray-500 py-8 text-center">Chưa có lịch sử sạc.</div>;
 
     return (
         <div>
@@ -49,7 +60,7 @@ const ChargingHistoryTable: React.FC<Props> = ({ userId }) => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {data.content.map((item) => (
+                        {uniqueContent.map((item) => (
                             <TableRow key={item.sessionId}>
                                 <TableCell className="font-medium">
                                     <div className="flex flex-col">

@@ -113,7 +113,6 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
       });
     }
 
-    if (role === "SUPPLIER") {
       baseTabs.push({
         id: "supplier-operations",
         name: "Quản lý trạm",
@@ -122,7 +121,6 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
             <StationManagementSection />
             <VendorChargingSessionManager />
             <PayoutSettingsSection role={role} />
-            <AnalyticsSection role={role} />
           </div>
         ),
       });
@@ -136,6 +134,17 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
           <div className="space-y-8">
             <DriverManagementSection />
             <PayoutSettingsSection role={role} />
+          </div>
+        ),
+      });
+    }
+
+    if (role === "SUPPLIER" || role === "TECH") {
+      baseTabs.push({
+        id: "analytics",
+        name: "Thống kê",
+        content: (
+          <div className="space-y-8">
             <AnalyticsSection role={role} />
           </div>
         ),
