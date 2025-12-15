@@ -199,11 +199,11 @@ INSERT INTO customers (user_id) VALUES (6), (7);
 
 -- 3.2 LOCATIONS (5 dòng)
 INSERT INTO locations (latitude, longitude, province, address_detail) VALUES
-(10.7769, 106.7009, 'Hồ Chí Minh', '72 Lê Thánh Tôn, Bến Nghé, Quận 1'), -- Vincom Center
-(21.0285, 105.8542, 'Hà Nội', '54A Nguyễn Chí Thanh, Láng Thượng, Đống Đa'), -- Vincom NCT
-(16.0544, 108.2022, 'Đà Nẵng', '910A Ngô Quyền, An Hải Bắc, Sơn Trà'), -- Vincom Plaza
-(10.7626, 106.6602, 'Hồ Chí Minh', '273 An Dương Vương, Phường 3, Quận 5'), -- ĐH Sư Phạm
-(10.8231, 106.6297, 'Hồ Chí Minh', '10 Tân Kỳ Tân Quý, Tân Sơn Nhì, Tân Phú'); -- Aeon Mall
+(10.7769, 106.7009, 'Hồ Chí Minh', '114 Đ. Nguyễn Huệ, Bến Nghé, Quận 1'), -- Vincom Center
+(21.0285, 105.8542, 'Hà Nội', '35 Trần Nguyên Hãn, Lý Thái Tổ, Hoàn Kiếm'), -- Vincom NCT
+(16.0544, 108.2022, 'Đà Nẵng', '1 Trần Hưng Đạo, Hải Châu'), -- Vincom Plaza
+(10.7626, 106.6602, 'Hồ Chí Minh', '117 Lý Thường Kiệt, phường 7, Quận 10'), -- ĐH Sư Phạm
+(10.8231, 106.6297, 'Hồ Chí Minh', '372/15/13P August revaluation street , ward 10, district 3'); -- Aeon Mall
 
 -- 3.3 RESCUE STATIONS (5 dòng)
 INSERT INTO rescue_stations (location_id, name, phone, email, open_time, close_time) VALUES
