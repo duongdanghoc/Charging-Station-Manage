@@ -50,12 +50,14 @@ public interface ChargingSessionRepository
         long countByStationIdAndStatusIn(@Param("stationId") Integer stationId,
                         @Param("statuses") List<SessionStatus> statuses);
 
+        @Query(value = "SELECT DISTINCT s FROM ChargingSession s WHERE s.electricVehicle.customer.id = :customerId ORDER BY s.startTime DESC, s.id DESC",
+               countQuery = "SELECT COUNT(DISTINCT s) FROM ChargingSession s WHERE s.electricVehicle.customer.id = :customerId")
         @EntityGraph(attributePaths = {
                         "electricVehicle",
                         "chargingConnector.pole.station.location",
                         "transaction"
         })
-        Page<ChargingSession> findByElectricVehicle_Customer_IdOrderByStartTimeDesc(Integer customerId,
+        Page<ChargingSession> findByElectricVehicle_Customer_IdOrderByStartTimeDesc(@Param("customerId") Integer customerId,
                         Pageable pageable);
 
         @Query("""
@@ -101,8 +103,10 @@ public interface ChargingSessionRepository
         @Query("""
                             SELECT cs FROM ChargingSession cs
                             WHERE (:customerId IS NULL OR cs.electricVehicle.customer.id = :customerId)
+                              AND (:vendorId IS NULL OR cs.chargingConnector.pole.station.vendor.id = :vendorId)
                               AND (:stationId IS NULL OR cs.chargingConnector.pole.station.id = :stationId)
                               AND (:status IS NULL OR cs.status = :status)
+                              AND ((:statuses) IS NULL OR cs.status IN (:statuses))
                               AND (:startTimeFrom IS NULL OR cs.startTime >= :startTimeFrom)
                               AND (:startTimeTo IS NULL OR cs.startTime <= :startTimeTo)
                               AND (:endTimeFrom IS NULL OR cs.endTime >= :endTimeFrom)
@@ -125,8 +129,10 @@ public interface ChargingSessionRepository
         })
         Page<ChargingSession> searchChargingSessions(
                         @Param("customerId") Integer customerId,
+                        @Param("vendorId") Integer vendorId,
                         @Param("stationId") Integer stationId,
                         @Param("status") SessionStatus status,
+                        @Param("statuses") List<SessionStatus> statuses,
                         @Param("startTimeFrom") LocalDateTime startTimeFrom,
                         @Param("startTimeTo") LocalDateTime startTimeTo,
                         @Param("endTimeFrom") LocalDateTime endTimeFrom,

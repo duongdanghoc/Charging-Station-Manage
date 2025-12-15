@@ -20,12 +20,7 @@ export const DesktopLoginsSignups: React.FC = () => {
             // Call logout API
             await logout().unwrap();
             
-            // Refetch session to update UI immediately
-            await refetch();
-            
-            // Navigate to login page
-            router.push("/login");
-            router.refresh();
+            window.location.href = "/login";
         } catch (error) {
             console.error("Logout failed:", error);
             
@@ -33,11 +28,7 @@ export const DesktopLoginsSignups: React.FC = () => {
             localStorage.removeItem("authToken");
             localStorage.removeItem("user");
             
-            // Force refetch to clear cache
-            await refetch();
-            
-            router.push("/login");
-            router.refresh();
+            window.location.href = "/login";
         }
     };
 

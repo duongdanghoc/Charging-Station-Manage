@@ -11,7 +11,7 @@ public record ChargingHistoryResponse(
         LocalDateTime startTime,
         LocalDateTime endTime,
         BigDecimal energyKwh,
-        BigDecimal totalAmount,
+        BigDecimal amount,
         String sessionStatus, // COMPLETED, CHARGING...
         String paymentStatus, // PAID, PENDING, FAILED
         String paymentMethod) {

@@ -38,4 +38,8 @@ public class ChargingSessionFilterRequest {
     private String stationName;
 
     private String licensePlate;
+
+    private Integer vendorId;
+
+    private java.util.List<SessionStatus> statuses;
 }
