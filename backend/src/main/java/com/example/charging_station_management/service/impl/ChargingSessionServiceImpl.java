@@ -163,6 +163,12 @@ public class ChargingSessionServiceImpl implements ChargingSessionService {
             throw new RuntimeException("Đầu sạc này đang bận hoặc bảo trì.");
         }
 
+        // Check if connector has a valid price configured
+        java.math.BigDecimal applicablePrice = getApplicablePrice(connector);
+        if (applicablePrice.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            throw new RuntimeException("Chân sạc này chưa được cấu hình giá, không thể sạc.");
+        }
+
         // 3. Check Vehicle
         com.example.charging_station_management.entity.converters.ElectricVehicle vehicle = vehicleRepository
                 .findByIdAndCustomerId(vehicleId, userId)
