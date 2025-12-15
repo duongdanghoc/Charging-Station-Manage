@@ -348,17 +348,16 @@ export const adminApi = createApi({
       providesTags: (result) =>
         result?.content
           ? [
-              ...result.content.map(({ id }) => ({ 
-                type: 'Transactions' as const, 
-                id 
+              ...result.content.map(({ transactionId }) => ({
+                type: 'Transactions' as const,
+                id: transactionId
               })),
               { type: 'Transactions', id: 'LIST' },
             ]
           : [{ type: 'Transactions', id: 'LIST' }],
-      transformResponse: (response: PageResponse<TransactionDetailResponse>) => {
+      transformResponse: (response: ApiResponse<PageResponse<TransactionDetailResponse>>) => {
         console.log('✅ Transactions Response:', response);
-        // TransactionController trả về trực tiếp Page object, không có wrapper
-        return response;
+        return response.data;
       },
       transformErrorResponse: (response: any) => {
         console.error('❌ Transactions Error:', response);
