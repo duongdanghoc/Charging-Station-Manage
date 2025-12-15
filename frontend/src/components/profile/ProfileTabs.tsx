@@ -113,6 +113,7 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
       });
     }
 
+    if (role === "SUPPLIER") {
       baseTabs.push({
         id: "supplier-operations",
         name: "Quản lý trạm",
