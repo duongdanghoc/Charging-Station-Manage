@@ -77,7 +77,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: any) {
 
       toast.success("Tạo tài khoản thành công!", {
         description: (
-          <div className="mt-2 p-2 bg-slate-100 rounded text-xs font-mono">
+          <div className="mt-2 p-2 bg-green-100 text-green-800 rounded text-xs font-mono">
             <strong>Mật khẩu tạm:</strong> {password}
             <br />(Hãy copy mật khẩu này)
           </div>
