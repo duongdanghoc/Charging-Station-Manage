@@ -416,21 +416,9 @@ export default function UserManagement() {
           </div>
         </div>
 
-        <div className="w-[160px]">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">Vai trò</label>
-          <select
-            className="w-full py-2 px-3 border rounded-lg text-sm bg-white"
-            value={filters.role || ''}
-            onChange={(e) => handleFilterChange('role', e.target.value || undefined)}
-          >
-            <option value="">Tất cả</option>
-            <option value="CUSTOMER">Customer</option>
-            <option value="VENDOR">Vendor</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-        </div>
 
-        <div className="w-[160px]">
+
+        <div className="w-[190px]">
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Trạng thái</label>
           <select
             className="w-full py-2 px-3 border rounded-lg text-sm bg-white"
