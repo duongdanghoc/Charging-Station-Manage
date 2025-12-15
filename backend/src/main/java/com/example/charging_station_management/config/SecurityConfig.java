@@ -101,7 +101,11 @@ public class SecurityConfig {
                                 "/api/auth/reset-password")
                         .permitAll()
 
-                        // 4. ADMIN endpoints (Bảo vệ nghiêm ngặt nhất)
+                        // 4. PUBLIC Rescue Stations (READ ONLY - no auth required)
+                        .requestMatchers(HttpMethod.GET, "/api/admin/rescue-stations/**").permitAll()
+
+                        // 5. ADMIN endpoints (Bảo vệ nghiêm ngặt nhất)
+                        // POST/PUT/DELETE rescue-stations vẫn cần ADMIN vì match rule này
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/transactions/**").hasRole("ADMIN")
                         .requestMatchers("/api/stations/admin/**").hasRole("ADMIN")

@@ -1,7 +1,7 @@
 'use client';
 
 import React from "react";
-import { Building2, Eye, MapPin, Pencil, Power, Trash2, WifiOff, Plug } from "lucide-react";
+import { Building2, Eye, MapPin, Pencil, Power, Trash2, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Station } from "@/lib/redux/services/stationApi";
 
@@ -11,7 +11,6 @@ interface StationListTableProps {
     onEdit: (station: Station) => void;
     onDelete: (id: number) => void;
     onToggleStatus: (station: Station) => void;
-    onManageConnectors: (station: Station) => void;
 }
 
 const StationListTable: React.FC<StationListTableProps> = ({
@@ -19,8 +18,7 @@ const StationListTable: React.FC<StationListTableProps> = ({
     onViewDetail,
     onEdit,
     onDelete,
-    onToggleStatus,
-    onManageConnectors
+    onToggleStatus
 }) => {
     
     // Đã xóa hàm getConnectorStats cũ vì dữ liệu activePorts/ports đã có sẵn từ API
@@ -40,11 +38,10 @@ const StationListTable: React.FC<StationListTableProps> = ({
                 <table className="min-w-full text-left">
                     <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                         <tr>
-                            <th className="px-6 py-3 font-medium">Tên trạm</th>
-                            <th className="px-6 py-3 font-medium">Địa chỉ</th>
-                            <th className="px-6 py-3 font-medium">Loại xe</th>
-                            <th className="px-6 py-3 font-medium">Connectors</th>
-                            <th className="px-6 py-3 font-medium">Trạng thái</th>
+                            <th className="px-6 py-3 font-medium text-center">Thông tin trạm</th>
+                            <th className="px-6 py-3 font-medium text-center">Loại xe</th>
+                            <th className="px-6 py-3 font-medium text-center">Connectors</th>
+                            <th className="px-6 py-3 font-medium text-center">Trạng thái</th>
                             <th className="px-6 py-3 font-medium text-center">Hành động</th>
                         </tr>
                     </thead>
@@ -53,42 +50,32 @@ const StationListTable: React.FC<StationListTableProps> = ({
                             return (
                             <tr key={station.id} className="hover:bg-gray-50/60">
                                 <td className="px-6 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <Building2 className="size-4 text-gray-400" />
-                                        <span className="font-medium text-gray-900">{station.name}</span>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <Building2 className="size-4 text-gray-400" />
+                                            <span className="font-medium text-gray-900">{station.name}</span>
+                                        </div>
+                                        <div className="flex items-start gap-2 text-gray-600">
+                                            <MapPin className="size-3 mt-[2px] text-gray-400 shrink-0" />
+                                            <div className="flex flex-col text-xs">
+                                                <span>{station.address}</span>
+                                                <span className="text-gray-400">{station.city}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </td>
-                                <td className="px-6 py-3 text-gray-600 flex flex-col gap-1">
-                                    <div className="flex items-start gap-2">
-                                        <MapPin className="size-4 mt-[2px] text-gray-400 shrink-0" />
-                                        <span>{station.address}</span>
-                                    </div>
-                                    <span className="text-xs text-gray-400 pl-6">{station.city}</span>
                                 </td>
                                 <td className="px-6 py-3 text-gray-600">
-                                    <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-semibold">
+                                    <span className="inline-flex items-center justify-center w-full px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs font-semibold">
                                         {station.type}
                                     </span>
                                 </td>
                                 <td className="px-6 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm">
-                                            {/* 👇 Sử dụng trực tiếp dữ liệu từ API Backend */}
-                                            <span className="font-semibold text-emerald-600">{station.activePorts || 0}</span>
-                                            <span className="text-gray-400">/</span>
-                                            <span className="font-medium text-gray-600">{station.ports || 0}</span>
-                                        </span>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => onManageConnectors(station)}
-                                            className="h-7 text-xs px-2"
-                                            title="Quản lý connectors"
-                                        >
-                                            <Plug className="size-3 mr-1" />
-                                            Quản lý
-                                        </Button>
-                                    </div>
+                                    <span className="inline-flex text-sm items-center justify-center w-full">
+                                        {/* 👇 Sử dụng trực tiếp dữ liệu từ API Backend */}
+                                        <span className="font-semibold text-emerald-600">{station.activePorts || 0}</span>
+                                        <span className="text-gray-400">/</span>
+                                        <span className="font-medium text-gray-600">{station.ports || 0}</span>
+                                    </span>
                                 </td>
                                 <td className="px-6 py-3">
                                     <span

@@ -97,6 +97,12 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public RescueStation getRescueStationById(Integer id) {
+        return rescueStationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Rescue Station not found with id: " + id));
+    }
+
+    @Override
     @Transactional
     public RescueStation createRescueStation(RescueStationRequest request) {
         Location location = new Location();
@@ -212,7 +218,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public Page<StationResponse> getStationsByVendor(Integer vendorId,
-                                                     org.springframework.data.domain.Pageable pageable) {
+            org.springframework.data.domain.Pageable pageable) {
         if (!userRepository.existsById(vendorId)) {
             throw new ResourceNotFoundException("Vendor not found with id: " + vendorId);
         }
@@ -223,18 +229,20 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public Page<ElectricVehicleResponse> getVehiclesByCustomer(Integer customerId,
-                                                               org.springframework.data.domain.Pageable pageable) {
+            org.springframework.data.domain.Pageable pageable) {
         if (!userRepository.existsById(customerId)) {
             throw new ResourceNotFoundException("Customer not found with id: " + customerId);
         }
-        // Lưu ý: Đoạn code này trong file gốc của bạn có vẻ đang "xóa mềm" user mỗi khi get xe?
+        // Lưu ý: Đoạn code này trong file gốc của bạn có vẻ đang "xóa mềm" user mỗi khi
+        // get xe?
         // Nếu không cần thiết thì nên comment lại hoặc xem lại logic nghiệp vụ.
         /*
-        User user = userRepository.findById(customerId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + customerId));
-        user.setStatus(0);
-        userRepository.save(user);
-        */
+         * User user = userRepository.findById(customerId)
+         * .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " +
+         * customerId));
+         * user.setStatus(0);
+         * userRepository.save(user);
+         */
 
         Page<ElectricVehicle> vehicles = electricVehicleRepository.findByCustomerId(customerId, pageable);
         return vehicles.map(this::mapVehicleToDto);
@@ -257,9 +265,11 @@ public class AdminServiceImpl implements AdminService {
         try {
             String fullAddress = "Chưa cập nhật";
             if (station.getLocation() != null) {
-                String detail = station.getLocation().getAddressDetail() != null ? station.getLocation().getAddressDetail()
+                String detail = station.getLocation().getAddressDetail() != null
+                        ? station.getLocation().getAddressDetail()
                         : "";
-                String province = station.getLocation().getProvince() != null ? station.getLocation().getProvince() : "";
+                String province = station.getLocation().getProvince() != null ? station.getLocation().getProvince()
+                        : "";
                 fullAddress = (detail + ", " + province).trim();
                 if (fullAddress.startsWith(","))
                     fullAddress = fullAddress.substring(1).trim();
@@ -269,9 +279,11 @@ public class AdminServiceImpl implements AdminService {
             int totalPoles = 0;
             if (station.getChargingPoles() != null) {
                 totalPoles = station.getChargingPoles().size();
-                // 👇 ĐÃ SỬA: Đếm từ list connectors thay vì gọi getConnectorCount() (biến đã xóa)
+                // 👇 ĐÃ SỬA: Đếm từ list connectors thay vì gọi getConnectorCount() (biến đã
+                // xóa)
                 totalPorts = station.getChargingPoles().stream()
-                        .mapToInt(pole -> pole.getChargingConnectors() != null ? pole.getChargingConnectors().size() : 0)
+                        .mapToInt(
+                                pole -> pole.getChargingConnectors() != null ? pole.getChargingConnectors().size() : 0)
                         .sum();
             }
 

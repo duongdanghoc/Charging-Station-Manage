@@ -734,8 +734,9 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     // Initialize texts from coords when coming from map or first mount
     useEffect(() => {
         if (isEditingStart) return;
-        if (startLabel && startLabel.trim() && startText !== startLabel) {
-            setStartText(startLabel);
+        const labelStr = typeof startLabel === 'string' ? startLabel : '';
+        if (labelStr && labelStr.trim() && startText !== labelStr) {
+            setStartText(labelStr);
             return;
         }
         if (startPoint && !startText) {
@@ -746,8 +747,9 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
 
     useEffect(() => {
         if (isEditingEnd) return;
-        if (endLabel && endLabel.trim() && endText !== endLabel) {
-            setEndText(endLabel);
+        const labelStr = typeof endLabel === 'string' ? endLabel : '';
+        if (labelStr && labelStr.trim() && endText !== labelStr) {
+            setEndText(labelStr);
             return;
         }
         if (endPoint && !endText) {

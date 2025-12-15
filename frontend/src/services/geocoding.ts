@@ -7,10 +7,47 @@ export type Suggestion = {
     raw?: any;
 };
 
+export type ReverseResult = {
+    address: string;
+    province?: string;
+    district?: string;
+    country?: string;
+};
+
 export interface Geocoder {
     suggest(query: string): Promise<Suggestion[]>;
     geocode(query: string): Promise<Suggestion | null>;
-    reverse?(lng: number, lat: number): Promise<string | null>;
+    reverse(lng: number, lat: number): Promise<ReverseResult | null>;
+}
+
+/**
+ * Helper function to parse address string into address detail and province
+ * Example: "Giặt là ATB, 17 Đ. La Thành, Chợ Dừa, Đống Đa, Hà Nội"
+ * -> address: "Giặt là ATB, 17 Đ. La Thành, Chợ Dừa, Đống Đa"
+ * -> province: "Hà Nội"
+ */
+function parseAddressString(fullAddress: string): { address: string; province: string } {
+    if (!fullAddress) return { address: '', province: '' };
+
+    const lastCommaIndex = fullAddress.lastIndexOf(',');
+    if (lastCommaIndex === -1) {
+        // No comma found, return full address as address, empty province
+        return { address: fullAddress.trim(), province: '' };
+    }
+
+    let provinceCandidate = fullAddress.substring(lastCommaIndex + 1).trim();
+    let addressPart = fullAddress.substring(0, lastCommaIndex).trim();
+
+    // If the last part is "Vietnam" or "Việt Nam", skip it and take the part before
+    if (provinceCandidate.toLowerCase() === 'vietnam' || provinceCandidate.toLowerCase() === 'việt nam') {
+        const secondLastCommaIndex = addressPart.lastIndexOf(',');
+        if (secondLastCommaIndex !== -1) {
+            provinceCandidate = addressPart.substring(secondLastCommaIndex + 1).trim();
+            addressPart = addressPart.substring(0, secondLastCommaIndex).trim();
+        }
+    }
+
+    return { address: addressPart, province: provinceCandidate };
 }
 
 class MapboxGeocoder implements Geocoder {
@@ -34,13 +71,26 @@ class MapboxGeocoder implements Geocoder {
         const list = await this.suggest(query);
         return list[0] || null;
     }
-    async reverse(lng: number, lat: number): Promise<string | null> {
+    async reverse(lng: number, lat: number): Promise<ReverseResult | null> {
         if (!this.token) return null;
         const params = new URLSearchParams({ limit: '1', language: 'vi', access_token: this.token });
         const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?${params}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return data?.features?.[0]?.place_name ?? null;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const feat = data?.features?.[0];
+            if (!feat) return null;
+
+            const fullAddress = feat.place_name || '';
+            const parsed = parseAddressString(fullAddress);
+
+            return {
+                address: parsed.address,
+                province: parsed.province,
+                district: '',
+                country: ''
+            };
+        } catch { return null; }
     }
 }
 
@@ -59,12 +109,21 @@ class NominatimGeocoder implements Geocoder {
         const list = await this.suggest(query);
         return list[0] || null;
     }
-    async reverse(lng: number, lat: number): Promise<string | null> {
+    async reverse(lng: number, lat: number): Promise<ReverseResult | null> {
         const params = new URLSearchParams({ format: 'jsonv2', lat: String(lat), lon: String(lng), 'accept-language': 'vi' });
         const url = `https://nominatim.openstreetmap.org/reverse?${params}`;
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        const data = await res.json();
-        return data?.display_name ?? null;
+        try {
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            const fullAddress = data?.display_name || '';
+            const parsed = parseAddressString(fullAddress);
+            return {
+                address: parsed.address,
+                province: parsed.province,
+                district: '',
+                country: ''
+            };
+        } catch { return null; }
     }
 }
 
@@ -84,13 +143,24 @@ class OpenCageGeocoder implements Geocoder {
         const list = await this.suggest(query);
         return list[0] || null;
     }
-    async reverse(lng: number, lat: number): Promise<string | null> {
+    async reverse(lng: number, lat: number): Promise<ReverseResult | null> {
         if (!this.key) return null;
         const params = new URLSearchParams({ q: `${lat}+${lng}`, key: this.key, language: 'vi', limit: '1' });
         const url = `https://api.opencagedata.com/geocode/v1/json?${params}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        return data?.results?.[0]?.formatted ?? null;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const res0 = data?.results?.[0];
+            if (!res0) return null;
+            const fullAddress = res0.formatted || '';
+            const parsed = parseAddressString(fullAddress);
+            return {
+                address: parsed.address,
+                province: parsed.province,
+                district: '',
+                country: ''
+            };
+        } catch { return null; }
     }
 }
 
@@ -160,14 +230,23 @@ class GoogleGeocoder implements Geocoder {
         } catch { return null; }
     }
 
-    async reverse(lng: number, lat: number): Promise<string | null> {
+    async reverse(lng: number, lat: number): Promise<ReverseResult | null> {
         if (!this.key) return null;
         const rvParams = new URLSearchParams({ latlng: `${lat},${lng}`, language: 'vi', key: this.key });
         const rvUrl = `${this.base}/geocode/json?${rvParams}`;
         try {
             const res = await fetch(rvUrl);
             const data = await res.json();
-            return data?.results?.[0]?.formatted_address ?? null;
+            const res0 = data?.results?.[0];
+            if (!res0) return null;
+            const fullAddress = res0.formatted_address || '';
+            const parsed = parseAddressString(fullAddress);
+            return {
+                address: parsed.address,
+                province: parsed.province,
+                district: '',
+                country: ''
+            };
         } catch { return null; }
     }
 }
@@ -233,7 +312,7 @@ class GoongGeocoder implements Geocoder {
         }
     }
 
-    async reverse(lng: number, lat: number): Promise<string | null> {
+    async reverse(lng: number, lat: number): Promise<ReverseResult | null> {
         if (!this.key) return null;
         // Reverse geocoding
         const params = new URLSearchParams({ latlng: `${lat},${lng}`, api_key: this.key });
@@ -241,7 +320,16 @@ class GoongGeocoder implements Geocoder {
         try {
             const res = await fetch(url);
             const data = await res.json();
-            return data?.results?.[0]?.formatted_address ?? null;
+            const res0 = data?.results?.[0];
+            if (!res0) return null;
+            const fullAddress = res0.formatted_address || '';
+            const parsed = parseAddressString(fullAddress);
+            return {
+                address: parsed.address,
+                province: parsed.province,
+                district: '',
+                country: ''
+            };
         } catch {
             return null;
         }

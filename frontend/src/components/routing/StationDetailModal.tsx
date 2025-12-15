@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { X, MapPin, Clock, Star, Zap, Power, Calendar, Building2, Phone, Mail, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { X, MapPin, Clock, Star, Zap, Power, Calendar, Building2, Phone, Mail, AlertCircle, CheckCircle, XCircle, Loader2, Wrench } from 'lucide-react';
 import { StationService } from './StationService';
 
 interface ChargingConnector {
@@ -206,9 +206,14 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
         <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                 {/* Header */}
-                <div className="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-blue-50 to-emerald-50 p-6">
+                <div className={`flex items-start justify-between border-b border-slate-200 p-6 ${station.type === 'rescue' ? 'bg-gradient-to-r from-orange-50 to-amber-50' : 'bg-gradient-to-r from-blue-50 to-emerald-50'}`}>
                     <div className="flex-1">
                         <div className="flex items-center gap-3">
+                            {station.type === 'rescue' ? (
+                                <Wrench className="h-6 w-6 text-orange-600" />
+                            ) : (
+                                <Zap className="h-6 w-6 text-emerald-600" />
+                            )}
                             <h2 className="text-2xl font-bold text-slate-900">{station.name}</h2>
                             <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(station.status)}`}>
                                 <span className={`inline-block h-2 w-2 rounded-full ${station.status === 1 ? 'bg-emerald-500' : 'bg-slate-400'}`} />
@@ -245,8 +250,8 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                     <div className="flex gap-1">
                         {[
                             { id: 'info' as const, label: 'Thông tin', icon: MapPin },
-                            { id: 'poles' as const, label: `Trụ sạc (${station.poles?.length || 0})`, icon: Zap },
-                            { id: 'reviews' as const, label: `Đánh giá (${reviews.length})`, icon: Star },
+                            ...(station.type !== 'rescue' ? [{ id: 'poles' as const, label: `Trụ sạc (${station.poles?.length || 0})`, icon: Zap }] : []),
+                            ...(station.type !== 'rescue' ? [{ id: 'reviews' as const, label: `Đánh giá (${reviews.length})`, icon: Star }] : []),
                         ].map(({ id, label, icon: Icon }) => (
                             <button
                                 key={id}
@@ -295,27 +300,44 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                             </div>
 
                             {/* Tổng quan */}
-                            <div className="grid gap-4 sm:grid-cols-3">
-                                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
-                                    <Zap className="mx-auto h-8 w-8 text-emerald-600" />
-                                    <p className="mt-2 text-2xl font-bold text-slate-900">{station.poles?.length || 0}</p>
-                                    <p className="text-sm text-slate-600">Trụ sạc</p>
+                            {station.type === 'rescue' ? (
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-center">
+                                        <Wrench className="mx-auto h-8 w-8 text-orange-600" />
+                                        <p className="mt-2 text-xl font-bold text-slate-900">Cứu hộ 24/7</p>
+                                        <p className="text-sm text-slate-600">Dịch vụ khẩn cấp</p>
+                                    </div>
+                                    {station.contact && (
+                                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center">
+                                            <Phone className="mx-auto h-8 w-8 text-blue-600" />
+                                            <p className="mt-2 text-xl font-bold text-slate-900">{station.contact}</p>
+                                            <p className="text-sm text-slate-600">Hotline</p>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
-                                    <Power className="mx-auto h-8 w-8 text-blue-600" />
-                                    <p className="mt-2 text-2xl font-bold text-slate-900">
-                                        {station.poles?.reduce((sum, pole) => sum + pole.connectorCount, 0) || 0}
-                                    </p>
-                                    <p className="text-sm text-slate-600">Cổng sạc</p>
+                            ) : (
+                                <div className="grid gap-4 sm:grid-cols-3">
+                                    <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                                        <Zap className="mx-auto h-8 w-8 text-emerald-600" />
+                                        <p className="mt-2 text-2xl font-bold text-slate-900">{station.poles?.length || 0}</p>
+                                        <p className="text-sm text-slate-600">Trụ sạc</p>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                                        <Power className="mx-auto h-8 w-8 text-blue-600" />
+                                        <p className="mt-2 text-2xl font-bold text-slate-900">
+                                            {station.poles?.reduce((sum, pole) => sum + pole.connectorCount, 0) || 0}
+                                        </p>
+                                        <p className="text-sm text-slate-600">Cổng sạc</p>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
+                                        <Star className="mx-auto h-8 w-8 text-amber-500" />
+                                        <p className="mt-2 text-2xl font-bold text-slate-900">
+                                            {station.averageRating > 0 ? station.averageRating.toFixed(1) : 'N/A'}
+                                        </p>
+                                        <p className="text-sm text-slate-600">Đánh giá</p>
+                                    </div>
                                 </div>
-                                <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
-                                    <Star className="mx-auto h-8 w-8 text-amber-500" />
-                                    <p className="mt-2 text-2xl font-bold text-slate-900">
-                                        {station.averageRating > 0 ? station.averageRating.toFixed(1) : 'N/A'}
-                                    </p>
-                                    <p className="text-sm text-slate-600">Đánh giá</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     )}
 

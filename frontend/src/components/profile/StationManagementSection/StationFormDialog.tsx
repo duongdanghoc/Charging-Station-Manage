@@ -9,7 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Station, CreateStationRequest } from "@/lib/redux/services/stationApi";
 import { getDirtyValues } from "@/utils/getDirtyValues";
-import dynamic from "next/dynamic"; // 1. Import dynamic
+import dynamic from "next/dynamic";
+import { getGeocoder } from '@/services/geocoding';
 
 // 👇 2. QUAN TRỌNG: Khai báo Map bằng dynamic import với ssr: false
 // Điều này ngăn Next.js render bản đồ trên server (nơi không có window)
@@ -60,6 +61,27 @@ const StationFormDialog: React.FC<StationFormDialogProps> = ({
         setValue("latitude", parseFloat(lat.toFixed(6)), { shouldDirty: true });
         setValue("longitude", parseFloat(lng.toFixed(6)), { shouldDirty: true });
     };
+
+    // Auto-populate address and province based on coordinates
+    useEffect(() => {
+        if (!open) return;
+
+        const timer = setTimeout(async () => {
+            if (currentLat && currentLng) {
+                try {
+                    const result = await getGeocoder().reverse(currentLng, currentLat);
+                    if (result) {
+                        setValue("addressDetail", result.address, { shouldDirty: true });
+                        setValue("province", result.province || result.district || '', { shouldDirty: true });
+                    }
+                } catch (e) {
+                    console.error("Reverse geocoding failed", e);
+                }
+            }
+        }, 800); // 800ms debounce
+
+        return () => clearTimeout(timer);
+    }, [currentLat, currentLng, open, setValue]);
 
     // Reset form when opening for create, or fill data when editing
     useEffect(() => {

@@ -66,10 +66,10 @@ export function middleware(request: NextRequest) {
             redirectPath = '/admin';
             break;
           case 'VENDOR':
-            redirectPath = '/vendor/dashboard';
+            redirectPath = '/';
             break;
           case 'CUSTOMER':
-            redirectPath = '/customer/dashboard';
+            redirectPath = '/';
             break;
         }
         
