@@ -10,6 +10,7 @@ import PaymentMethodsSection from "@/components/profile/PaymentMethodsSection";
 import MyReviewsSection from "@/components/profile/MyReviewsSection";
 import PayoutSettingsSection from "@/components/profile/PayoutSettingsSection";
 import StationManagementSection from "@/components/profile/StationManagementSection";
+import VendorChargingSessionManager from "@/components/profile/VendorSession/VendorChargingSessionManager";
 import DriverManagementSection from "@/components/profile/DriverManagementSection";
 import HistorySection from "@/components/profile/HistorySection";
 import AnalyticsSection from "@/components/profile/AnalyticsSection";
@@ -176,6 +177,7 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
         content: (
           <div className="space-y-8">
             <StationManagementSection />
+            <VendorChargingSessionManager />
             <PayoutSettingsSection role={role} />
             <AnalyticsSection role={role} />
           </div>

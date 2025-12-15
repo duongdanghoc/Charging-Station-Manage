@@ -14,7 +14,7 @@ public interface ChargingSessionMapper {
     @Mapping(source = "chargingConnector.pole.station.location.addressDetail", target = "address")
     @Mapping(source = "electricVehicle.licensePlate", target = "vehiclePlate")
     @Mapping(source = "status", target = "sessionStatus")
-    @Mapping(source = "transaction.amount", target = "totalAmount")
+    @Mapping(source = "cost", target = "amount")
     @Mapping(source = "transaction.paymentStatus", target = "paymentStatus")
     @Mapping(source = "transaction.paymentMethod", target = "paymentMethod")
     ChargingHistoryResponse toHistoryResponse(ChargingSession session);

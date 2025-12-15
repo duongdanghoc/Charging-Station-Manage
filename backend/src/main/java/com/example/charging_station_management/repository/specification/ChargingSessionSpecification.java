@@ -64,4 +64,15 @@ public class ChargingSessionSpecification {
                         cb.like(cb.lower(root.get("electricVehicle").get("licensePlate")),
                                 "%" + licensePlate.toLowerCase() + "%");
     }
+
+    public static Specification<ChargingSession> withVendorId(Integer vendorId) {
+        return (root, query, cb) ->
+                vendorId == null ? cb.conjunction() :
+                        cb.equal(root.get("chargingConnector").get("pole").get("station").get("vendor").get("id"), vendorId);
+    }
+
+    public static Specification<ChargingSession> withStatusIn(java.util.List<SessionStatus> statuses) {
+        return (root, query, cb) ->
+                (statuses == null || statuses.isEmpty()) ? cb.conjunction() : root.get("status").in(statuses);
+    }
 }
