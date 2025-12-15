@@ -108,9 +108,7 @@ const DetailProfileSection: React.FC<DetailProfileSectionProps> = ({
                 <h2 id="detail-profile-section" className="text-xl font-semibold text-gray-900">
                     Thông tin chi tiết tài khoản – {roleLabels[role]}
                 </h2>
-                <p className="text-sm text-gray-600">
-                    Giao diện demo cho phép nhập và lưu các thông tin cơ bản. Dữ liệu được lưu tạm thời trên trình duyệt nhằm mô phỏng trải nghiệm chỉnh sửa.
-                </p>
+
             </div>
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 sm:p-8">
                 {content}

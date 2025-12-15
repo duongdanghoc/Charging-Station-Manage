@@ -96,6 +96,7 @@ export function PoleManagementDialog({
             maxPower: Number(formData.maxPower),
             maxConnectors: Number(formData.maxConnectors),
             installDate: formData.installDate,
+            connectors: poleToEdit.connectors || []
           }
         }).unwrap();
         toast.success("Cập nhật thông tin thành công");

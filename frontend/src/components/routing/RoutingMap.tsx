@@ -309,7 +309,10 @@ export default function RoutingMap() {
     const reverseGeocode = useCallback(async (lng: number, lat: number): Promise<string | null> => {
         try {
             const gc = getGeocoder();
-            if (gc.reverse) return await gc.reverse(lng, lat);
+            if (gc.reverse) {
+                const result = await gc.reverse(lng, lat);
+                return result?.address ?? null;
+            }
             // fallback to Mapbox if provider has no reverse
             const token = config.mapbox?.accessToken || (process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string) || "";
             if (!token) return null;

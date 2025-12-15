@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import ProjectHeaderSection from "@/components/profile/ProjectHeaderSection";
 import DetailProfileSection, {
   type CustomerDetail,
@@ -167,13 +168,32 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
     return baseTabs;
   }, [userId, detailInfo?.customer, detailInfo?.supplier, detailInfo?.tech, role]);
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabFromUrl = searchParams.get('tab');
+
   const [activeTabId, setActiveTabId] = useState<string>(tabConfigs[0]?.id ?? "account");
+
+  // Initialize tab from URL on mount
+  useEffect(() => {
+    if (tabFromUrl && tabConfigs.find((tab) => tab.id === tabFromUrl)) {
+      setActiveTabId(tabFromUrl);
+    }
+  }, [tabFromUrl, tabConfigs]);
 
   useEffect(() => {
     if (!tabConfigs.find((tab) => tab.id === activeTabId)) {
       setActiveTabId(tabConfigs[0]?.id ?? "account");
     }
   }, [activeTabId, tabConfigs]);
+
+  // Handle tab change and update URL
+  const handleTabChange = (tabId: string) => {
+    setActiveTabId(tabId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tabId);
+    router.push(`/profile?${params.toString()}`, { scroll: false });
+  };
 
   const activeTab = tabConfigs.find((tab) => tab.id === activeTabId) ?? tabConfigs[0];
 
@@ -185,7 +205,7 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
           {tabConfigs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`flex-1 text-center group flex items-center justify-center lg:justify-start px-3 py-2 text-sm font-medium rounded-md ${activeTabId === tab.id
                 ? "bg-gray-100 text-gray-900"
                 : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
