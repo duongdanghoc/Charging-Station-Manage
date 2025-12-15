@@ -39,7 +39,7 @@ export default function VendorSessionHistory() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Session History</h3>
+        <h3 className="text-lg font-medium">Lịch sử phiên sạc</h3>
         <div className="flex gap-2">
             <Popover>
             <PopoverTrigger asChild>
@@ -51,7 +51,7 @@ export default function VendorSessionHistory() {
                 )}
                 >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Filter by start date</span>}
+                {date ? format(date, "PPP") : <span>Lọc theo ngày bắt đầu</span>}
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -63,7 +63,7 @@ export default function VendorSessionHistory() {
                 />
             </PopoverContent>
             </Popover>
-            {date && <Button variant="ghost" onClick={() => setDate(undefined)}>Clear</Button>}
+            {date && <Button variant="ghost" onClick={() => setDate(undefined)}>Xóa</Button>}
         </div>
       </div>
 
@@ -72,23 +72,23 @@ export default function VendorSessionHistory() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Start Time</TableHead>
-                <TableHead>Station</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Energy</TableHead>
-                <TableHead>Total Cost</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Thời gian bắt đầu</TableHead>
+                <TableHead>Trạm</TableHead>
+                <TableHead>Khách hàng</TableHead>
+                <TableHead>Năng lượng</TableHead>
+                <TableHead>Tổng chi phí</TableHead>
+                <TableHead>Trạng thái</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                   <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">Loading...</TableCell>
+                      <TableCell colSpan={6} className="text-center h-24">Đang tải...</TableCell>
                   </TableRow>
               ) : sessions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                    No history found.
+                    Không tìm thấy lịch sử.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -143,7 +143,7 @@ export default function VendorSessionHistory() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page + 1} of {totalPages || 1}
+            Trang {page + 1} / {totalPages || 1}
           </span>
           <Button
             variant="outline"

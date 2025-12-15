@@ -25,9 +25,9 @@ export default function VendorActiveSessions() {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
+        <AlertTitle>Lỗi</AlertTitle>
         <AlertDescription>
-          Failed to load active sessions. Please try again later.
+          Không thể tải các phiên sạc đang hoạt động. Vui lòng thử lại sau.
         </AlertDescription>
       </Alert>
     );
@@ -38,7 +38,7 @@ export default function VendorActiveSessions() {
         <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center p-6 text-muted-foreground h-40">
                 <Zap className="h-8 w-8 mb-2 opacity-50" />
-                <p>No active charging sessions currently.</p>
+                <p>Hiện không có phiên sạc nào đang hoạt động.</p>
             </CardContent>
         </Card>
     );
@@ -46,7 +46,7 @@ export default function VendorActiveSessions() {
 
   return (
     <div className="space-y-4">
-        <h3 className="text-lg font-medium">Active Sessions ({sessions.length})</h3>
+        <h3 className="text-lg font-medium">Phiên đang hoạt động ({sessions.length})</h3>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {sessions.map((session) => (
           <Card key={session.sessionId} className="relative overflow-hidden border-l-4 border-l-green-500">
@@ -67,7 +67,7 @@ export default function VendorActiveSessions() {
               <div className="grid grid-cols-2 gap-2 text-sm mt-2">
                 <div className="flex items-center text-muted-foreground">
                     <Clock className="w-4 h-4 mr-1" />
-                    <span>Duration</span>
+                    <span>Thời lượng</span>
                 </div>
                 <div className="font-medium text-right">
                     {calculateDuration(session.startTime)}
@@ -75,7 +75,7 @@ export default function VendorActiveSessions() {
 
                 <div className="flex items-center text-muted-foreground">
                     <Zap className="w-4 h-4 mr-1" />
-                    <span>Energy</span>
+                    <span>Năng lượng</span>
                 </div>
                 <div className="font-medium text-right">
                     {session.energyKwh} kWh
@@ -83,7 +83,7 @@ export default function VendorActiveSessions() {
 
                  <div className="flex items-center text-muted-foreground">
                     <Battery className="w-4 h-4 mr-1" />
-                    <span>Cost (Est.)</span>
+                    <span>Chi phí (Ước tính)</span>
                 </div>
                 <div className="font-medium text-right">
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(session.cost)}
