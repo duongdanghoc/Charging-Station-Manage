@@ -35,10 +35,19 @@ export default function TransactionManagement() {
   // Redux API Hooks
   const { data: transactionsData, isLoading, isFetching } = useGetTransactionsQuery(filters);
 
+<<<<<<< HEAD
   // --- SỬA LẠI ĐOẠN NÀY ---
   // Truy cập sâu thêm một cấp vào .data
   const transactions = transactionsData?.data?.content || [];
   const totalPages = transactionsData?.data?.totalPages || 0;
+=======
+<<<<<<< HEAD
+=======
+  // transactionsData is already PageResponse, no need for .data
+>>>>>>> a5b0960 (fix admin transaction)
+  const transactions = transactionsData?.content || [];
+  const totalPages = transactionsData?.totalPages || 0;
+>>>>>>> f681f79 (fix admin transaction)
 
   // Handlers
   const handleFilterChange = (key: keyof TransactionFilterParams, value: any) => {
