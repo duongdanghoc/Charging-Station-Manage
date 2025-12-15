@@ -72,63 +72,6 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
   const tabConfigs = useMemo(() => {
     const baseTabs = [
       {
-        id: "project",
-        name: "Thông tin dự án",
-        content: (
-          <div className="space-y-6">
-            <div className="bg-white p-6 sm:p-8 rounded-lg border border-gray-200">
-              <ProjectHeaderSection
-                projectTitle={project.title}
-                projectTags={project.tags}
-                onEditProject={onEditProject}
-              />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <InfoCard
-                title="Thông tin liên hệ"
-                actionLabel="Chỉnh sửa"
-                onAction={onEditContact}
-                items={[
-                  { label: "Địa điểm", value: project.contactInfo.location ?? "Chưa cập nhật" },
-                  { label: "Website", value: project.contactInfo.website ?? "Chưa cập nhật" },
-                  { label: "Portfolio", value: project.contactInfo.portfolio ?? "Chưa cập nhật" },
-                  { label: "Email", value: project.contactInfo.email ?? "Chưa cập nhật" },
-                ]}
-              />
-              <InfoCard
-                title="Thông tin gọi vốn"
-                actionLabel="Chỉnh sửa"
-                onAction={onEditFunding}
-                items={[
-                  { label: "Khoản đầu tư", value: project.fundingInfo.investment ?? "Chưa cập nhật" },
-                  { label: "Loại tiền tệ", value: project.fundingInfo.currency ?? "Chưa cập nhật" },
-                  {
-                    label: "Đồng sáng lập",
-                    value:
-                      project.fundingInfo.cofounders?.length
-                        ? project.fundingInfo.cofounders.join(", ")
-                        : "Chưa cập nhật",
-                  },
-                  {
-                    label: "Đối tác",
-                    value:
-                      project.fundingInfo.partners?.length
-                        ? project.fundingInfo.partners.join(", ")
-                        : "Chưa cập nhật",
-                  },
-                ]}
-              />
-            </div>
-            <InfoDescriptionCard
-              title="Mô tả dự án"
-              description={project.description}
-              actionLabel="Chỉnh sửa"
-              onAction={onEditAbout}
-            />
-          </div>
-        ),
-      },
-      {
         id: "account",
         name: "Hồ sơ tài khoản",
         content: (
@@ -199,24 +142,26 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({
       });
     }
 
-    baseTabs.push({
-      id: "history",
-      name: "Lịch sử hoạt động",
-      content: (
-        <div className="space-y-8">
-          <HistorySection role={role} currentUserId={userId} />
-        </div>
-      ),
-    });
+    if (role === "CUSTOMER") {
+      baseTabs.push({
+        id: "history",
+        name: "Lịch sử hoạt động",
+        content: (
+          <div className="space-y-8">
+            <HistorySection role={role} currentUserId={userId} />
+          </div>
+        ),
+      });
+    }
 
     return baseTabs;
-  }, [userId, detailInfo?.customer, detailInfo?.supplier, detailInfo?.tech, onEditAbout, onEditContact, onEditFunding, onEditProject, project.contactInfo, project.description, project.fundingInfo, project.tags, project.title, role]);
+  }, [userId, detailInfo?.customer, detailInfo?.supplier, detailInfo?.tech, role]);
 
-  const [activeTabId, setActiveTabId] = useState<string>(tabConfigs[0]?.id ?? "project");
+  const [activeTabId, setActiveTabId] = useState<string>(tabConfigs[0]?.id ?? "account");
 
   useEffect(() => {
     if (!tabConfigs.find((tab) => tab.id === activeTabId)) {
-      setActiveTabId(tabConfigs[0]?.id ?? "project");
+      setActiveTabId(tabConfigs[0]?.id ?? "account");
     }
   }, [activeTabId, tabConfigs]);
 
