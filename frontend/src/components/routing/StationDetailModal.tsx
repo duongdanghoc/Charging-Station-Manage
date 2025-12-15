@@ -3,22 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, MapPin, Clock, Star, Zap, Power, Calendar, Building2, Phone, Mail, AlertCircle, CheckCircle, XCircle, Loader2, Wrench } from 'lucide-react';
 import { StationService } from './StationService';
-
-interface ChargingConnector {
-    id: number;
-    connectorType: string;
-    maxPower: number;
-    status: 'AVAILABLE' | 'IN_USE' | 'OUT_OF_SERVICE';
-}
-
-interface ChargingPole {
-    id: number;
-    manufacturer: string;
-    maxPower: number;
-    connectorCount: number;
-    installDate: string;
-    connectors: ChargingConnector[];
-}
+import type { ChargingConnector, ChargingPole } from '@/lib/redux/services/stationApi';
 
 interface Review {
     id: number;
@@ -43,6 +28,10 @@ interface StationDetail {
     averageRating: number;
     totalRatings: number;
     poles: ChargingPole[];
+    contact?: string;
+    // Thêm thông tin từ Station API
+    ports?: number;       // Tổng số đầu sạc
+    activePorts?: number; // Số đầu sạc đang sẵn sàng
 }
 
 interface StationDetailModalProps {
@@ -66,9 +55,24 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
         try {
             setLoading(true);
             const data = await StationService.getStationById(stationId);
+            
+            // Nếu là trạm sạc thường (không phải rescue), load thêm danh sách trụ sạc
+            let poles: ChargingPole[] = [];
+            const stationIdStr = String(stationId);
+            if (data.type !== 'rescue' && !stationIdStr.startsWith('rescue-')) {
+                try {
+                    const polesData = await StationService.getStationPoles(stationId);
+                    poles = Array.isArray(polesData) ? polesData : (polesData?.data || []);
+                    console.log('Loaded poles data:', poles); // Debug log
+                } catch (poleErr) {
+                    console.error('Không thể tải trụ sạc:', poleErr);
+                    poles = [];
+                }
+            }
+            
             setStation({
                 ...data,
-                poles: Array.isArray(data.poles) ? data.poles : []
+                poles: poles
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Không thể tải thông tin trạm');
@@ -98,8 +102,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
         switch (status) {
             case 'AVAILABLE':
                 return <CheckCircle className="h-4 w-4 text-emerald-500" />;
+            case 'INUSE':
             case 'IN_USE':
                 return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+            case 'OUTOFSERVICE':
             case 'OUT_OF_SERVICE':
                 return <XCircle className="h-4 w-4 text-red-500" />;
             default:
@@ -111,8 +117,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
         switch (status) {
             case 'AVAILABLE':
                 return 'Sẵn sàng';
+            case 'INUSE':
             case 'IN_USE':
                 return 'Đang sử dụng';
+            case 'OUTOFSERVICE':
             case 'OUT_OF_SERVICE':
                 return 'Ngưng hoạt động';
             default:
@@ -124,8 +132,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
         switch (status) {
             case 'AVAILABLE':
                 return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            case 'INUSE':
             case 'IN_USE':
                 return 'bg-blue-50 text-blue-700 border-blue-200';
+            case 'OUTOFSERVICE':
             case 'OUT_OF_SERVICE':
                 return 'bg-red-50 text-red-700 border-red-200';
             default:
@@ -325,7 +335,10 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                                     <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
                                         <Power className="mx-auto h-8 w-8 text-blue-600" />
                                         <p className="mt-2 text-2xl font-bold text-slate-900">
-                                            {station.poles?.reduce((sum, pole) => sum + pole.connectorCount, 0) || 0}
+                                            {station.activePorts !== undefined 
+                                                ? `${station.activePorts}/${station.ports || station.poles?.reduce((sum, pole) => sum + (pole.connectors?.length || pole.connectorCount || 0), 0) || 0}`
+                                                : (station.ports || station.poles?.reduce((sum, pole) => sum + (pole.connectors?.length || pole.connectorCount || 0), 0) || 0)
+                                            }
                                         </p>
                                         <p className="text-sm text-slate-600">Cổng sạc</p>
                                     </div>
@@ -366,7 +379,7 @@ export const StationDetailModal: React.FC<StationDetailModalProps> = ({ stationI
                                         <div className="mt-4 flex items-center gap-4 text-sm text-slate-600">
                                             <span className="flex items-center gap-1">
                                                 <Power className="h-4 w-4" />
-                                                {pole.connectorCount} cổng
+                                                {pole.connectors?.length || pole.connectorCount || 0} cổng
                                             </span>
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="h-4 w-4" />

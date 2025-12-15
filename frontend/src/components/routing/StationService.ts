@@ -293,6 +293,20 @@ export class StationService {
         return Array.isArray(data) ? data : (data.content || []);
     }
 
+    /** Lấy danh sách trụ sạc của trạm */
+    static async getStationPoles(id: string): Promise<any> {
+        const idStr = String(id);
+        if (idStr.startsWith('rescue-')) {
+            return [];
+        }
+        
+        const res = await fetch(`${API_BASE}/${id}/poles`);
+        if (!res.ok) throw new Error("Không thể lấy danh sách trụ sạc");
+        const data = await res.json();
+        // API trả về BaseApiResponse<List<ChargingPoleResponse>>
+        return data;
+    }
+
     /** Tìm trạm gần nhất (client-side tính khoảng cách) */
     static async findNearestStations(
         lat: number,
