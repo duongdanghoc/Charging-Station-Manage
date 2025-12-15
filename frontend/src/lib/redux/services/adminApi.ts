@@ -348,15 +348,9 @@ export const adminApi = createApi({
       providesTags: (result) =>
         result?.content
           ? [
-<<<<<<< HEAD
-              ...result.content.map(({ id }) => ({
-                type: 'Transactions' as const,
-                id
-=======
               ...result.content.map(({ transactionId }) => ({
                 type: 'Transactions' as const,
                 id: transactionId
->>>>>>> f681f79 (fix admin transaction)
               })),
               { type: 'Transactions', id: 'LIST' },
             ]
